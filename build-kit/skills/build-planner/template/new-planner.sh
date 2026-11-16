@@ -27,5 +27,5 @@ EOF
 cd "$dir" && git init -q && git add -A && git commit -q -m "Start the $title planner from the build planner template"
 echo "Made $dir"
 echo "Next: edit the ITEM block in index.html, run ./check.sh, then publish:"
-echo "  gh repo create $slug-planner --public --source=. --push"
+echo "  gh repo create $slug-planner --private --source=. --push"
 echo "  gh api -X POST repos/{owner}/$slug-planner/pages -f \"source[branch]=main\" -f \"source[path]=/\""
