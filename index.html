@@ -371,7 +371,7 @@ const CAB_W=29.9, CAB_H=29.9, CAB_D=14.4;
 const ISO_SIDE=3, ISO_TOP=3, ISO_BASE=2, ISO_BACK=4, ISO_FRONT=6, ISO_WALL=1.5;
 const ISO_W=CAB_W+2*ISO_SIDE+2*ISO_WALL, ISO_H=CAB_H+ISO_TOP+ISO_BASE+2*ISO_WALL, ISO_D=CAB_D+ISO_BACK+ISO_FRONT+2*ISO_WALL;
 /* Measured on site 2026-11-15: the overhang is 65" wide, 16" deep, underside 5'0". */
-const OH_W=65, AMP_D=16, AMP_CASE=1.5, SHELF_T=1, AMP_TIER_PITCH=HEAD_H+9.5;
+const OH_W=65, OH_D=16, AMP_CASE=1.5, SHELF_T=1, AMP_TIER_PITCH=HEAD_H+9.5;
 /* How many heads fit is set by the underside of the overhang, not by choice. Four is the
    floor worth building; below that the wall is not an amp wall. */
 function ampFit(){
@@ -398,11 +398,16 @@ const WALLS=[
 WALLS.forEach(w=>{const dx=w.p1[0]-w.p0[0],dy=w.p1[1]-w.p0[1];w.L=Math.hypot(dx,dy);w.u=[dx/w.L,dy/w.L];w.n=[-w.u[1],w.u[0]];});
 const WALL=Object.fromEntries(WALLS.map(w=>[w.id,w]));
 /* front face of the amp wall / screen box (88" wide, 20" proud of the north wall), facing south into the room */
-const AMPW={id:'P',name:'Amp wall face',p0:[85,20],p1:[173,20],from:'west end'};
+/* The overhang: a soffit, not a floor-to-ceiling box. Measured 2026-11-15 as 65" wide and
+   16" deep with its underside 5'0" above the floor. OH_X is where it starts from the NW
+   corner and is the one number still assumed: it keeps the old box's start so the north
+   wall runs move as little as possible. */
+const OH_X=85, OH_UNDER=60;
+const AMPW={id:'P',name:'Overhang face',p0:[OH_X,OH_D],p1:[OH_X+OH_W,OH_D],from:'west end'};
 {const dx=AMPW.p1[0]-AMPW.p0[0],dy=AMPW.p1[1]-AMPW.p0[1];AMPW.L=Math.hypot(dx,dy);AMPW.u=[dx/AMPW.L,dy/AMPW.L];AMPW.n=[-AMPW.u[1],AMPW.u[0]];}
 WALL.P=AMPW;
-/* the amp wall box's two 20" sides, facing west and east */
-const AMPSIDES=[{id:'PW',name:'Amp wall, west side',p0:[85,0],p1:[85,20],from:'north wall'},{id:'PE',name:'Amp wall, east side',p0:[173,20],p1:[173,0],from:'front corner'}];
+/* the overhang's two 16" returns, facing west and east */
+const AMPSIDES=[{id:'PW',name:'Overhang, west side',p0:[OH_X,0],p1:[OH_X,OH_D],from:'north wall'},{id:'PE',name:'Overhang, east side',p0:[OH_X+OH_W,OH_D],p1:[OH_X+OH_W,0],from:'front corner'}];
 AMPSIDES.forEach(w=>{const dx=w.p1[0]-w.p0[0],dy=w.p1[1]-w.p0[1];w.L=Math.hypot(dx,dy);w.u=[dx/w.L,dy/w.L];w.n=[-w.u[1],w.u[0]];WALL[w.id]=w;});
 /* ---------- control / vocal booth: rectangle, double wall (room within a room) ----------
    Outer leaf: new 2x4 walls on the north and east sides, full height to the room ceiling, 2 layers 5/8" drywall on the room side.
@@ -437,15 +442,15 @@ const clearAt=ang=>STANDOFF/Math.tan(ang/2);
 const CL_EA=clearAt(cornerAngle(WALL.E,WALL.A)), CL_AS=clearAt(cornerAngle(WALL.A,WALL.S));
 const RUNS=[
   {wall:'N',name:'North, corner to room door',a:STANDOFF+REVEAL,b:10-CASING-REVEAL,refA:0,refB:10-CASING,comp:[],auto:true},
-  {wall:'N',name:'North, door to screen',a:46+CASING+REVEAL,b:85-REVEAL,refA:46,refB:85,comp:[],auto:true},
-  {wall:'N',name:'North, right of screen',a:173+REVEAL,b:264,refA:173,refB:264,comp:[],auto:true},
+  {wall:'N',name:'North, door to overhang',a:46+CASING+REVEAL,b:OH_X-REVEAL,refA:46,refB:OH_X,comp:[],auto:true},
+  {wall:'N',name:'North, east of overhang',a:OH_X+OH_W+REVEAL,b:264,refA:OH_X+OH_W,refB:264,comp:[],auto:true},
   {wall:'E',name:'East',a:STANDOFF+REVEAL,b:162-CL_EA-REVEAL,refA:0,refB:162,comp:[],auto:true},
   {wall:'A',name:'Angled',a:CL_EA+REVEAL,b:AL-CL_AS-REVEAL,refA:0,refB:AL,comp:[],auto:true},
   {wall:'S',name:'South, angled corner to booth',a:CL_AS+REVEAL,b:204-BX-STANDOFF-REVEAL,refA:0,refB:204-BX,comp:[],auto:true},
   {wall:'W',name:'West, booth to north corner',a:194-BY+REVEAL,b:194,refA:194-BY,refB:194,comp:[],auto:true},
-  {wall:'P',name:'Amp wall face',a:REVEAL,b:88-REVEAL,refA:0,refB:88,comp:[],auto:true,amp:true},
-  {wall:'PW',name:'Amp wall, west side',a:STANDOFF+REVEAL,b:20-REVEAL,refA:0,refB:20,comp:[],auto:true,amp:true},
-  {wall:'PE',name:'Amp wall, east side',a:REVEAL,b:20-STANDOFF-REVEAL,refA:0,refB:20,comp:[],auto:true,amp:true},
+  {wall:'P',name:'Overhang face',a:REVEAL,b:OH_W-REVEAL,refA:0,refB:OH_W,comp:[],auto:true,amp:true},
+  {wall:'PW',name:'Overhang, west side',a:STANDOFF+REVEAL,b:OH_D-REVEAL,refA:0,refB:OH_D,comp:[],auto:true,amp:true},
+  {wall:'PE',name:'Overhang, east side',a:REVEAL,b:OH_D-STANDOFF-REVEAL,refA:0,refB:OH_D,comp:[],auto:true,amp:true},
   {wall:'BN',name:'Booth outside, east of window',a:REVEAL,b:WIN_S_OUT-WIN_W/2-CASING-REVEAL,refA:0,refB:WIN_S_OUT-WIN_W/2-CASING,comp:[],auto:true,booth:true},
   {wall:'BN',name:'Booth outside, above the window',a:WIN_S_OUT-WIN_W/2-CASING,b:WIN_S_OUT+WIN_W/2+CASING,refA:WIN_S_OUT-WIN_W/2-CASING,refB:WIN_S_OUT+WIN_W/2+CASING,comp:[],auto:true,overDoor:'win'},
   {wall:'BN',name:'Booth outside, west of window',a:WIN_S_OUT+WIN_W/2+CASING+REVEAL,b:BX-STANDOFF-REVEAL,refA:WIN_S_OUT+WIN_W/2+CASING,refB:BX,comp:[],auto:true,booth:true},
@@ -542,6 +547,8 @@ const M={
   plate:new THREE.MeshStandardMaterial({color:'#d8b57a',roughness:.85}),
   header:new THREE.MeshStandardMaterial({color:'#c99a57',roughness:.85}),
   jack:new THREE.MeshStandardMaterial({color:'#3a3a40',roughness:.9}),
+  amphead:new THREE.MeshStandardMaterial({color:'#17171b',roughness:.55,metalness:.25}),
+  isocab:new THREE.MeshStandardMaterial({color:'#2a2730',roughness:.85}),
   studWood:new THREE.MeshStandardMaterial({color:'#c9a971',roughness:.9}),
 };
 Object.values(M).forEach(m=>m.userData.keep=true);
@@ -749,7 +756,7 @@ function layout(){
   const holes=[];
   {const faces={};
    /* the amp wall box and the booth stand against these faces, so no run belongs there */
-   const BLOCKED={N:[[85,173]],S:[[204-BX,204]],W:[[0,194-BY]]};
+   const BLOCKED={N:[[OH_X,OH_X+OH_W]],S:[[204-BX,204]],W:[[0,194-BY]]};
    RUNS.forEach(r=>{if(r.door)return;(faces[r.wall]=faces[r.wall]||[]).push([r.refA,r.refB]);});
    Object.keys(BLOCKED).forEach(id=>{if(faces[id])faces[id]=faces[id].concat(BLOCKED[id]);});
    Object.keys(faces).forEach(id=>{const w=WALL[id];if(!w||!w.L)return;
@@ -791,7 +798,7 @@ function layout(){
   if(state.bottom<4)warns.push(['warn',`Panel bottoms are ${fIn(state.bottom)} off the floor. Leave room for baseboards and cleaning.`]);
   if(state.ampGap<CLEAT_RISE+.25)warns.push(['bad',`Amp wall panels sit ${fIn(state.ampGap)} below the ceiling, but a 2x4 French cleat needs ${fIn(CLEAT_RISE+.25)} of lift to engage. Raise the ceiling gap to at least ${fIn(CLEAT_RISE+.25)}.`]);
   {const f=ampFit();if(f.heads<4)warns.push(['warn',`The amp head wall fits ${f.heads} head${f.heads===1?'':'s'} under a ${fFt(f.soffit)} underside${f.cabs?' with the cabinets in the bay':''}. Four is the fewest worth building: ${f.cabs?'take the cabinets out of this bay':'raise the underside'}.`]);}
-  if(ISO_D>AMP_D)warns.push(['bad',`Isolation cabinets for a ${fIn(CAB_D)} deep 4x12 need ${fIn(ISO_D)} of depth. The amp wall overhang is ${fIn(AMP_D)} and cannot move, so they stand ${fIn(ISO_D-AMP_D)} proud of it. Open the Amp head wall sheet for the three ways to resolve it.`]);
+  if(ISO_D>OH_D)warns.push(['bad',`Isolation cabinets for a ${fIn(CAB_D)} deep 4x12 need ${fIn(ISO_D)} of depth. The amp wall overhang is ${fIn(OH_D)} and cannot move, so they stand ${fIn(ISO_D-OH_D)} proud of it. Open the Amp head wall sheet for the three ways to resolve it.`]);
   {const dp=panels.find(p=>p.run.door);if(dp)warns.push(['warn',`Ipe on the booth door adds about ${lb(dp.weight)} to the door. The door slats are resawn to 1/2" thick; hang the door on 4 heavy-duty ball-bearing hinges.`]);}
   {const tight=panels.filter(p=>p.type!=='ipe'&&((p.run.panels[0]===p&&p.s0-p.run.refA<DEPTH[p.type])||(p.run.panels.at(-1)===p&&p.run.refB-p.s1<DEPTH[p.type])));
     if(tight.length)warns.push(['warn',`${tight.map(p=>p.id).join(', ')}: ${tight[0].type==='diff'?'diffusers stick out '+fIn(DEPTH.diff):'absorbers stick out '+fIn(DEPTH.abs)} and sit at a corner or edge. Check they clear the neighboring wall or door trim.`]);}
@@ -841,7 +848,19 @@ function buildRoom(){
     box(36,80,.4,M.door,28,40,.2,N);
     [[10-CASING/2,41.25,CASING,82.5],[46+CASING/2,41.25,CASING,82.5],[28,80+CASING/2,36+2*CASING,CASING]].forEach(([x,y,w,h])=>box(w,h,.75,M.casing,x,y,.375,N));
     if(key)label('Room door',V(28,90,2),N,{k:.85,bg:'#5c7c99'});
-    tag(box(88,C,20,M.obst,129,C/2,10,og),['N','P']);if(key)tag(label('Amp wall / screen',V(129,Math.max(20,(C-state.ampGap-state.ampH)/2),24),og,{k:.85,bg:'#57534e'}),['N','P']);
+    tag(box(OH_W,C-OH_UNDER,OH_D,M.obst,OH_X+OH_W/2,(OH_UNDER+C)/2,OH_D/2,og),['N','P']);
+    if(key)tag(label('Overhang',V(OH_X+OH_W/2,(OH_UNDER+C)/2,OH_D+4),og,{k:.85,bg:'#57534e'}),['N','P']);
+    /* the amp head wall, in the open bay under the overhang */
+    {const F=ampFit(),x0=OH_X+AMP_CASE,inW=F.inW;
+     tag(box(OH_W,SHELF_T,OH_D,M.ply,OH_X+OH_W/2,OH_UNDER-SHELF_T/2,OH_D/2,og),['N','P']);
+     for(let t=0;t<F.tiers;t++){const sy=F.shelfBot+t*F.pitch;
+       tag(box(inW,SHELF_T,OH_D-2,M.ply,x0+inW/2,sy+SHELF_T/2,(OH_D-2)/2,og),['N','P']);
+       const hg=(inW-F.perTier*HEAD_W)/(F.perTier+1);
+       for(let i=0;i<F.perTier;i++){const hx=x0+hg+i*(HEAD_W+hg);
+         tag(box(HEAD_W,HEAD_H,HEAD_D,M.amphead,hx+HEAD_W/2,sy+SHELF_T+HEAD_H/2,HEAD_D/2+2,og),['N','P']);}}
+     if(F.cabs){const gp=(inW-2*ISO_W)/3;for(let i=0;i<2;i++){const cx=x0+gp+i*(ISO_W+gp);
+       tag(box(ISO_W,ISO_H,Math.min(ISO_D,OH_D),M.isocab,cx+ISO_W/2,ISO_H/2,Math.min(ISO_D,OH_D)/2,og),['N','P']);}}
+     if(key)tag(label(`${F.heads} amp heads`,V(OH_X+OH_W/2,F.shelfBot+F.tiers*F.pitch+6,OH_D+2),og,{k:.8,bg:'#57534e'}),['N','P']);}
     {const bm=state.framing?M.boothGhost:M.booth,Hc=C,Hb=state.booth,fr=framing;
       const solid=(x0,x1,y0,y1,h,views)=>{const b=box(x1-x0,h,y1-y0,bm,(x0+x1)/2,h/2,(y0+y1)/2,og);b.castShadow=!state.framing;b.receiveShadow=true;tag(b,views);return b;};
       /* outer leaf */
@@ -1102,7 +1121,7 @@ function applyVisibility(){const v=state.view;roomG.visible=v!=='detail'&&v!=='s
 /* ---------- camera views + touch ---------- */
 const VIEW_GROUPS=[
   ['Room',[['iso','3D'],['plan','Plan']]],
-  ['Room walls',[['N','North'],['E','East'],['A','Angled'],['S','South'],['W','West'],['P','Amp wall']]],
+  ['Room walls',[['N','North'],['E','East'],['A','Angled'],['S','South'],['W','West'],['P','Overhang']]],
   ['Control room',BOOTHW.map(w=>[w.id,w.short])],
   ['Details',[['detail','Panel'],['section','Rail section']]],
 ];
@@ -1147,7 +1166,7 @@ function zoomBy(f){const off=camera.position.clone().sub(controls.target);const 
 let sheetOpen=true;
 function wallObstacles(v,Ht){
   switch(v){
-    case 'N':return [{s0:10,s1:46,y0:0,y1:80,t:'Room door',f:'#3a332c'},{s0:85,s1:173,y0:0,y1:Ht,t:'Amp wall box',f:'#8e8a85',o:.25}];
+    case 'N':return [{s0:10,s1:46,y0:0,y1:80,t:'Room door',f:'#3a332c'},{s0:OH_X,s1:OH_X+OH_W,y0:OH_UNDER,y1:Ht,t:'Overhang',f:'#8e8a85',o:.25},{s0:OH_X,s1:OH_X+OH_W,y0:0,y1:OH_UNDER,t:'Amp head wall',f:'#6b645c',o:.18}];
     case 'S':return [{s0:204-BX,s1:204,y0:0,y1:state.ceil,t:'Booth outer wall',f:'#7b8794',o:.3}];
     case 'W':return [{s0:0,s1:194-BY,y0:0,y1:state.ceil,t:'Booth outer wall',f:'#7b8794',o:.3}];
     case 'BN':return [{s0:BAR_S0,s1:BAR_S1,y0:0,y1:BAR_H,t:'Bar',f:'#8e8a85',o:.45},{s0:WIN_S_OUT-WIN_W/2,s1:WIN_S_OUT+WIN_W/2,y0:WIN_SILL,y1:WIN_SILL+WIN_H,t:'Long window (outer pane)',f:'#6f8aa3',o:.6}];
@@ -1878,31 +1897,31 @@ function ampDepthPlan(){
   const X=x=>ml+x, Y=y=>mt+y;
   const inW=W-2*AMP_CASE, gap=(inW-2*ISO_W)/3;
   let o='';
-  o+=`<rect x="${X(0)}" y="${Y(0)}" width="${W}" height="${AMP_D}" fill="#fbfaf7" stroke="${IKL}" stroke-width="${(sw*1.4).toFixed(3)}"/>`;
-  o+=`<text x="${X(W/2).toFixed(2)}" y="${(Y(AMP_D)-1.6).toFixed(2)}" text-anchor="middle" font-size="${(fs*.78).toFixed(2)}" font-weight="700" fill="${IKM}">AMP WALL BOX, ${fIn(AMP_D)} DEEP</text>`;
+  o+=`<rect x="${X(0)}" y="${Y(0)}" width="${W}" height="${OH_D}" fill="#fbfaf7" stroke="${IKL}" stroke-width="${(sw*1.4).toFixed(3)}"/>`;
+  o+=`<text x="${X(W/2).toFixed(2)}" y="${(Y(OH_D)-1.6).toFixed(2)}" text-anchor="middle" font-size="${(fs*.78).toFixed(2)}" font-weight="700" fill="${IKM}">AMP WALL BOX, ${fIn(OH_D)} DEEP</text>`;
   for(let i=0;i<2;i++){const x=AMP_CASE+gap+i*(ISO_W+gap);
     o+=`<rect x="${X(x).toFixed(2)}" y="${Y(0).toFixed(2)}" width="${ISO_W.toFixed(2)}" height="${ISO_D.toFixed(2)}" fill="#fdeee9" stroke="${IKA}" stroke-width="${(sw*1.5).toFixed(3)}" stroke-dasharray="${(sw*6).toFixed(2)} ${(sw*4).toFixed(2)}"/>`;
     o+=`<rect x="${X(x+ISO_WALL+ISO_SIDE).toFixed(2)}" y="${Y(ISO_WALL+ISO_BACK).toFixed(2)}" width="${CAB_W.toFixed(2)}" height="${CAB_D.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${sw}"/>`;}
   /* the overhang */
-  o+=`<rect x="${X(0)}" y="${Y(AMP_D)}" width="${W}" height="${(ISO_D-AMP_D).toFixed(2)}" fill="${IKA}" fill-opacity=".12"/>`;
-  o+=dimV(Y(AMP_D),Y(ISO_D),X(W)+2.2,fIn(ISO_D-AMP_D)+' over',sw,fs,IKA);
+  o+=`<rect x="${X(0)}" y="${Y(OH_D)}" width="${W}" height="${(ISO_D-OH_D).toFixed(2)}" fill="${IKA}" fill-opacity=".12"/>`;
+  o+=dimV(Y(OH_D),Y(ISO_D),X(W)+2.2,fIn(ISO_D-OH_D)+' over',sw,fs,IKA);
   o+=dimV(Y(0),Y(ISO_D),ml-1.5,fIn(ISO_D),sw,fs);
   return ikWrap(vbW,vbH,o);
 }
 function ampWallDetail(){
-  const over=ISO_D-AMP_D, fits=over<=0, F=ampFit();
+  const over=ISO_D-OH_D, fits=over<=0, F=ampFit();
   const inW=F.inW;
   const head=kv([
-    ['Overhang, width x depth',`${fIn(OH_W)} x ${fIn(AMP_D)}`,'box'],['Measured on site','existing, cannot move'],
+    ['Overhang, width x depth',`${fIn(OH_W)} x ${fIn(OH_D)}`,'box'],['Measured on site','existing, cannot move'],
     ['Room ceiling',fFt(state.ceil)],
     ['Overhang underside',fFt(F.soffit),'box'],['Heads that fit',`${F.heads} on ${F.tiers} shelves`,'shelf'],
     ['Head envelope',`${fIn(HEAD_W)} x ${fIn(HEAD_H)} x ${fIn(HEAD_D)} deep`,'shelf'],
     ['Cabinet',`${fIn(CAB_W)} x ${fIn(CAB_H)} x ${fIn(CAB_D)} deep`,'iso'],
     ['Iso enclosure, each',`${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep`,'iso'],
   ]);
-  const shelving=`<p class="tnote">Heads are the easy half. At ${fIn(HEAD_D)} deep they sit in a ${fIn(AMP_D)} box with ${fIn(AMP_D-HEAD_D)} to spare for cable and air.</p>`
+  const shelving=`<p class="tnote">Heads are the easy half. At ${fIn(HEAD_D)} deep they sit in a ${fIn(OH_D)} box with ${fIn(OH_D-HEAD_D)} to spare for cable and air.</p>`
     +matTable([
-      ['Shelves',`${F.tiers} at ${fIn(inW)} x ${fIn(AMP_D-2)} deep`],
+      ['Shelves',`${F.tiers} at ${fIn(inW)} x ${fIn(OH_D-2)} deep`],
       ['Shelf stock','3/4" ply, doubled at the front edge to 1 1/2"'],
       ['Tier pitch',fIn(F.pitch)],
       ['Heads per shelf',`${F.perTier} at ${fIn(HEAD_W)} wide, ${fIn((F.inW-F.perTier*HEAD_W)/(F.perTier+1))} of air each side`],
@@ -1939,9 +1958,9 @@ function ampWallDetail(){
     ${head}
     <p class="tnote" style="margin-top:9px">Tap any measurement to light it up on the drawing.</p>
     ${F.cabs&&F.tiers===0?`<p class="tnote" style="color:var(--bad)"><b>Nothing fits with the cabinets in this bay.</b> An enclosure is ${fIn(ISO_H)} tall and the underside is ${fFt(F.soffit)}. After the clearance a cabinet and a shelf each need, that leaves ${fIn(Math.max(0,F.shelfTop-F.shelfBot))} of usable zone, and one shelf with a head on it needs ${fIn(AMP_TIER_PITCH)}. Untick the cabinets and the same bay gives ${fIn(F.soffit-8)} of shelf space, which is ${Math.floor((F.soffit-8)/AMP_TIER_PITCH)*F.perTier} heads.</p>`:''}
-    ${fits?'':`<p class="tnote" style="color:var(--bad)"><b>The cabinets do not fit this overhang.</b> A ${fIn(CAB_D)} deep 4x12 needs ${fIn(ISO_D)} of enclosure once you allow absorption behind it and room for a mic in front. The overhang is ${fIn(AMP_D)} deep and ${fFt(F.soffit)} to its underside, so a cabinet is both ${fIn(over)} too deep and, at ${fIn(ISO_H)} tall, leaves no room for a shelf above it.</p>
+    ${fits?'':`<p class="tnote" style="color:var(--bad)"><b>The cabinets do not fit this overhang.</b> A ${fIn(CAB_D)} deep 4x12 needs ${fIn(ISO_D)} of enclosure once you allow absorption behind it and room for a mic in front. The overhang is ${fIn(OH_D)} deep and ${fFt(F.soffit)} to its underside, so a cabinet is both ${fIn(over)} too deep and, at ${fIn(ISO_H)} tall, leaves no room for a shelf above it.</p>
     <div class="ik">${ampDepthPlan()}</div>
-    ${dd('Three Ways to Resolve It','pick one',`<p class="tnote">The ${fIn(AMP_D)} overhang is existing structure and cannot move, so deepening the box is out. That leaves three.</p><ol class="stepn">
+    ${dd('Three Ways to Resolve It','pick one',`<p class="tnote">The ${fIn(OH_D)} overhang is existing structure and cannot move, so deepening the box is out. That leaves three.</p><ol class="stepn">
       <li><b>Put the cabinets in the control room.</b> You already built an isolated room within a room, ${fIn(IN_E-IN_W)} x ${fIn(IN_S-IN_N)} inside. Two 4x12s against its west wall take ${fIn(2*CAB_W)} x ${fIn(CAB_D)} and leave ${fIn((IN_S-IN_N)-CAB_D)} of floor. Run speaker lines from the heads on the wall and mic them in there. Nothing to build, and better isolation than any box this size would give.</li>
       <li><b>Let the cabinets stand proud of the overhang</b> as a ${fIn(ISO_D)} deep plinth under the shelving, projecting ${fIn(over)} past the face. The overhang itself does not move; the plinth sits in front of it. You get a step in the wall at ${fIn(ISO_H)}, and ${fIn(over)} less floor along ${fIn(OH_W)}.</li>
       <li><b>Skip isolation.</b> Store the cabs in the box and mic them in the room. Fits as-is, but the room has to be quiet when you track.</li>
@@ -1949,7 +1968,7 @@ function ampWallDetail(){
     ${dd('Shelving','fits as drawn',shelving)}
     ${dd('Amp Switcher',`${F.heads} heads`,switcher)}
     ${dd('Iso Cabinet Build','per cabinet',isoBuild)}`;
-  const txt=`AMP HEAD WALL\nBox ${fIn(AMPW.L)} x ${fIn(AMP_D)} x ${fFt(state.ceil)}\n${F.heads} heads on ${F.tiers} shelves\nIso enclosure needed: ${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep, which is ${fIn(over)} deeper than the box.`;
+  const txt=`AMP HEAD WALL\nBox ${fIn(AMPW.L)} x ${fIn(OH_D)} x ${fFt(state.ceil)}\n${F.heads} heads on ${F.tiers} shelves\nIso enclosure needed: ${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep, which is ${fIn(over)} deeper than the box.`;
   return {key:'ampwall',title:'Amp Head Wall',sub:`${F.heads} heads over 2 cabinets ${String.fromCharCode(183)} under a ${fFt(F.soffit)} overhang`,html,txt};
 }
 /* ---------- the one detail surface: side rail on desktop, bottom sheet on mobile ---------- */
