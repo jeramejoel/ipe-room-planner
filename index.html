@@ -151,7 +151,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 .chain .cn b{font-size:12.5px;font-weight:700}
 .chain .cn span{font-size:11.5px;color:var(--mut);line-height:1.35}
 .chain .ar{padding:5px 0 5px 12px;font-size:11px;color:var(--acc);font-weight:700;line-height:1.35}
-#compBtn{border:0;background:#f1eee9;color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;pointer-events:auto;white-space:nowrap}
+#compBtn,#boothBtn{border:0;background:#f1eee9;color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;pointer-events:auto;white-space:nowrap}
 .diag{overflow-x:auto;margin:0 -4px 8px;border:1px solid var(--line);border-radius:10px;background:#fbfaf7}
 .diag svg{display:block}
 .cut{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
@@ -191,7 +191,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 <body>
 <canvas id="c"></canvas>
 <div id="top">
-  <div id="titleRow"><h1>Ipe Slat Wall</h1><button id="guideBtn">Build guide</button><button id="compBtn">Components</button><button id="warnPill"></button></div>
+  <div id="titleRow"><h1>Ipe Slat Wall</h1><button id="guideBtn">Build guide</button><button id="compBtn">Components</button><button id="boothBtn">Control room</button><button id="warnPill"></button></div>
   <div id="views"></div>
   <div id="legend"></div>
 </div>
@@ -324,9 +324,8 @@ const CLEAT_AREA=RAIL_T*RAIL_H/2;         /* each half, in\u00b2 */
 const CLEAT_RISE=RAIL_T;                  /* lift needed to engage or free the hook */
 const PRESETS={84:{bottom:1},90:{bottom:1},72:{bottom:1},96:{bottom:1},48:{bottom:1}};
 const MIN_RIP=1;            /* narrower than this and a filler is not worth cutting */
-const MAX_GAP_CREEP=0.35;   /* most a board gap may grow to swallow a run's leftover sliver */
 const isTouch=matchMedia('(pointer: coarse)').matches;
-const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'90',H:90,bottom:1,cleat:78,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
+const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
 
 /* Plan coords: origin NW interior floor corner, +X east, +Y south. Three: x=X, z=Y, y=up. Walls run clockwise. */
 const WALLS=[
@@ -620,30 +619,32 @@ function layout(){
        no neighbour to screw into, so unlike an end filler it keeps its own rails. */
     if(state.seamless&&!r.door&&!parts.length&&r.avail>=MIN_RIP)
       parts=[{k:1,w:r.avail,sw:r.avail,rip:r.avail,solo:true}];
-    if(state.seamless&&!r.door&&parts.length){
-      const base=parts.reduce((a,q)=>a+q.w,0)+(parts.length-1)*g;
-      const rem=r.avail-base;
-      if(rem>=g+MIN_RIP){
-        const wf=(rem-2*g)/2;
-        if(wf>=MIN_RIP){parts.unshift({k:1,w:wf,sw:wf,rip:wf});parts.push({k:1,w:wf,sw:wf,rip:wf});}
-        else{const w1=rem-g;if(w1>=MIN_RIP)parts.push({k:1,w:w1,sw:w1,rip:w1});}
+    /* Every gap is exactly state.gap, so the wall reads as one field of boards with no
+       wider joint anywhere. A run almost never lands on whole boards, so the slack goes
+       into the two END boards, ripped narrower, with everything between them full width.
+       If the slack is too thin to rip, give one full board back and the two ends come out
+       usable: dropping a board frees SLAT_W + gap, half of which lands on each end. */
+    if(state.seamless&&!r.door&&parts.length&&!parts[0].solo){
+      const width=()=>parts.reduce((a,q)=>a+q.w,0)+(parts.length-1)*g;
+      const boards=()=>parts.reduce((a,q)=>a+q.k,0);
+      let wf=(r.avail-width()-2*g)/2;
+      if(wf<MIN_RIP&&boards()>1){
+        const big=parts.reduce((m,q)=>q.k>m.k?q:m,parts[0]);
+        big.k--;big.w=big.k*SLAT_W+(big.k-1)*g;
+        if(big.k<1)parts.splice(parts.indexOf(big),1);
+        wf=parts.length?(r.avail-width()-2*g)/2:-1;
+      }
+      if(!parts.length)parts=[{k:1,w:r.avail,sw:r.avail,rip:r.avail,solo:true}];
+      else if(wf>=MIN_RIP){
+        const base=width();
+        const w1=Math.round(wf*16)/16;          /* one end on the tape, to 1/16" */
+        const w2=r.avail-base-2*g-w1;           /* the other carries the remainder, cut to fit */
+        parts.unshift({k:1,w:w1,sw:w1,rip:w1});
+        parts.push({k:1,w:w2,sw:w2,rip:w2});
       }
     }
-    /* Close the run exactly. After the fillers there is usually a sliver left over,
-       too small to rip. Spread it across the board gaps instead of leaving it bare at a
-       corner: a few hundredths on each gap is invisible, a bare strip is not. Solve
-       A + B*eg = avail, where A is all the board width and B counts every gap. */
-    let eg=g;
-    {const A=parts.reduce((a,q)=>a+(q.rip?q.rip:q.k*SLAT_W),0);
-     const B=parts.reduce((a,q)=>a+(q.rip?0:q.k-1),0)+(parts.length-1);
-     if(B>0){const want=(r.avail-A)/B;if(want>g&&want-g<=MAX_GAP_CREEP)eg=want;}}
-    /* Round every panel to 1/16" so rails and components still group into repeatable
-       cuts. Whatever is left after that is a few hundredths and goes to the end reveals. */
-    parts.forEach(q=>{const w=q.rip?q.rip:q.k*SLAT_W+(q.k-1)*eg;q.w=Math.round(w*16)/16;if(q.rip)q.rip=q.w,q.sw=q.w;});
-    /* Rounding can leave the run a sixteenth long or short. Solve the gap between panels
-       once more against the rounded widths so the run still lands exactly on its bounds. */
-    {const nG=parts.length-1,wsum=parts.reduce((a,q)=>a+q.w,0);
-     if(nG>0){const g2=(r.avail-wsum)/nG;if(g2>=g-MAX_GAP_CREEP&&g2<=g+MAX_GAP_CREEP)eg=g2;}}
+    const eg=g;
+    parts.forEach(q=>{if(!q.rip)q.w=q.k*SLAT_W+(q.k-1)*eg;});
     r.g=eg;r.parts=parts;
     const ws=parts.map(q=>q.w);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*eg;r.over=r.used-r.avail;
     let s=r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];const gg=eg;
@@ -698,7 +699,10 @@ function layout(){
     n:{3:panels.filter(p=>p.k===3).length,4:panels.filter(p=>p.k===4).length,5:panels.filter(p=>p.k===5).length},
     ipeTotal:panels.reduce((a,x)=>a+(x.type==='ipe'?x.slatLb:0),0),total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
     railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
-    usedMain:main.slats*main.H/(main.boards*STOCK),used:(main.slats*main.H+amp.slats*amp.H+booth.slats*booth.H)/(boards*STOCK),
+    /* count the ripped fillers as the board width they actually consume, or the yield
+       reads as waste when the boards were bought for them */
+    usedMain:(main.slats+main.ripEq)*main.H/(main.boards*STOCK),
+    used:((main.slats+main.ripEq)*main.H+(amp.slats+amp.ripEq)*amp.H+(booth.slats+booth.ripEq)*booth.H)/(boards*STOCK),
     bandArea:RUNS.reduce((a,r)=>a+r.used*r.sp.H,0),wallArea:PERIM*state.ceil,slatArea:panels.reduce((a,p)=>a+p.k*SLAT_W*p.H,0),
     ledgeOk:main.offEach>=6,ledgeUsed:bandLen,ledgeAvail:main.offEach>=6?main.boards*main.offEach:0};
   {const D=panels.filter(p=>p.type==='diff'),A=panels.filter(p=>p.type==='abs');const rows=[];
@@ -1448,7 +1452,8 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&$('tray').classList.contains
   gr.addEventListener('pointerup',end);gr.addEventListener('pointercancel',end);})();
 $('trayCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('tray').dataset.txt||'');$('trayCopy').textContent='Copied';}catch(e){$('trayCopy').textContent='Blocked';}setTimeout(()=>$('trayCopy').textContent='Copy',1600);};
 $('copyCuts').onclick=async()=>{try{await navigator.clipboard.writeText(buildCutList().txt+'\n\nHOW TO CUT\n'+CUT_STEPS.map((x,i)=>(i+1)+'. '+x.replace(/<[^>]+>/g,'')).join('\n'));$('copyMsg').textContent='Copied.';}catch(e){$('copyMsg').textContent='Copy was blocked here; select the text instead.';}};
-$('compBtn').onclick=()=>{compView=!compView;if(compView)state.sel=null;updateTray();};
+$('compBtn').onclick=()=>{compView=!compView;if(compView){boothView=false;state.sel=null;}updateTray();};
+$('boothBtn').onclick=()=>{boothView=!boothView;if(boothView){compView=false;state.sel=null;}updateTray();};
 $('guideBtn').onclick=openGuide;$('guideClose').onclick=()=>$('guide').classList.remove('open');
 $('guideCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('guide').dataset.txt||'');$('guideCopy').textContent='Copied';}catch(e){$('guideCopy').textContent='Copy blocked';}setTimeout(()=>$('guideCopy').textContent='Copy all',1600);};
 $('strSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.strings=b.dataset.v==='on';rebuild();});
@@ -1665,6 +1670,103 @@ function componentsDetail(){
 function wrapTables(el){el.querySelectorAll('table').forEach(t=>{const pr=t.parentElement;
   if(pr&&pr.classList.contains('tscroll'))return;
   const d=document.createElement('div');d.className='tscroll';t.parentNode.insertBefore(d,t);d.appendChild(t);});}
+/* ---------- control room: the booth as its own build sheet ---------- */
+/* Plan through the booth at waist height, local coords: X = plan x, Y = plan y less BY. */
+function boothPlan(){
+  const W=BX, D=194-BY, ml=13, mr=5, mt=BAR_D+7, mb=11;   /* top clears the bar, left clears the depth dimension */
+  const vbW=ml+W+mr, vbH=mt+D+mb, sw=vbW/330, fs=vbW/34;
+  const X=x=>ml+x, Y=y=>mt+(y-BY);
+  const inL=IN_E-IN_W, inD=IN_S-IN_N;
+  let o='';
+  /* existing room walls on the west and south */
+  o+=`<rect x="${(X(0)-2.4).toFixed(2)}" y="${mt.toFixed(2)}" width="2.4" height="${D.toFixed(2)}" fill="#f2efe9" stroke="${IKL}" stroke-width="${sw}"/>`;
+  o+=`<rect x="${(X(0)-2.4).toFixed(2)}" y="${Y(194).toFixed(2)}" width="${(W+2.4).toFixed(2)}" height="2.4" fill="#f2efe9" stroke="${IKL}" stroke-width="${sw}"/>`;
+  /* inside clear */
+  o+=`<rect x="${X(IN_W).toFixed(2)}" y="${Y(IN_N).toFixed(2)}" width="${inL.toFixed(2)}" height="${inD.toFixed(2)}" fill="#fbfaf7" stroke="none"/>`;
+  /* inner leaf, all four sides */
+  o+=`<path d="M${X(IN_W-ST-DWL).toFixed(2)} ${Y(IN_N-ST-DWL).toFixed(2)} h${(inL+2*(ST+DWL)).toFixed(2)} v${(inD+2*(ST+DWL)).toFixed(2)} h${(-(inL+2*(ST+DWL))).toFixed(2)} Z M${X(IN_W).toFixed(2)} ${Y(IN_N).toFixed(2)} v${inD.toFixed(2)} h${inL.toFixed(2)} v${(-inD).toFixed(2)} Z" fill="#cfc8bd" stroke="${IKL}" stroke-width="${sw}" fill-rule="evenodd"/>`;
+  /* outer leaf on the north and east only */
+  o+=`<rect x="${X(0).toFixed(2)}" y="${Y(BY).toFixed(2)}" width="${W.toFixed(2)}" height="${OUT_T.toFixed(2)}" fill="#8a8279" stroke="${IKL}" stroke-width="${sw}"/>`;
+  o+=`<rect x="${X(BX-OUT_T).toFixed(2)}" y="${Y(BY).toFixed(2)}" width="${OUT_T.toFixed(2)}" height="${D.toFixed(2)}" fill="#8a8279" stroke="${IKL}" stroke-width="${sw}"/>`;
+  /* the 1" air gap, drawn as the accent so the double wall is obvious */
+  o+=`<rect x="${X(0).toFixed(2)}" y="${Y(BY+OUT_T).toFixed(2)}" width="${(W-OUT_T).toFixed(2)}" height="${AG.toFixed(2)}" fill="${IKA}"/>`;
+  o+=`<rect x="${X(BX-OUT_T-AG).toFixed(2)}" y="${Y(BY+OUT_T).toFixed(2)}" width="${AG.toFixed(2)}" height="${(D-OUT_T).toFixed(2)}" fill="${IKA}"/>`;
+  o+=`<rect x="${X(IN_W-ST-DWL-AG).toFixed(2)}" y="${Y(IN_S+ST+DWL).toFixed(2)}" width="${(inL+2*(ST+DWL)+AG).toFixed(2)}" height="${AG.toFixed(2)}" fill="${IKA}"/>`;
+  o+=`<rect x="${X(IN_W-ST-DWL-AG).toFixed(2)}" y="${Y(IN_N-ST-DWL).toFixed(2)}" width="${AG.toFixed(2)}" height="${(inD+2*(ST+DWL)+AG).toFixed(2)}" fill="${IKA}"/>`;
+  /* the long window through the north side */
+  o+=`<rect x="${X(WIN_X-WIN_W/2).toFixed(2)}" y="${(Y(BY)-0.4).toFixed(2)}" width="${WIN_W.toFixed(2)}" height="${(IN_N-BY+0.8).toFixed(2)}" fill="#cfe4f2" stroke="${IKL}" stroke-width="${sw}"/>`;
+  /* the double door through the east side */
+  o+=`<rect x="${(X(IN_E)-0.4).toFixed(2)}" y="${Y(DOOR_Y-DOOR_W/2).toFixed(2)}" width="${(BX-IN_E+0.8).toFixed(2)}" height="${DOOR_W.toFixed(2)}" fill="#efe3d2" stroke="${IKL}" stroke-width="${sw}"/>`;
+  /* the bar on the room side of the north face */
+  o+=`<rect x="${X(BAR_X0).toFixed(2)}" y="${(Y(BY)-BAR_D).toFixed(2)}" width="${BAR_L.toFixed(2)}" height="${BAR_D.toFixed(2)}" fill="${IKW}" stroke="${IKL}" stroke-width="${sw}"/>`;
+  o+=`<text x="${X(BAR_X0+BAR_L/2).toFixed(2)}" y="${(Y(BY)-BAR_D/2+fs*.35).toFixed(2)}" text-anchor="middle" font-size="${fs.toFixed(2)}" font-weight="700" fill="${IKM}">BAR</text>`;
+  o+=`<text x="${X((IN_W+IN_E)/2).toFixed(2)}" y="${Y((IN_N+IN_S)/2+1).toFixed(2)}" text-anchor="middle" font-size="${(fs*1.15).toFixed(2)}" font-weight="700" fill="${IKM}">INSIDE</text>`;
+  o+=`<text x="${X((IN_W+IN_E)/2).toFixed(2)}" y="${Y((IN_N+IN_S)/2+7).toFixed(2)}" text-anchor="middle" font-size="${(fs*.92).toFixed(2)}" fill="${IKM}">${fIn(inL)} x ${fIn(inD)}</text>`;
+  o+=dimH(X(0),X(BX),Y(194)+5.5,fIn(BX),sw,fs);
+  o+=dimV(Y(BY),Y(194),X(0)-4.2,fIn(194-BY),sw,fs);
+  return ikWrap(vbW,vbH,o);
+}
+function boothDetail(){
+  const fr=framing,inL=IN_E-IN_W,inD=IN_S-IN_N,inH=state.booth-DWL;
+  const sqft=(inL*inD/144).toFixed(1);
+  const head=kv([
+    ['Outside footprint',`${fIn(BX)} x ${fIn(194-BY)}`,'out'],
+    ['Inside clear',`${fIn(inL)} x ${fIn(inD)}`,'in'],
+    ['Inside height',`${fFt(inH)}`,'in'],
+    ['Floor area',`${sqft} sq ft`],
+    ['Outer walls',`to the ceiling, ${fFt(state.ceil)}`],
+    ['Inner box',`${fFt(state.booth)} tall, lid on top`],
+    ['Air gap, all round',fIn(AG),'gap'],
+  ]);
+  const layers=`<ol class="lgd">
+    <li><i>1</i><span><b>Outer leaf</b>, north and east only: 2x4 at 16" on center to the room ceiling, two layers of 5/8" drywall on the room side. ${fIn(OUT_T)} thick.</span></li>
+    <li><i class="k">${fIn(AG)}</i><span><b>Air gap.</b> The two leaves never touch, and neither touches the room's west or south walls. This is the whole point: ipe screwed to one leaf cannot ring the other.</span></li>
+    <li><i>2</i><span><b>Inner box</b>: its own four walls and a lid, 2x4 at 16" on center, ${fFt(state.booth)} tall, two layers of 5/8" drywall on the booth side.</span></li>
+    <li><i>3</i><span><b>Lid</b>: 2x6 joists at 16" on center with two layers of 5/8" underneath, bearing on the inner north and south walls.</span></li>
+  </ol>`;
+  const wallRows=ids=>ids.map(id=>{const w=fr.walls[id];if(!w)return '';
+    return `<p class="tnote" style="margin:9px 0 4px"><b>${WALL[id].name.replace('Booth ','')}</b>: ${fIn(w.len)} long x ${fFt(w.H)} tall</p>`
+      +matTable(w.cuts.map(c=>[c.label.split(': ')[1]||c.label,`${c.n} x ${fIn(c.len)} ${c.lum}`]));}).join('');
+  const dwl=Math.ceil((2*(BX*state.ceil+(194-BY)*state.ceil)+2*(2*(inL+inD)*state.booth)+inL*inD)/144/32*1.12);
+  const mats=matTable([
+    ['5/8" drywall, 4 x 8 sheets',`about ${dwl}`],
+    ['2x4 studs, 8 ft',`${fr.cuts.filter(c=>c.lum==='2x4').reduce((a,c)=>a+c.n,0)} pieces`],
+    ['2x6 lid joists, 8 ft',`${fr.joists.length}`],
+    ['2x10 window header, inner north wall','2 pieces'],
+    ['Solid-core doors, 32" x 80"','2, one per leaf'],
+    [`Laminated glass, ${fIn(LITE_W)} x ${fIn(LITE_T-LITE_B)} door lites`,'2'],
+    [`Window panes, ${fIn(WIN_W)} x ${fIn(WIN_H)}`,'2: 1/4" outer, 3/8" inner tilted 5 degrees'],
+    ['Mineral wool, both leaves','fill every bay'],
+    ['Acoustic sealant + backer rod','every perimeter joint'],
+  ]);
+  const steps=[
+    `Set out the outer leaf on the north and east: 2x4 plates and studs at 16" on center, floor to the room ceiling at ${fFt(state.ceil)}. Frame the door and window openings as you go.`,
+    `Build the inner box inside it, ${fIn(AG)} clear of the outer leaf and ${fIn(AG)} clear of the room's west and south walls. Four walls, ${fFt(state.booth)} tall.`,
+    `Set the 2x6 lid joists at 16" on center across the inner north and south walls. The inner north wall carries them, which is why its window opening gets a 2x10 header.`,
+    'Electrical rough-in: LED supplies, dimmers, string-light circuit. Licensed electrician.',
+    'Mineral wool in every bay of both leaves. Do not pack it tight.',
+    'Two layers of 5/8" drywall: room side of the outer leaf, booth side of the inner. Stagger the seams between layers and seal every edge with acoustic sealant.',
+    `Hang both doors, each in its own leaf, hinged on the north jamb. Fill the gap between the two jambs with backer rod and sealant and never bridge it with wood.`,
+    `Set both window panes, the ${fIn(WIN_H)} opening at a ${fIn(WIN_SILL)} sill, inner pane tilted 5 degrees so sound does not ring between them.`,
+    `Build the bar against the outside of the north face: ${fIn(BAR_L)} x ${fIn(BAR_D)} deep x ${fIn(BAR_H)} tall, top from 5 edge-glued ipe boards.`,
+    'Paint everything matte black, then hang the ipe on the outside faces only. No ipe inside the booth.',
+  ];
+  const html=`<div class="ik">${boothPlan()}</div>
+    <ol class="lgd">
+      <li><i>1</i><span><b>Outer leaf</b>, north and east. Grey.</span></li>
+      <li><i>2</i><span><b>Inner box</b>, all four sides. Light grey.</span></li>
+      <li><i class="k">${fIn(AG)}</i><span>The <b>air gap</b>, in pink. It runs all the way round.</span></li>
+    </ol>
+    ${head}
+    <p class="tnote" style="margin-top:9px">Tap any measurement to light it up on the plan.</p>
+    ${dd('How the Two Leaves Stack','',layers,true)}
+    ${dd('Framing Cut List','outer, then inner',wallRows(['BN','BE'])+wallRows(['BIN','BIE','BIS','BIW']))}
+    ${dd('Materials','',mats)}
+    ${dd('Order of Work',`${steps.length} steps`,`<ol class="stepn">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>`)}`;
+  const txt=`CONTROL ROOM\nOutside ${fIn(BX)} x ${fIn(194-BY)}, inside clear ${fIn(inL)} x ${fIn(inD)} x ${fFt(inH)} (${sqft} sq ft)\n\nORDER OF WORK\n`
+    +steps.map((x,i)=>`${i+1}. ${x.replace(/<[^>]+>/g,'')}`).join('\n');
+  return {key:'booth',title:'Control Room',sub:`Room within a room ${String.fromCharCode(183)} ${sqft} sq ft inside`,html,txt};
+}
 /* ---------- the one detail surface: side rail on desktop, bottom sheet on mobile ---------- */
 const trayEl=()=>document.getElementById('tray');
 let trayKey='';
@@ -1705,13 +1807,14 @@ function trayShow(d){
 }
 function trayHide(){const t=trayEl();if(!t)return;t.classList.remove('open');t.setAttribute('aria-hidden','true');trayKey='';
   setTimeout(()=>{if(!t.classList.contains('open'))t.classList.remove('shown');},220);}
-function trayClose(){state.sel=null;compView=false;sheetOpen=false;trayHide();rebuild();}
-let compView=false;
+function trayClose(){state.sel=null;compView=false;boothView=false;sheetOpen=false;trayHide();rebuild();}
+let compView=false,boothView=false;
 function updateTray(){
   const btn=document.getElementById('sheetBtn');
   const elev=!!WALL[state.view];
-  if(btn)btn.style.display=(elev||state.sel||compView)?'flex':'none';
+  if(btn)btn.style.display=(elev||state.sel||compView||boothView)?'flex':'none';
   if(!panels.length){trayHide();return;}
+  if(boothView&&!state.sel){trayShow(boothDetail());return;}
   if(compView&&!state.sel){trayShow(componentsDetail());return;}
   if(state.sel){const p=panels.find(x=>x.id===state.sel);if(p){trayShow(panelDetail(p));return;}}
   if(elev&&sheetOpen){trayShow(wallDetail(state.view));return;}
