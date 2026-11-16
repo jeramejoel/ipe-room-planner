@@ -151,7 +151,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 .chain .cn b{font-size:12.5px;font-weight:700}
 .chain .cn span{font-size:11.5px;color:var(--mut);line-height:1.35}
 .chain .ar{padding:5px 0 5px 12px;font-size:11px;color:var(--acc);font-weight:700;line-height:1.35}
-#compBtn,#boothBtn{border:0;background:#f1eee9;color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;pointer-events:auto;white-space:nowrap}
+#compBtn,#boothBtn,#ampBtn{border:0;background:#f1eee9;color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;pointer-events:auto;white-space:nowrap}
 .diag{overflow-x:auto;margin:0 -4px 8px;border:1px solid var(--line);border-radius:10px;background:#fbfaf7}
 .diag svg{display:block}
 .cut{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
@@ -191,7 +191,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 <body>
 <canvas id="c"></canvas>
 <div id="top">
-  <div id="titleRow"><h1>Ipe Slat Wall</h1><button id="guideBtn">Build guide</button><button id="compBtn">Components</button><button id="boothBtn">Control room</button><button id="warnPill"></button></div>
+  <div id="titleRow"><h1>Ipe Slat Wall</h1><button id="guideBtn">Build guide</button><button id="compBtn">Components</button><button id="boothBtn">Control room</button><button id="ampBtn">Amp head wall</button><button id="warnPill"></button></div>
   <div id="views"></div>
   <div id="legend"></div>
 </div>
@@ -323,6 +323,15 @@ const CLEAT_CUT=(RAIL_H-RAIL_T)/2;        /* 1": where the rip meets the back fa
 const CLEAT_AREA=RAIL_T*RAIL_H/2;         /* each half, in\u00b2 */
 const CLEAT_RISE=RAIL_T;                  /* lift needed to engage or free the hook */
 const PRESETS={84:{bottom:1},90:{bottom:1},72:{bottom:1},96:{bottom:1},48:{bottom:1}};
+/* ---------- amp head wall: shelving over two isolation cabinets ----------
+   Head envelope is a full-size Marshall-format head; cab is a 1960A/B 4x12. The iso
+   clearances are what an enclosure needs to actually isolate: absorption behind, room
+   for a mic in front, and a decoupled double wall. */
+const HEAD_W=30, HEAD_H=11, HEAD_D=9;
+const CAB_W=29.9, CAB_H=29.9, CAB_D=14.4;
+const ISO_SIDE=3, ISO_TOP=3, ISO_BASE=2, ISO_BACK=4, ISO_FRONT=6, ISO_WALL=1.5;
+const ISO_W=CAB_W+2*ISO_SIDE+2*ISO_WALL, ISO_H=CAB_H+ISO_TOP+ISO_BASE+2*ISO_WALL, ISO_D=CAB_D+ISO_BACK+ISO_FRONT+2*ISO_WALL;
+const AMP_D=20, AMP_CASE=1.5, SHELF_T=1, SHELF_TIERS=4, HEADS_PER_TIER=2;
 const MIN_RIP=1;            /* narrower than this and a filler is not worth cutting */
 const isTouch=matchMedia('(pointer: coarse)').matches;
 const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
@@ -587,8 +596,10 @@ function boothFraming(){
 }
 /* LED strip positions along a run: every panel joint, plus both run ends when there is at least 3/4" to the next stop */
 function ledXs(r){if(state.led==='off'||r.door)return [];const g=state.gap,xs=[];
-  if(r.start-r.refA>=.75)xs.push(r.start-Math.min(g/2,(r.start-r.refA)/2));
+  /* one strip down the back of every board, and nothing else. An extra strip at the run
+     start used to land here too, which put a brighter line at one end of every run. */
   if(state.led==='back'){r.panels.forEach(p=>{const pg=p.g??g;if(p.type==='ipe')for(let k=0;k<p.k;k++)xs.push(p.s0+k*(p.sw+pg)+p.sw/2);});return xs;}
+  if(r.start-r.refA>=.75)xs.push(r.start-Math.min(g/2,(r.start-r.refA)/2));
   r.panels.forEach((p,i)=>{if(i<r.panels.length-1)xs.push(p.s1+g/2);});
   if(r.refB-r.end>=.75)xs.push(r.end+Math.min(g/2,(r.refB-r.end)/2));
   return xs;}
@@ -728,6 +739,7 @@ function layout(){
   else if(state.ceil-top<CLEAT_RISE+1)warns.push(['warn',`Only ${fIn(state.ceil-top)} between panel tops and the ceiling. Each panel has to lift ${fIn(CLEAT_RISE+.25)} to come off its cleat.`]);
   if(state.bottom<4)warns.push(['warn',`Panel bottoms are ${fIn(state.bottom)} off the floor. Leave room for baseboards and cleaning.`]);
   if(state.ampGap<CLEAT_RISE+.25)warns.push(['bad',`Amp wall panels sit ${fIn(state.ampGap)} below the ceiling, but a 2x4 French cleat needs ${fIn(CLEAT_RISE+.25)} of lift to engage. Raise the ceiling gap to at least ${fIn(CLEAT_RISE+.25)}.`]);
+  if(ISO_D>AMP_D)warns.push(['bad',`Isolation cabinets for a ${fIn(CAB_D)} deep 4x12 need ${fIn(ISO_D)} of depth. The amp wall overhang is ${fIn(AMP_D)} and cannot move, so they stand ${fIn(ISO_D-AMP_D)} proud of it. Open the Amp head wall sheet for the three ways to resolve it.`]);
   {const dp=panels.find(p=>p.run.door);if(dp)warns.push(['warn',`Ipe on the booth door adds about ${lb(dp.weight)} to the door. The door slats are resawn to 1/2" thick; hang the door on 4 heavy-duty ball-bearing hinges.`]);}
   {const tight=panels.filter(p=>p.type!=='ipe'&&((p.run.panels[0]===p&&p.s0-p.run.refA<DEPTH[p.type])||(p.run.panels.at(-1)===p&&p.run.refB-p.s1<DEPTH[p.type])));
     if(tight.length)warns.push(['warn',`${tight.map(p=>p.id).join(', ')}: ${tight[0].type==='diff'?'diffusers stick out '+fIn(DEPTH.diff):'absorbers stick out '+fIn(DEPTH.abs)} and sit at a corner or edge. Check they clear the neighboring wall or door trim.`]);}
@@ -866,8 +878,10 @@ function buildRoom(){
     RUNS.forEach(r=>{const g=WALL[r.wall].g,sp=r.sp;const xs=ledXs(r);
       const back=state.led==='back';
       if(back&&xs.length){/* strips face the wall 2" away; with a 120° beam each one lights about 7" of wall, so neighbors overlap into one even field */
-        xs.forEach(x=>{const a=box(.45,sp.H-1,.2,strip,x,sp.bot+sp.H/2,FLOAT-.15,g);a.raycast=()=>{};});
-        const x0=Math.min(...xs)-SLAT_W/2-1.5,x1=Math.max(...xs)+SLAT_W/2+1.5;
+        xs.forEach(x=>{const a=box(.45,sp.H-1,.2,strip,x,sp.bot+sp.H/2,FLOAT-.32,g);a.raycast=()=>{};});
+        /* carry the wash to the run's reference line so neighbouring runs meet instead of
+           each fading out into a dark seam */
+        const x0=Math.min(r.refA,Math.min(...xs)-SLAT_W/2),x1=Math.max(r.refB,Math.max(...xs)+SLAT_W/2);
         const wp=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0,sp.H+2),WASHM_EVEN);wp.position.set((x0+x1)/2,sp.bot+sp.H/2,.03);wp.raycast=()=>{};g.add(wp);return;}
       xs.forEach(x=>{const a=box(.45,sp.H-1,.2,strip,x,sp.bot+sp.H/2,.12,g);a.raycast=()=>{};
         const wp=new THREE.Mesh(new THREE.PlaneGeometry(5,sp.H+6),wash);wp.position.set(x,sp.bot+sp.H/2,.03);wp.raycast=()=>{};g.add(wp);});});
@@ -1000,7 +1014,7 @@ function requestRebuild(){if(rebuildQueued)return;rebuildQueued=true;requestAnim
 let LEDM=null,WASHM=null,WASHM_EVEN=null,PLIGHTS=[];
 /* soft-edged texture so the even wash fades out at the ends of each run */
 const edgeFade=(()=>{const c=document.createElement('canvas');c.width=256;c.height=8;const x=c.getContext('2d');const gr=x.createLinearGradient(0,0,256,0);
-  gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(.04,'#fff');gr.addColorStop(.96,'#fff');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,256,8);
+  gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(.012,'#fff');gr.addColorStop(.988,'#fff');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,256,8);
   const t=new THREE.CanvasTexture(c);t.userData.keep=true;return t;})();
 /* procedural Persian-style rug: an original pattern (border bands, field with lattice and a central medallion) */
 const RUG_CACHE={};
@@ -1453,7 +1467,8 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&$('tray').classList.contains
 $('trayCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('tray').dataset.txt||'');$('trayCopy').textContent='Copied';}catch(e){$('trayCopy').textContent='Blocked';}setTimeout(()=>$('trayCopy').textContent='Copy',1600);};
 $('copyCuts').onclick=async()=>{try{await navigator.clipboard.writeText(buildCutList().txt+'\n\nHOW TO CUT\n'+CUT_STEPS.map((x,i)=>(i+1)+'. '+x.replace(/<[^>]+>/g,'')).join('\n'));$('copyMsg').textContent='Copied.';}catch(e){$('copyMsg').textContent='Copy was blocked here; select the text instead.';}};
 $('compBtn').onclick=()=>{compView=!compView;if(compView){boothView=false;state.sel=null;}updateTray();};
-$('boothBtn').onclick=()=>{boothView=!boothView;if(boothView){compView=false;state.sel=null;}updateTray();};
+$('boothBtn').onclick=()=>{boothView=!boothView;if(boothView){compView=ampView=false;state.sel=null;}updateTray();};
+$('ampBtn').onclick=()=>{ampView=!ampView;if(ampView){compView=boothView=false;state.sel=null;}updateTray();};
 $('guideBtn').onclick=openGuide;$('guideClose').onclick=()=>$('guide').classList.remove('open');
 $('guideCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('guide').dataset.txt||'');$('guideCopy').textContent='Copied';}catch(e){$('guideCopy').textContent='Copy blocked';}setTimeout(()=>$('guideCopy').textContent='Copy all',1600);};
 $('strSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.strings=b.dataset.v==='on';rebuild();});
@@ -1767,6 +1782,116 @@ function boothDetail(){
     +steps.map((x,i)=>`${i+1}. ${x.replace(/<[^>]+>/g,'')}`).join('\n');
   return {key:'booth',title:'Control Room',sub:`Room within a room ${String.fromCharCode(183)} ${sqft} sq ft inside`,html,txt};
 }
+/* ---------- amp head wall: its own build sheet ---------- */
+function ampElevation(){
+  const W=AMPW.L, H=state.ceil, inW=W-2*AMP_CASE;
+  const ml=4, mr=4, mt=5, mb=11;
+  const vbW=ml+W+mr, vbH=mt+H+mb, sw=vbW/330, fs=vbW/30;
+  const X=x=>ml+x, Y=y=>mt+(H-y);
+  const isoTop=ISO_H, shelfBot=isoTop+4, shelfTop=H-4;
+  const pitch=(shelfTop-shelfBot)/SHELF_TIERS;
+  let o='';
+  o+=`<rect x="${X(0)}" y="${mt}" width="${W}" height="${H}" fill="#fbfaf7" stroke="${IKL}" stroke-width="${(sw*1.4).toFixed(3)}"/>`;
+  /* the two isolation cabinets, dashed because they do not fit this box in depth */
+  {const gap=(inW-2*ISO_W)/3;
+   for(let i=0;i<2;i++){const x=AMP_CASE+gap+i*(ISO_W+gap);
+     o+=`<rect x="${X(x).toFixed(2)}" y="${Y(isoTop).toFixed(2)}" width="${ISO_W.toFixed(2)}" height="${ISO_H.toFixed(2)}" fill="#fdeee9" stroke="${IKA}" stroke-width="${(sw*1.5).toFixed(3)}" stroke-dasharray="${(sw*6).toFixed(2)} ${(sw*4).toFixed(2)}"/>`;
+     o+=`<rect x="${X(x+ISO_WALL+ISO_SIDE).toFixed(2)}" y="${Y(isoTop-ISO_WALL-ISO_TOP).toFixed(2)}" width="${CAB_W.toFixed(2)}" height="${CAB_H.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${sw}"/>`;
+     o+=`<text x="${X(x+ISO_W/2).toFixed(2)}" y="${(Y(isoTop-ISO_H/2)+fs*.35).toFixed(2)}" text-anchor="middle" font-size="${(fs*.85).toFixed(2)}" font-weight="700" fill="${IKM}">4x12</text>`;}}
+  /* shelves and heads */
+  for(let t=0;t<SHELF_TIERS;t++){
+    const sy=shelfBot+t*pitch;
+    o+=`<rect x="${X(AMP_CASE).toFixed(2)}" y="${Y(sy+SHELF_T).toFixed(2)}" width="${inW.toFixed(2)}" height="${SHELF_T}" fill="#cfc8bd" stroke="${IKL}" stroke-width="${sw}"/>`;
+    const hg=(inW-HEADS_PER_TIER*HEAD_W)/(HEADS_PER_TIER+1);
+    for(let i=0;i<HEADS_PER_TIER;i++){const hx=AMP_CASE+hg+i*(HEAD_W+hg);
+      o+=`<rect x="${X(hx).toFixed(2)}" y="${Y(sy+SHELF_T+HEAD_H).toFixed(2)}" width="${HEAD_W}" height="${HEAD_H}" fill="${IKW}" stroke="${IKL}" stroke-width="${sw}"/>`;
+      for(let v=1;v<4;v++)o+=`<line x1="${X(hx+HEAD_W*v/4).toFixed(2)}" y1="${Y(sy+SHELF_T+HEAD_H-1).toFixed(2)}" x2="${X(hx+HEAD_W*v/4).toFixed(2)}" y2="${Y(sy+SHELF_T+1).toFixed(2)}" stroke="${IKM}" stroke-width="${(sw*.7).toFixed(3)}"/>`;}
+  }
+  o+=`<text x="${X(W/2).toFixed(2)}" y="${(Y(shelfTop+1.5)).toFixed(2)}" text-anchor="middle" font-size="${(fs*.8).toFixed(2)}" font-weight="700" fill="${IKM}">${SHELF_TIERS*HEADS_PER_TIER} HEADS ON ${SHELF_TIERS} SHELVES</text>`;
+  o+=dimH(X(0),X(W),mt+H+fs*.9,fIn(W),sw,fs);
+  o+=dimV(Y(H),Y(0),ml-1.5,fFt(H),sw,fs);
+  return ikWrap(vbW,vbH,o);
+}
+/* plan through the box at cab height: this is where the iso cabinets do not fit */
+function ampDepthPlan(){
+  const W=AMPW.L, ml=4, mr=4, mt=10, mb=10;
+  const vbW=ml+W+mr, vbH=mt+ISO_D+mb, sw=vbW/330, fs=vbW/30;
+  const X=x=>ml+x, Y=y=>mt+y;
+  const inW=W-2*AMP_CASE, gap=(inW-2*ISO_W)/3;
+  let o='';
+  o+=`<rect x="${X(0)}" y="${Y(0)}" width="${W}" height="${AMP_D}" fill="#fbfaf7" stroke="${IKL}" stroke-width="${(sw*1.4).toFixed(3)}"/>`;
+  o+=`<text x="${X(W/2).toFixed(2)}" y="${(Y(AMP_D)-1.6).toFixed(2)}" text-anchor="middle" font-size="${(fs*.78).toFixed(2)}" font-weight="700" fill="${IKM}">AMP WALL BOX, ${fIn(AMP_D)} DEEP</text>`;
+  for(let i=0;i<2;i++){const x=AMP_CASE+gap+i*(ISO_W+gap);
+    o+=`<rect x="${X(x).toFixed(2)}" y="${Y(0).toFixed(2)}" width="${ISO_W.toFixed(2)}" height="${ISO_D.toFixed(2)}" fill="#fdeee9" stroke="${IKA}" stroke-width="${(sw*1.5).toFixed(3)}" stroke-dasharray="${(sw*6).toFixed(2)} ${(sw*4).toFixed(2)}"/>`;
+    o+=`<rect x="${X(x+ISO_WALL+ISO_SIDE).toFixed(2)}" y="${Y(ISO_WALL+ISO_BACK).toFixed(2)}" width="${CAB_W.toFixed(2)}" height="${CAB_D.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${sw}"/>`;}
+  /* the overhang */
+  o+=`<rect x="${X(0)}" y="${Y(AMP_D)}" width="${W}" height="${(ISO_D-AMP_D).toFixed(2)}" fill="${IKA}" fill-opacity=".12"/>`;
+  o+=dimV(Y(AMP_D),Y(ISO_D),X(W)+2.2,fIn(ISO_D-AMP_D)+' over',sw,fs,IKA);
+  o+=dimV(Y(0),Y(ISO_D),ml-1.5,fIn(ISO_D),sw,fs);
+  return ikWrap(vbW,vbH,o);
+}
+function ampWallDetail(){
+  const over=ISO_D-AMP_D, fits=over<=0;
+  const inW=AMPW.L-2*AMP_CASE;
+  const head=kv([
+    ['Box, width x depth',`${fIn(AMPW.L)} x ${fIn(AMP_D)}`,'box'],['Box depth','existing overhang, fixed'],
+    ['Box height',fFt(state.ceil),'box'],
+    ['Heads',`${SHELF_TIERS*HEADS_PER_TIER} on ${SHELF_TIERS} shelves`,'shelf'],
+    ['Head envelope',`${fIn(HEAD_W)} x ${fIn(HEAD_H)} x ${fIn(HEAD_D)} deep`,'shelf'],
+    ['Cabinet',`${fIn(CAB_W)} x ${fIn(CAB_H)} x ${fIn(CAB_D)} deep`,'iso'],
+    ['Iso enclosure, each',`${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep`,'iso'],
+  ]);
+  const shelving=`<p class="tnote">Heads are the easy half. At ${fIn(HEAD_D)} deep they sit in a ${fIn(AMP_D)} box with ${fIn(AMP_D-HEAD_D)} to spare for cable and air.</p>`
+    +matTable([
+      ['Shelves',`${SHELF_TIERS} at ${fIn(inW)} x ${fIn(AMP_D-2)} deep`],
+      ['Shelf stock','3/4" ply, doubled at the front edge to 1 1/2"'],
+      ['Tier pitch',fIn((state.ceil-4-(ISO_H+4))/SHELF_TIERS)],
+      ['Heads per shelf',`${HEADS_PER_TIER} at ${fIn(HEAD_W)} wide`],
+      ['Shelf bearers','2x2 cleats screwed to the box studs, both ends and the back'],
+      ['Load','a full-size head is 40 to 50 lb; two per shelf means a 100 lb shelf'],
+      ['Air','leave the back of every bay open and vent the box top and bottom'],
+    ]);
+  const switcher=`<p class="tnote">One guitar in, one of ${SHELF_TIERS*HEADS_PER_TIER} heads out, with every head kept safe.</p>`
+    +`<ol class="stepn">
+      <li><b>Input side.</b> A ${SHELF_TIERS*HEADS_PER_TIER}-way amp switcher with transformer-isolated outputs, one per head. Isolation here is what stops the ground loop you would otherwise get from ${SHELF_TIERS*HEADS_PER_TIER} amps sharing a wall.</li>
+      <li><b>Speaker side is the dangerous half.</b> A tube head must never run without a load. Give every head its own permanent load: a reactive load box or a dummy load rated above the head, wired at all times.</li>
+      <li><b>Switch after the load,</b> not before it. The selected head's load-box line feeds the cabinet; the rest stay loaded and silent. Use make-before-break relays so no head is ever momentarily open.</li>
+      <li><b>Standby.</b> Switched outlets per shelf so unused heads sit on standby rather than idling hot for hours.</li>
+      <li><b>Control.</b> Run the remote to the live room and a second to the booth, so the selection can change without walking to the wall.</li>
+      <li><b>Label every line</b> at both ends. Eight heads, eight loads and two cabinets is 18 cables behind a wall you cannot see into.</li>
+    </ol>`;
+  const isoBuild=`<p class="tnote">Each enclosure is a box within a box, the same idea as the control room at a smaller scale.</p>`
+    +matTable([
+      ['Inside clear',`${fIn(CAB_W+2*ISO_SIDE)} x ${fIn(CAB_H+ISO_TOP+ISO_BASE)} x ${fIn(CAB_D+ISO_BACK+ISO_FRONT)} deep`],
+      ['Walls','2 layers 3/4" MDF, seams staggered, glued and screwed'],
+      ['Between the layers','mass loaded vinyl, fully sealed at every edge'],
+      ['Inside face','2" open-cell foam on all five faces, 4" behind the cab'],
+      ['Cab support','neoprene pads, the cab touches no wall of the box'],
+      ['Door','the front face, on a full-length piano hinge with a compression seal'],
+      ['Mic',`${fIn(ISO_FRONT)} clear in front of the grille, on a short arm clamped to the box, not the floor`],
+      ['Cable','speaker and mic through a sealed gland, never a bare hole'],
+      ['Air','a baffled vent top and bottom, two 90 degree turns each, lined'],
+    ]);
+  const html=`<div class="ik">${ampElevation()}</div>
+    <ol class="lgd">
+      <li><i>1</i><span><b>${SHELF_TIERS} shelves</b>, ${HEADS_PER_TIER} heads each. These fit.</span></li>
+      <li><i class="k">!</i><span><b>Two iso cabinets</b>, dashed. Drawn at the size they need to be, which is not the size that fits.</span></li>
+    </ol>
+    ${head}
+    <p class="tnote" style="margin-top:9px">Tap any measurement to light it up on the drawing.</p>
+    ${fits?'':`<p class="tnote" style="color:var(--bad)"><b>The cabinets do not fit this box.</b> A ${fIn(CAB_D)} deep 4x12 needs ${fIn(ISO_D)} of enclosure once you allow absorption behind it and room for a mic in front. The box is ${fIn(AMP_D)}. The plan below shows the ${fIn(over)} overhang.</p>
+    <div class="ik">${ampDepthPlan()}</div>
+    ${dd('Three Ways to Resolve It','pick one',`<p class="tnote">The ${fIn(AMP_D)} overhang is existing structure and cannot move, so deepening the box is out. That leaves three.</p><ol class="stepn">
+      <li><b>Put the cabinets in the control room.</b> You already built an isolated room within a room, ${fIn(IN_E-IN_W)} x ${fIn(IN_S-IN_N)} inside. Two 4x12s against its west wall take ${fIn(2*CAB_W)} x ${fIn(CAB_D)} and leave ${fIn((IN_S-IN_N)-CAB_D)} of floor. Run speaker lines from the heads on the wall and mic them in there. Nothing to build, and better isolation than any box this size would give.</li>
+      <li><b>Let the cabinets stand proud of the overhang</b> as a ${fIn(ISO_D)} deep plinth under the shelving, projecting ${fIn(over)} past the face. The overhang itself does not move; the plinth sits in front of it. You get a step in the wall at ${fIn(ISO_H)}, and ${fIn(over)} less floor along ${fIn(AMPW.L)}.</li>
+      <li><b>Skip isolation.</b> Store the cabs in the box and mic them in the room. Fits as-is, but the room has to be quiet when you track.</li>
+    </ol><p class="tnote">Half stacks do not change this: a half stack is a head and the same 4x12, so the depth is identical. Nor do smaller cabinets by much, since almost every guitar cab is 11" to 15" deep and the absorption and mic space are what drive the number.</p>`,true)}`}
+    ${dd('Shelving','fits as drawn',shelving)}
+    ${dd('Amp Switcher',`${SHELF_TIERS*HEADS_PER_TIER} heads`,switcher)}
+    ${dd('Iso Cabinet Build','per cabinet',isoBuild)}`;
+  const txt=`AMP HEAD WALL\nBox ${fIn(AMPW.L)} x ${fIn(AMP_D)} x ${fFt(state.ceil)}\n${SHELF_TIERS*HEADS_PER_TIER} heads on ${SHELF_TIERS} shelves\nIso enclosure needed: ${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep, which is ${fIn(over)} deeper than the box.`;
+  return {key:'ampwall',title:'Amp Head Wall',sub:`${SHELF_TIERS*HEADS_PER_TIER} heads over 2 cabinets`,html,txt};
+}
 /* ---------- the one detail surface: side rail on desktop, bottom sheet on mobile ---------- */
 const trayEl=()=>document.getElementById('tray');
 let trayKey='';
@@ -1807,13 +1932,14 @@ function trayShow(d){
 }
 function trayHide(){const t=trayEl();if(!t)return;t.classList.remove('open');t.setAttribute('aria-hidden','true');trayKey='';
   setTimeout(()=>{if(!t.classList.contains('open'))t.classList.remove('shown');},220);}
-function trayClose(){state.sel=null;compView=false;boothView=false;sheetOpen=false;trayHide();rebuild();}
-let compView=false,boothView=false;
+function trayClose(){state.sel=null;compView=false;boothView=false;ampView=false;sheetOpen=false;trayHide();rebuild();}
+let compView=false,boothView=false,ampView=false;
 function updateTray(){
   const btn=document.getElementById('sheetBtn');
   const elev=!!WALL[state.view];
-  if(btn)btn.style.display=(elev||state.sel||compView||boothView)?'flex':'none';
+  if(btn)btn.style.display=(elev||state.sel||compView||boothView||ampView)?'flex':'none';
   if(!panels.length){trayHide();return;}
+  if(ampView&&!state.sel){trayShow(ampWallDetail());return;}
   if(boothView&&!state.sel){trayShow(boothDetail());return;}
   if(compView&&!state.sel){trayShow(componentsDetail());return;}
   if(state.sel){const p=panels.find(x=>x.id===state.sel);if(p){trayShow(panelDetail(p));return;}}
