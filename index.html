@@ -391,7 +391,7 @@ function ampFit(){
   return {soffit,inW,perTier,cabs,shelfBot,shelfTop,tiers,heads:tiers*perTier,pitch:AMP_TIER_PITCH};
 }
 const MIN_RIP=1;
-const GRID_MIN=0.5;         /* on the grid, a filler this narrow still beats bare wall */            /* narrower than this and a filler is not worth cutting */
+const GRID_MIN=MIN_RIP;     /* a filler narrower than this is not worth cutting: an ipe strip under 1" splits on the screw */            /* narrower than this and a filler is not worth cutting */
 const isTouch=matchMedia('(pointer: coarse)').matches;
 const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:60,ampCabsInBay:true,gridAlign:true,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
 
@@ -770,10 +770,21 @@ function layout(){
     return {H,slats:n,ripEq,cuts,boards,offEach:STOCK-cuts*(H+KERF),offTotal:boards*STOCK-n*(H+KERF),slatLb:SLAT_W*SLAT_T*H/1728*IPE_PCF,ps};};
   const main=grp(state.H,RUNS.filter(r=>!r.amp&&!r.overDoor&&!r.overBar&&!r.door)),amp=grp(state.ampH,RUNS.filter(r=>r.amp)),booth=grp(state.H,[]),barG=grp(state.bottom+state.H-BAR_H-2,RUNS.filter(r=>r.overBar)),doorG=grp(79,RUNS.filter(r=>r.door));
   const overPs=panels.filter(p=>p.run.overDoor);const over={slats:overPs.reduce((a,p)=>a+p.k,0),lb:overPs.reduce((a,p)=>a+p.slatLb,0),pieces:RUNS.filter(r=>r.overDoor).map(r=>({name:r.name,n:r.panels.reduce((a,p)=>a+p.k,0),H:r.sp.H}))};
-  const slats=main.slats+amp.slats+booth.slats+over.slats+barG.slats+doorG.slats,boards=main.boards+amp.boards+booth.boards+barG.boards+doorG.boards;
+  const slats=main.slats+amp.slats+booth.slats+over.slats+barG.slats+doorG.slats;
+  /* One buy for the whole wall. Every piece goes onto 97" stock through the same first-fit
+     packer the rail list uses, so an over-door piece lands in whatever offcut actually fits
+     instead of being charged against the amp wall alone and then topped up by a guess. */
+  const buyList=[],pushCut=(n,L)=>{for(let i=0;i<n;i++)buyList.push({len:L});};
+  [main,amp,booth,barG,doorG].forEach(G=>{if(G.slats)pushCut(G.slats+Math.ceil(G.ripEq),G.H);});
+  over.pieces.forEach(o=>pushCut(o.n,o.H));
+  pushCut(5,BAR_L+2);                       /* the bar top, edge-glued from 5 boards */
+  const boards=packBoards(buyList,STOCK).length,buyLen=buyList.reduce((a,c)=>a+c.len,0);
   const bandLen=RUNS.filter(r=>!r.amp&&!r.booth&&!r.overDoor&&!r.overBar&&!r.door).reduce((a,r)=>a+r.used,0);
   const railCuts={};panels.filter(p=>p.nr>0).forEach(p=>{const L=Math.round(p.Lr*16)/16;railCuts[L]=(railCuts[L]||0)+p.nr;});
-  let twoByBoards=0;Object.entries(railCuts).forEach(([L,n])=>{const per=Math.floor((STUD_STOCK+KERF)/(+L+KERF));twoByBoards+=Math.ceil(n/per);});
+  /* Mix rail lengths on one 2x4. Packing each length into boards of its own leaves the
+     same offcut over and over: five 17 3/8" rails end an 8 ft board 8 1/2" short of a sixth. */
+  const railList=[];Object.entries(railCuts).forEach(([L,n])=>{for(let i=0;i<n;i++)railList.push({len:+L});});
+  const twoByBoards=packBoards(railList,STUD_STOCK).length;
   /* Edge audit: what is left bare at the end of every run. A run stops short where a
      panel on the next wall returns into the corner, and that clearance is the panel's own
      depth plus one board gap. Anything wider than that is an open strip. */
@@ -803,14 +814,14 @@ function layout(){
      spans.forEach(sp=>{if(sp[0]-cur>0.5)holes.push({wall:w.name,from:cur,to:sp[0]});cur=Math.max(cur,sp[1]);});
      if(w.L-cur>0.5)holes.push({wall:w.name,from:cur,to:w.L});});}
   const hung=panels.filter(p=>p.nr>0);const wallCleatLb=hung.reduce((a,p)=>a+p.Lc*CLEAT_AREA,0)/1728*BACK_PCF;
-  stats={main,amp,booth,over,barG,doorG,hung,edges,holes,rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
+  stats={main,amp,booth,over,barG,doorG,hung,edges,holes,rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:boards*STOCK-buyLen,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
     n:{3:panels.filter(p=>p.k===3).length,4:panels.filter(p=>p.k===4).length,5:panels.filter(p=>p.k===5).length},
     ipeTotal:panels.reduce((a,x)=>a+(x.type==='ipe'?x.slatLb:0),0),total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
     railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
     /* count the ripped fillers as the board width they actually consume, or the yield
        reads as waste when the boards were bought for them */
     usedMain:(main.slats+main.ripEq)*main.H/(main.boards*STOCK),
-    used:((main.slats+main.ripEq)*main.H+(amp.slats+amp.ripEq)*amp.H+(booth.slats+booth.ripEq)*booth.H)/(boards*STOCK),
+    used:buyLen/(boards*STOCK),
     bandArea:RUNS.reduce((a,r)=>a+r.used*r.sp.H,0),wallArea:PERIM*state.ceil,slatArea:panels.reduce((a,p)=>a+p.k*SLAT_W*p.H,0),
     ledgeOk:main.offEach>=6,ledgeUsed:bandLen,ledgeAvail:main.offEach>=6?main.boards*main.offEach:0};
   {const D=panels.filter(p=>p.type==='diff'),A=panels.filter(p=>p.type==='abs');const rows=[];
@@ -1404,13 +1415,11 @@ function buildCutList(){
   if(s.barG.slats)row(`Booth, above the bar: cut to ${fIn(s.barG.H)}`,`${s.barG.slats} boards`,`${s.barG.boards} boards, ${fIn(s.barG.offEach)} offcut each`);
   if(s.doorG.slats)row('Booth door face (around a 20" × 30" vision lite)',`2 × ${fIn(79)} + 3 × ${fIn(LITE_B-1-.5)} + 3 × ${fIn(79.5-LITE_T-1)}`,'3 boards; screw from inside the door, keep boards 1/2" off the hinge edge');
   s.over.pieces.forEach(o=>{const src=[['above-bar',s.barG.offEach],['amp-wall',s.amp.offEach]].filter(([,L])=>L>=o.H+KERF).sort((a,b)=>a[1]-b[1])[0];
-    row(`${o.name}: cut to ${fIn(o.H)}`,`${o.n} boards`,src?`from ${src[0]} offcuts (${fIn(src[1])}, ${Math.floor((src[1]+KERF)/(o.H+KERF))} per offcut), no extra boards`:'needs extra boards');});
-  {const H=Math.max(...s.over.pieces.map(o=>o.H),1),per=L=>Math.max(0,Math.floor((L+KERF)/(H+KERF)));const need=s.over.pieces.reduce((a,o)=>a+o.n,0)+(state.ampTrim&&state.ampGap>.05?3:0);
-    const cap=s.amp.slats*per(s.amp.offEach)+s.barG.slats*per(s.barG.offEach);if(need>cap)row('Offcut shortfall','buy '+Math.ceil((need-cap)/Math.max(1,per(STOCK)))+' more boards');}
+    row(`${o.name}: cut to ${fIn(o.H)}`,`${o.n} boards`,src?`cut these from ${src[0]} offcuts first (${fIn(src[1])} each, ${Math.floor((src[1]+KERF)/(o.H+KERF))} per offcut)`:'cut from the longest offcuts on hand');});
   const amp=RUNS.find(r=>r.amp);if(state.ampTrim&&state.ampGap>.05){const pcs=Math.ceil(amp.used/(s.amp.offEach-1));row('Amp wall ceiling trim strip',`${pcs} × ${fIn(amp.used/pcs)}`,`rip ${fIn(state.ampGap-.0625)} wide from amp-wall offcuts; butt joints over LED gaps`);}
   row('Door casings (room door + both booth doors, both sides)','about 15 pcs',`${fIn(CASING)} wide, rip from offcuts; heads ${fIn(DOOR_W+2*CASING)}`);
-  row('Bar top (5 boards edge-glued, 20" deep with the overhang)',`5 × ${fIn(BAR_L+2)}`,'cut from 5 extra boards; the 22" offcuts become door casing');
-  row('Boards to buy',`${s.boards+5} + 5 spare`);
+  row('Bar top (5 boards edge-glued, 20" deep with the overhang)',`5 × ${fIn(BAR_L+2)}`,'counted in the buy below; the 22" offcuts become door casing');
+  row('Boards to buy',`${s.boards} + 5 spare`,'every cut above packed onto 97" stock, longest first');
   sec('2x4 (8 ft), panel rails');
   Object.entries(s.railCuts).sort((a,b)=>b[0]-a[0]).forEach(([L,n])=>{const c=s.hung.filter(x=>Math.abs(x.Lr-L)<1e-3).length;row(`Rails at ${fIn16(+L)}`,`${n}`,`${c} ripped at 45° as cleat rails (each yielding its own wall cleat), ${n-c} plain bottom rails; all painted matte black`);});
   {if(state.led==='back')row('LED groove down the center back of every board',`${s.slats-s.doorG.slats} boards`,'1/2" wide × 1/4" deep, full length, table saw with the fence at 2 1/2"; the strip sits in it facing the wall and passes over the rails');}
@@ -1834,7 +1843,7 @@ function componentsDetail(){
           +`<table class="mat"><tr><th>Wall</th><th>Width</th></tr>${hl.map(h=>`<tr><td>${h.wall}<br><span style="font-size:11px;color:var(--mut)">${fIn(h.from)} to ${fIn(h.to)} along the face</span></td><td class="n">${fIn(h.to-h.from)}</td></tr>`).join('')}</table>`:'';
         return `<p class="tnote">Every edge carries the same ${fIn(state.gap)} reveal. At a corner that means the panel depth ${fIn(STANDOFF)} plus the gap; at a casing it means the casing plus the gap. <b>Clearance</b> is that inset, <b>bare</b> is anything uncovered beyond it.</p>`
          +`<table class="mat"><tr><th>Area</th><th>Clearance</th><th>Bare</th></tr>${rows}</table>`
-         +`<p class="tnote" style="margin-top:9px">${bare<=0.05?'<b>Nothing bare.</b> Every run closes to its bounds, the leftover absorbed into the board gaps.':`<b>${fIn(bare)}</b> still bare across ${es.filter(e=>e.sliver>0.03).length} edges.`}</p>`+holeBlock;})())}
+         +`<p class="tnote" style="margin-top:9px">${bare<=0.05?'<b>Nothing bare.</b> Every run closes to its bounds, the leftover absorbed into the board gaps.':(n=>`<b>${fIn(bare)}</b> of reveal beyond the gap, across ${n} edge${n===1?'':'s'}. Too thin to rip ipe for: it sits as a wider reveal.`)(es.filter(e=>e.sliver>0.03).length)}</p>`+holeBlock;})())}
     <p class="tnote"><button class="copy" id="ckReset" style="background:#f1eee9;color:var(--ink)">Clear all ticks</button></p>`;
   const txt='REPEATABLE COMPONENTS\n'+gs.map(g=>`${g.n} x ${g.p.rip?'ripped filler':g.p.k+'-board panel'} ${fIn(g.p.w)} x ${fIn(g.p.H)} (${g.ids.join(', ')})`).join('\n');
   return {key:'components',title:'Components',sub:`${gs.length} repeatable pieces ${String.fromCharCode(183)} ${tot} total`,html,txt};
