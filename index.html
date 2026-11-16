@@ -303,7 +303,11 @@ const gcd=(a,b)=>b?gcd(b,a%b):a;
 function fIn(v){const r=Math.round(v*8)/8;const neg=r<0;const a=Math.abs(r);const wh=Math.floor(a+1e-9);let fr=Math.round((a-wh)*8);let s=wh?String(wh):'';if(fr){const g=gcd(fr,8);s+=(s?' ':'')+(fr/g)+'/'+(8/g);}if(!s)s='0';return (neg?'-':'')+s+'"';}
 function fFt(v){if(Math.abs(v)<24)return fIn(v);const ft=Math.floor((v+1e-6)/12);return ft+"' "+fIn(v-ft*12);}
 const fBoth=v=>Math.abs(v)<24?fIn(v):fFt(v)+' ('+fIn(v)+')';
-const lb=v=>Math.round(v)+' lb';
+const lb=v=>Number.isFinite(v)?Math.round(v)+' lb':'n/a';
+const pKs=ps=>[...new Set(ps.map(p=>p.k))].sort((a,b)=>b-a);
+const pW=(ps,k)=>ps.find(p=>p.k===k).weight;
+const wSentence=ps=>{const t=pKs(ps).map(k=>`${k}-slat about ${lb(pW(ps,k))}`);return t.length?' Panel weight: '+t.join(', ')+'.':'';};
+const wCell=ps=>{const t=pKs(ps).map(k=>`${k}-slat ${lb(pW(ps,k))}`);return t.length?t.join(', '):'none';};
 
 /* ---------- three setup ---------- */
 const canvas=document.getElementById('c');
@@ -521,10 +525,8 @@ function layout(){
   const railCuts={};panels.filter(p=>p.nr>0).forEach(p=>{const L=+p.Lr.toFixed(4);railCuts[L]=(railCuts[L]||0)+p.nr;});
   let twoByBoards=0;Object.entries(railCuts).forEach(([L,n])=>{const per=Math.floor((STUD_STOCK+KERF)/(+L+KERF));twoByBoards+=Math.ceil(n/per);});
   const hung=panels.filter(p=>p.nr>0);const wallCleatLb=hung.reduce((a,p)=>a+p.Lc*WC_AREA,0)/1728*BACK_PCF;
-  const byK=(ps,k)=>(ps.find(p=>p.k===k)||{}).weight;
   stats={main,amp,booth,over,barG,doorG,hung,slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
     n:{3:panels.filter(p=>p.k===3).length,4:panels.filter(p=>p.k===4).length,5:panels.filter(p=>p.k===5).length},
-    w4:byK(main.ps,4),w3:byK(main.ps,3),aw4:byK(amp.ps,4),aw5:byK(amp.ps,5),bw4:byK(booth.ps,4),bw3:byK(booth.ps,3),
     ipeTotal:main.slats*main.slatLb+amp.slats*amp.slatLb+booth.slats*booth.slatLb+over.lb+barG.slats*barG.slatLb+doorG.slats*doorG.slatLb,total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
     cleatFt:hung.reduce((a,p)=>a+p.Lc,0)/12,railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
     usedMain:main.slats*main.H/(main.boards*STOCK),used:(main.slats*main.H+amp.slats*amp.H+booth.slats*booth.H)/(boards*STOCK),
@@ -1159,7 +1161,7 @@ function renderUI(){
   document.querySelectorAll('#moodSeg button').forEach(b=>b.classList.toggle('on',(b.dataset.v==='night')===state.night));
   $('ledHint').textContent=`${fFt(stats.led.ft*12)} of LED strip in ${stats.led.count} strips${state.led==='back'?', one down the back of each board, washing the black wall 2" behind it':''}.`;
   const s=stats,H=state.H;const pct=v=>(v*100).toFixed(1)+'%';
-  $('presetHint').textContent=`${s.cuts} cut${s.cuts>1?'s':''} per board, ${fIn(Math.max(0,s.offEach))} offcut per board (${((1-s.usedMain)*100).toFixed(0)}% of the ipe left over). 4-slat panel about ${lb(s.w4)}, 3-slat about ${lb(s.w3)}.`;
+  $('presetHint').textContent=`${s.cuts} cut${s.cuts>1?'s':''} per board, ${fIn(Math.max(0,s.offEach))} offcut per board (${((1-s.usedMain)*100).toFixed(0)}% of the ipe left over).${wSentence(s.main.ps)}`;
   $('bottom').max=Math.max(0,state.ceil-H);$('bottom').value=state.bottom;$('bottomOut').textContent=`${fIn(state.bottom)} (top ${fFt(state.bottom+H)})`;
   $('cleat').min=RAIL_H/2;$('cleat').max=H-RAIL_H/2;$('cleat').value=state.cleat;$('cleatOut').textContent=`${fIn(state.cleat)} (${fFt(state.bottom+state.cleat)} above floor)`;
   $('ceil').value=state.ceil;$('ceilOut').textContent=fFt(state.ceil);
@@ -1168,7 +1170,7 @@ function renderUI(){
   $('ampH').value=state.ampH;$('ampHOut').textContent=fBoth(state.ampH);
   $('ampGap').value=state.ampGap;$('ampGapOut').textContent=fIn(state.ampGap);
   const A=s.amp,ab=state.ceil-state.ampGap-state.ampH;
-  $('ampHint').textContent=`Panels run ${fFt(ab)} to ${fFt(ab+state.ampH)} above floor (covering ${fIn(state.ceil-ab)} from the ceiling down). ${A.slats} slats from ${A.boards} boards, ${fIn(Math.max(0,A.offEach))} offcut each. 4-slat about ${lb(s.aw4)}, 5-slat about ${lb(s.aw5)}.`;
+  $('ampHint').textContent=`Panels run ${fFt(ab)} to ${fFt(ab+state.ampH)} above floor (covering ${fIn(state.ceil-ab)} from the ceiling down). ${A.slats} slats from ${A.boards} boards, ${fIn(Math.max(0,A.offEach))} offcut each.${wSentence(s.amp.ps)}`;
   const rows=[
     ['sub','Panels'],
     ['Panels',`${panels.length} (${[5,4,3].filter(k=>s.n[k]).map(k=>s.n[k]+' × '+k+'-slat').join(', ')})`],
@@ -1180,7 +1182,7 @@ function renderUI(){
     ['Boards, main band',`${s.main.boards} (${fIn(Math.max(0,s.main.offEach))} offcut each)`],['Boards, amp wall',`${s.amp.boards} (${fIn(Math.max(0,s.amp.offEach))} offcut each)`],['Boards total',s.boards],
     ['Total offcut',(Math.max(0,s.offTotal)/12).toFixed(1)+' ft'],['Stock used',pct(s.used)],
     ['sub','Weight (ipe 66 lb/ft³, framing 34 lb/ft³)'],
-    ['One slat',s.slatLb.toFixed(1)+' lb'],['Main 4-slat / 3-slat panel',`${lb(s.w4)} / ${lb(s.w3)}`],['Amp 5-slat / 4-slat panel',`${lb(s.aw5)} / ${lb(s.aw4)}`],['All ipe',lb(s.ipeTotal)],['Everything on the walls',lb(s.total)],
+    ['One slat',s.slatLb.toFixed(1)+' lb'],['Main panel',wCell(s.main.ps)],['Amp wall panel',wCell(s.amp.ps)],['All ipe',lb(s.ipeTotal)],['Everything on the walls',lb(s.total)],
     ['sub','Framing'],
     ['Stand-off, wall to slat face',fIn(STANDOFF)],
     
