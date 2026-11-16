@@ -405,10 +405,11 @@ WALLS.forEach(w=>{const dx=w.p1[0]-w.p0[0],dy=w.p1[1]-w.p0[1];w.L=Math.hypot(dx,
 const WALL=Object.fromEntries(WALLS.map(w=>[w.id,w]));
 /* front face of the amp wall / screen box (88" wide, 20" proud of the north wall), facing south into the room */
 /* The overhang: a soffit, not a floor-to-ceiling box. Measured on site 2026-11-15:
-   65" wide, 16" deep, underside 5'0", and its east edge 91" from the NE corner.
-   The north wall is 264", so it runs 108" to 173" from the NW corner. */
-const OH_FROM_NE=91;
-const OH_X=264-OH_FROM_NE-OH_W, OH_UNDER=60;
+   65" wide, 16" deep, underside 5'0", 83" from the NW corner and 91" from the NE.
+   Those three add to 239", not the 264" the hand drawing gave for this wall, so the
+   overhang is drawn from the NW measurement and the gap is raised as a warning. */
+const OH_FROM_NW=83, OH_FROM_NE=91;   /* both measured on site; they do not agree, see the warning */
+const OH_X=OH_FROM_NW, OH_UNDER=60;
 const AMPW={id:'P',name:'Overhang face',p0:[OH_X,OH_D],p1:[OH_X+OH_W,OH_D],from:'west end'};
 {const dx=AMPW.p1[0]-AMPW.p0[0],dy=AMPW.p1[1]-AMPW.p0[1];AMPW.L=Math.hypot(dx,dy);AMPW.u=[dx/AMPW.L,dy/AMPW.L];AMPW.n=[-AMPW.u[1],AMPW.u[0]];}
 WALL.P=AMPW;
@@ -803,6 +804,8 @@ function layout(){
   else if(state.ceil-top<CLEAT_RISE+1)warns.push(['warn',`Only ${fIn(state.ceil-top)} between panel tops and the ceiling. Each panel has to lift ${fIn(CLEAT_RISE+.25)} to come off its cleat.`]);
   if(state.bottom<4)warns.push(['warn',`Panel bottoms are ${fIn(state.bottom)} off the floor. Leave room for baseboards and cleaning.`]);
   if(state.ampGap<CLEAT_RISE+.25)warns.push(['bad',`Amp wall panels sit ${fIn(state.ampGap)} below the ceiling, but a 2x4 French cleat needs ${fIn(CLEAT_RISE+.25)} of lift to engage. Raise the ceiling gap to at least ${fIn(CLEAT_RISE+.25)}.`]);
+  {const implied=OH_FROM_NW+OH_W+OH_FROM_NE,d=WALL.N.L-implied;
+   if(Math.abs(d)>0.5)warns.push(['bad',`The overhang measurements do not fit the north wall. ${fIn(OH_FROM_NW)} from the NW corner, plus ${fIn(OH_W)} of overhang, plus ${fIn(OH_FROM_NE)} to the NE corner, is ${fIn(implied)}. The wall is modelled at ${fIn(WALL.N.L)}, which is ${fIn(Math.abs(d))} ${d>0?'longer':'shorter'}. That length came from the hand drawing, so it is the likely culprit: measure the north wall corner to corner. The overhang is drawn from the NW measurement, so its east edge lands ${fIn(WALL.N.L-OH_X-OH_W)} from the NE corner rather than ${fIn(OH_FROM_NE)}.`]);}
   {const f=ampFit();if(f.heads<4)warns.push(['warn',`The amp head wall fits ${f.heads} head${f.heads===1?'':'s'} under a ${fFt(f.soffit)} underside${f.cabs?' with the cabinets in the bay':''}. Four is the fewest worth building: ${f.cabs?'take the cabinets out of this bay':'raise the underside'}.`]);}
   if(ISO_D>OH_D)warns.push(['bad',`The two 2x12 cabinets fit the overhang bay, but an enclosure that isolates one needs ${fIn(ISO_D)} of depth against a ${fIn(OH_D)} bay. Open the Amp head wall sheet: in the bay open, in the control room, or enclosed and standing proud.`]);
   {const dp=panels.find(p=>p.run.door);if(dp)warns.push(['warn',`Ipe on the booth door adds about ${lb(dp.weight)} to the door. The door slats are resawn to 1/2" thick; hang the door on 4 heavy-duty ball-bearing hinges.`]);}
