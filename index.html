@@ -10,25 +10,53 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;height:100dvh;overflow:hidden;background:#ece8e1;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-#top{position:fixed;left:0;right:0;top:0;padding:calc(10px + var(--st)) calc(12px + var(--sr)) 0 calc(12px + var(--sl));pointer-events:none;z-index:5}
-#titleRow{display:flex;align-items:center;gap:8px;pointer-events:auto;overflow-x:auto;scrollbar-width:none}
-#titleRow::-webkit-scrollbar{display:none}
-#titleRow h1{font-size:15px;margin:0;font-weight:700;background:var(--card);padding:6px 10px;border-radius:10px;box-shadow:0 1px 6px #0002;white-space:nowrap}
-#warnPill{display:none;background:var(--bad);color:#fff;border:0;border-radius:999px;padding:6px 10px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap}
-#views{display:flex;gap:6px;overflow-x:auto;padding:8px 0 6px;pointer-events:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-#views::-webkit-scrollbar{display:none}
-.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 13px;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink);min-height:36px}
-.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-#legend{margin-top:2px;display:inline-block;background:var(--card);border-radius:10px;padding:6px 10px;font-size:12px;color:var(--mut);box-shadow:0 1px 6px #0002;transition:opacity .4s;max-width:min(560px,100%)}
+:root{--hdr:50px;--side:168px;--bot:54px}
+/* ---------- app chrome: header, side nav, bottom bar, detail rail ---------- */
+#hdr{position:fixed;top:0;left:0;right:0;height:calc(var(--hdr) + var(--st));padding:var(--st) calc(10px + var(--sr)) 0 calc(10px + var(--sl));
+  display:flex;align-items:center;gap:8px;background:#fffffff2;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);z-index:9}
+#hdr h1{font-size:14px;margin:0;font-weight:800;white-space:nowrap;letter-spacing:-.01em}
+#hdrNav{display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+#hdrNav::-webkit-scrollbar{display:none}
+#hdrNav button{flex:0 0 auto;border:0;background:transparent;color:var(--mut);border-radius:8px;padding:7px 10px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;min-height:34px}
+#hdrNav button:hover{background:#f4f1ec;color:var(--ink)}
+#hdrNav button.on{background:var(--ink);color:#fff}
+#warnPill{flex:0 0 auto;display:none;background:var(--bad);color:#fff;border:0;border-radius:999px;padding:6px 10px;font-weight:700;font-size:11.5px;cursor:pointer;white-space:nowrap}
+#ctrlBtn{flex:0 0 auto;border:0;background:var(--ink);color:#fff;border-radius:9px;padding:8px 13px;font-weight:700;font-size:12.5px;cursor:pointer;min-height:34px}
+/* side nav: the view list */
+#side{position:fixed;left:0;top:calc(var(--hdr) + var(--st));bottom:0;width:calc(var(--side) + var(--sl));padding-left:var(--sl);
+  background:#fffffff2;backdrop-filter:blur(8px);border-right:1px solid var(--line);overflow-y:auto;z-index:8;padding-bottom:calc(var(--bot) + 12px + var(--sb))}
+#views{display:block;padding:8px 8px 10px}
+#views h4{margin:12px 0 4px;padding:0 8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:800}
+#views h4:first-child{margin-top:2px}
+.chip{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px 10px;font-weight:600;font-size:12.5px;cursor:pointer;color:var(--ink);min-height:34px}
+.chip:hover{background:#f4f1ec}
+.chip.on{background:var(--ink);color:#fff}
+/* bottom bar: camera and light */
+#botbar{position:fixed;left:calc(var(--side) + var(--sl));right:0;bottom:0;height:calc(var(--bot) + var(--sb));padding:0 calc(12px + var(--sr)) var(--sb) 12px;
+  display:flex;align-items:center;gap:14px;background:#fffffff2;backdrop-filter:blur(8px);border-top:1px solid var(--line);z-index:8}
+#botbar .grp{display:flex;align-items:center;gap:5px}
+#botbar .sep{flex:1}
+#botbar button{border:0;background:#f1eee9;border-radius:8px;min-width:34px;height:34px;font-size:16px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 8px}
+#botbar button:hover{background:#e8e3db}
+#botbar button.on{background:var(--ink);color:#fff}
+#botbar .mode{font-size:10px;letter-spacing:.03em;padding:0 10px}
+#legend{position:fixed;left:calc(var(--side) + var(--sl) + 14px);top:calc(var(--hdr) + var(--st) + 12px);z-index:5;background:var(--card);border-radius:10px;padding:7px 11px;font-size:12px;color:var(--mut);box-shadow:0 1px 6px #0002;transition:opacity .4s;max-width:min(520px,calc(100vw - var(--side) - 420px));pointer-events:none}
 #legend b{color:var(--ink)}
 #legend.fade{opacity:0}
-#nav{position:fixed;left:calc(12px + var(--sl));bottom:calc(16px + var(--sb));z-index:6;display:flex;flex-direction:column;gap:8px}
-#nav button{width:46px;height:46px;border-radius:14px;border:0;background:#fff;box-shadow:0 2px 10px #0003;font-size:20px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
-#nav button.on{background:var(--ink);color:#fff}
-#nav .mode{font-size:10.5px;font-weight:700;letter-spacing:.02em}
-#ctrlBtn{position:fixed;right:calc(14px + var(--sr));bottom:calc(16px + var(--sb));z-index:6;border:0;background:var(--ink);color:#fff;border-radius:999px;padding:13px 18px;font-weight:700;box-shadow:0 4px 14px #0003;cursor:pointer;min-height:46px}
+@media (max-width:899px){
+  :root{--side:0px}
+  #side{left:0;right:0;top:calc(var(--hdr) + var(--st));bottom:auto;width:auto;height:46px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden;padding:0 0 0 var(--sl)}
+  #views{display:flex;gap:6px;padding:6px 10px;align-items:center}
+  #views h4{display:none}
+  .chip{display:inline-block;width:auto;flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;white-space:nowrap}
+  #botbar{left:0;gap:8px;padding:0 calc(8px + var(--sr)) var(--sb) 8px}
+  #legend{left:10px;right:10px;top:calc(var(--hdr) + var(--st) + 54px);max-width:none}
+  #hdr h1{font-size:13px}
+  #hdrNav{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+  #hdrNav button{padding:7px 8px}
+}
 #panel{position:fixed;z-index:7;background:#fff;box-shadow:0 0 24px #0003;overflow-y:auto;transition:transform .25s ease;-webkit-user-select:text;user-select:text;overscroll-behavior:contain}
-@media (min-width:760px){#panel{top:0;right:0;width:370px;height:100%;transform:translateX(105%)}#panel.open{transform:none}}
+@media (min-width:760px){#panel{top:calc(var(--hdr) + var(--st));right:0;width:370px;height:calc(100% - var(--hdr) - var(--st));transform:translateX(105%)}#panel.open{transform:none}}
 @media (max-width:759px){#panel{left:0;right:0;bottom:0;max-height:62dvh;border-radius:18px 18px 0 0;transform:translateY(105%);padding-bottom:var(--sb)}#panel.open{transform:none}
   #titleRow h1{font-size:14px}#legend{font-size:11.5px}}
 #grab{display:none}
@@ -59,7 +87,7 @@ td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums
 /* ---------- detail tray: side rail on desktop, bottom sheet on mobile ---------- */
 #tray{position:fixed;z-index:8;background:#fff;display:none;flex-direction:column;-webkit-user-select:text;user-select:text;overscroll-behavior:contain;box-shadow:0 6px 32px #00000030}
 #tray.shown{display:flex}
-@media (min-width:760px){#tray{top:calc(12px + var(--st));right:calc(12px + var(--sr));width:384px;max-height:calc(100dvh - 24px - var(--st) - var(--sb));border-radius:14px;transform:translateX(110%)}#tray.open{transform:none}}
+@media (min-width:760px){#tray{top:calc(var(--hdr) + var(--st) + 10px);right:calc(10px + var(--sr));width:384px;max-height:calc(100dvh - var(--hdr) - var(--st) - var(--bot) - var(--sb) - 20px);border-radius:14px;transform:translateX(110%)}#tray.open{transform:none}}
 @media (max-width:759px){#tray{left:0;right:0;bottom:0;max-height:92dvh;border-radius:18px 18px 0 0;padding-bottom:var(--sb);transform:translateY(100%)}#tray.open{transform:none}}
 @media (prefers-reduced-motion:no-preference){
   @media (min-width:760px){#tray{transition:transform .2s cubic-bezier(.16,1,.3,1)}}
@@ -151,7 +179,6 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 .chain .cn b{font-size:12.5px;font-weight:700}
 .chain .cn span{font-size:11.5px;color:var(--mut);line-height:1.35}
 .chain .ar{padding:5px 0 5px 12px;font-size:11px;color:var(--acc);font-weight:700;line-height:1.35}
-#compBtn,#boothBtn,#ampBtn{border:0;background:#f1eee9;color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;pointer-events:auto;white-space:nowrap}
 .diag{overflow-x:auto;margin:0 -4px 8px;border:1px solid var(--line);border-radius:10px;background:#fbfaf7}
 .diag svg{display:block}
 .cut{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
@@ -160,8 +187,8 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 .cut td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
 .copy{border:0;background:var(--ink);color:#fff;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;min-height:38px}
 .steps{margin:6px 0 0;padding-left:18px;font-size:12.5px}.steps li{margin:6px 0}
-#nav #sheetBtn{display:none;font-size:10.5px}
-#guide{position:fixed;inset:0;z-index:9;background:#fff;display:none;flex-direction:column;-webkit-user-select:text;user-select:text}
+#botbar #sheetBtn{display:none}
+#guide{position:fixed;inset:0;z-index:12;background:#fff;display:none;flex-direction:column;-webkit-user-select:text;user-select:text}
 #guide.open{display:flex}
 #guideHead{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:calc(10px + var(--st)) 16px 10px;border-bottom:1px solid var(--line)}
 #guideHead b{font-size:16px}
@@ -174,8 +201,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 #guideBody h3{font-size:13px;margin:14px 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
 #guideBody p,#guideBody li{font-size:13.5px;line-height:1.5}
 #guideBody ol,#guideBody ul{padding-left:20px;margin:6px 0}
-#guideBtn{border:0;background:var(--ink);color:#fff;border-radius:999px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;pointer-events:auto;white-space:nowrap}
-#ledBar{position:fixed;z-index:6;right:calc(140px + var(--sr));bottom:calc(16px + var(--sb));display:flex;align-items:center;gap:6px;background:#fff;border-radius:999px;padding:6px 10px;box-shadow:0 2px 12px #0004}
+#ledBar{display:flex;align-items:center;gap:6px}
 #ledBar input[type=color]{width:34px;height:34px;border:0;padding:0;background:none;border-radius:50%;cursor:pointer}
 #ledBar button{width:34px;height:34px;border:0;border-radius:50%;background:#f1eee9;font-size:20px;font-weight:700;cursor:pointer;color:var(--ink);line-height:1}
 #ledBar input[type=range]{width:110px;height:28px}
@@ -184,26 +210,36 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 #ledBar .qtog{width:34px;height:34px;border:0;border-radius:50%;background:#f1eee9;font-size:15px;cursor:pointer;color:var(--mut);line-height:1;flex:0 0 auto}
 #ledBar .qtog.on{background:var(--ink);color:#ffd79a}
 #ledBar .dots{display:flex;gap:4px}#ledBar .dots i{width:16px;height:16px;border-radius:50%;cursor:pointer;display:block;box-shadow:inset 0 0 0 1px #0002}
-@media (max-width:759px){#ledBar{left:calc(70px + var(--sl));right:calc(118px + var(--sr));transform:none;justify-content:space-between;padding:5px 8px;gap:4px}#ledBar input[type=range]{width:auto;flex:1;min-width:40px}#ledBar output,#ledBar .lb,#ledBar .dots{display:none}}
+@media (max-width:899px){#ledBar{flex:1;min-width:0;gap:4px}#ledBar input[type=range]{width:auto;flex:1;min-width:30px}#ledBar output,#ledBar .lb,#ledBar .dots{display:none}}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="top">
-  <div id="titleRow"><h1>Ipe Slat Wall</h1><button id="guideBtn">Build guide</button><button id="compBtn">Components</button><button id="boothBtn">Control room</button><button id="ampBtn">Amp head wall</button><button id="warnPill"></button></div>
-  <div id="views"></div>
-  <div id="legend"></div>
+<header id="hdr">
+  <h1>Ipe Slat Wall</h1>
+  <nav id="hdrNav" aria-label="Sheets">
+    <button id="guideBtn">Build guide</button>
+    <button id="compBtn">Components</button>
+    <button id="boothBtn">Control room</button>
+    <button id="ampBtn">Amp head wall</button>
+  </nav>
+  <button id="warnPill"></button>
+  <button id="ctrlBtn">Controls</button>
+</header>
+<aside id="side" aria-label="Views"><div id="views"></div></aside>
+<div id="legend"></div>
+<div id="botbar">
+  <div class="grp">
+    <button id="zIn" aria-label="Zoom in">+</button>
+    <button id="zOut" aria-label="Zoom out">−</button>
+    <button id="fitBtn" aria-label="Reset view">⌂</button>
+    <button id="modeBtn" class="mode" aria-label="Toggle orbit or pan">ORBIT</button>
+    <button id="sheetBtn" class="mode" aria-label="Show details">DETAILS</button>
+  </div>
+  <div class="sep"></div>
+  <div id="ledBar"><span class="lb">LED</span><input type="color" id="qColor" value="#ffb46a" aria-label="LED color"><span class="dots" id="qDots"></span><button id="qDim" aria-label="Dim">−</button><input type="range" id="qLevel" min="0" max="1" step="0.01" aria-label="LED brightness"><button id="qBright" aria-label="Brighten">+</button><output id="qOut"></output><button id="qStr" class="qtog" aria-label="String lights on or off" title="String lights">☀</button></div>
 </div>
-<div id="nav">
-  <button id="zIn" aria-label="Zoom in">+</button>
-  <button id="zOut" aria-label="Zoom out">−</button>
-  <button id="fitBtn" aria-label="Reset view">⌂</button>
-  <button id="modeBtn" class="mode" aria-label="Toggle orbit or pan">ORBIT</button>
-  <button id="sheetBtn" class="mode" aria-label="Show details">DETAILS</button>
-</div>
-<div id="ledBar"><span class="lb">LED</span><input type="color" id="qColor" value="#ffb46a" aria-label="LED color"><span class="dots" id="qDots"></span><button id="qDim" aria-label="Dim">−</button><input type="range" id="qLevel" min="0" max="1" step="0.01" aria-label="LED brightness"><button id="qBright" aria-label="Brighten">+</button><output id="qOut"></output><button id="qStr" class="qtog" aria-label="String lights on or off" title="String lights">☀</button></div>
-<button id="ctrlBtn">Controls</button>
 <div id="tray" role="dialog" aria-labelledby="trayTitle" aria-hidden="true">
   <div id="trayGrab" aria-hidden="true"><i></i></div>
   <div id="trayHead">
@@ -244,6 +280,8 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
     <div class="row"><label for="ampGap">Gap at ceiling (lift room for the cleat)</label><output id="ampGapOut"></output></div>
     <input type="range" id="ampGap" min="0" max="4" step="0.125">
     <label class="tog"><input type="checkbox" id="t_ampTrim">Ipe trim strip closing the ceiling gap</label>
+    <div class="row"><label for="ampSoffit">Overhang underside above floor (amp head wall fits under this)</label><output id="ampSoffitOut"></output></div>
+    <input type="range" id="ampSoffit" min="60" max="144" step="1">
     <p class="hint" id="ampHint"></p>
   </div>
   <div class="sec">
@@ -331,10 +369,18 @@ const HEAD_W=30, HEAD_H=11, HEAD_D=9;
 const CAB_W=29.9, CAB_H=29.9, CAB_D=14.4;
 const ISO_SIDE=3, ISO_TOP=3, ISO_BASE=2, ISO_BACK=4, ISO_FRONT=6, ISO_WALL=1.5;
 const ISO_W=CAB_W+2*ISO_SIDE+2*ISO_WALL, ISO_H=CAB_H+ISO_TOP+ISO_BASE+2*ISO_WALL, ISO_D=CAB_D+ISO_BACK+ISO_FRONT+2*ISO_WALL;
-const AMP_D=20, AMP_CASE=1.5, SHELF_T=1, SHELF_TIERS=4, HEADS_PER_TIER=2;
+const AMP_D=20, AMP_CASE=1.5, SHELF_T=1, HEADS_PER_TIER=2, AMP_TIER_PITCH=HEAD_H+9.5;
+/* How many heads fit is set by the underside of the overhang, not by choice. Four is the
+   floor worth building; below that the wall is not an amp wall. */
+function ampFit(){
+  const soffit=Math.min(state.ampSoffit,state.ceil);
+  const shelfBot=ISO_H+4, shelfTop=soffit-4;
+  const tiers=Math.max(0,Math.min(4,Math.floor((shelfTop-shelfBot)/AMP_TIER_PITCH)));
+  return {soffit,shelfBot,shelfTop,tiers,heads:tiers*HEADS_PER_TIER,pitch:AMP_TIER_PITCH};
+}
 const MIN_RIP=1;            /* narrower than this and a filler is not worth cutting */
 const isTouch=matchMedia('(pointer: coarse)').matches;
-const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
+const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:124,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
 
 /* Plan coords: origin NW interior floor corner, +X east, +Y south. Three: x=X, z=Y, y=up. Walls run clockwise. */
 const WALLS=[
@@ -739,6 +785,7 @@ function layout(){
   else if(state.ceil-top<CLEAT_RISE+1)warns.push(['warn',`Only ${fIn(state.ceil-top)} between panel tops and the ceiling. Each panel has to lift ${fIn(CLEAT_RISE+.25)} to come off its cleat.`]);
   if(state.bottom<4)warns.push(['warn',`Panel bottoms are ${fIn(state.bottom)} off the floor. Leave room for baseboards and cleaning.`]);
   if(state.ampGap<CLEAT_RISE+.25)warns.push(['bad',`Amp wall panels sit ${fIn(state.ampGap)} below the ceiling, but a 2x4 French cleat needs ${fIn(CLEAT_RISE+.25)} of lift to engage. Raise the ceiling gap to at least ${fIn(CLEAT_RISE+.25)}.`]);
+  {const f=ampFit();if(f.heads<4)warns.push(['warn',`The overhang underside at ${fFt(f.soffit)} leaves room for ${f.heads} head${f.heads===1?'':'s'} above the cabinets. Four is the fewest worth building: raise the underside or drop the cabinets out of the bay.`]);}
   if(ISO_D>AMP_D)warns.push(['bad',`Isolation cabinets for a ${fIn(CAB_D)} deep 4x12 need ${fIn(ISO_D)} of depth. The amp wall overhang is ${fIn(AMP_D)} and cannot move, so they stand ${fIn(ISO_D-AMP_D)} proud of it. Open the Amp head wall sheet for the three ways to resolve it.`]);
   {const dp=panels.find(p=>p.run.door);if(dp)warns.push(['warn',`Ipe on the booth door adds about ${lb(dp.weight)} to the door. The door slats are resawn to 1/2" thick; hang the door on 4 heavy-duty ball-bearing hinges.`]);}
   {const tight=panels.filter(p=>p.type!=='ipe'&&((p.run.panels[0]===p&&p.s0-p.run.refA<DEPTH[p.type])||(p.run.panels.at(-1)===p&&p.run.refB-p.s1<DEPTH[p.type])));
@@ -1048,7 +1095,13 @@ function applyVisibility(){const v=state.view;roomG.visible=v!=='detail'&&v!=='s
   updateSheet();}
 
 /* ---------- camera views + touch ---------- */
-const VIEWS=[['iso','3D'],['plan','Plan'],['N','North'],['E','East'],['A','Angled'],['S','South'],['W','West'],['P','Amp wall'],...BOOTHW.map(w=>[w.id,w.short]),['detail','Panel'],['section','Rail section']];
+const VIEW_GROUPS=[
+  ['Room',[['iso','3D'],['plan','Plan']]],
+  ['Room walls',[['N','North'],['E','East'],['A','Angled'],['S','South'],['W','West'],['P','Amp wall']]],
+  ['Control room',BOOTHW.map(w=>[w.id,w.short])],
+  ['Details',[['detail','Panel'],['section','Rail section']]],
+];
+const VIEWS=VIEW_GROUPS.flatMap(gr=>gr[1]);
 let tween=null,home=null;
 function fit(w,h,fov){const t=Math.tan(THREE.MathUtils.degToRad(fov)/2);return Math.max(h/2/t,w/2/(t*camera.aspect));}
 function viewPose(v){
@@ -1427,7 +1480,8 @@ function openGuide(){const g=buildGuide();$('guideToc').innerHTML=g.toc;$('guide
   $('guideToc').querySelectorAll('a').forEach(a=>a.onclick=e=>{e.preventDefault();const t=document.getElementById(a.getAttribute('href').slice(1));if(t)$('guideBody').scrollTo({top:t.offsetTop-8,behavior:'smooth'});});}
 /* ---------- UI ---------- */
 const $=id=>document.getElementById(id);
-VIEWS.forEach(([v,t])=>{const b=document.createElement('button');b.className='chip';b.textContent=t;b.dataset.v=v;b.onclick=()=>setView(v);$('views').appendChild(b);});
+VIEW_GROUPS.forEach(([label,items])=>{const h=document.createElement('h4');h.textContent=label;$('views').appendChild(h);
+  items.forEach(([v,t])=>{const b=document.createElement('button');b.className='chip';b.textContent=t;b.dataset.v=v;b.onclick=()=>setView(v);$('views').appendChild(b);});});
 STUD_WALLS.forEach(w=>{const l=document.createElement('label');l.textContent=`${w.name} (from ${w.from})`;l.htmlFor='st_'+w.id;const i=document.createElement('input');i.type='number';i.inputMode='decimal';i.step='0.25';i.min='0';i.max='16';i.id='st_'+w.id;i.value=state.studOff[w.id];
   i.oninput=()=>{const v=parseFloat(i.value);if(!isNaN(v)){state.studOff[w.id]=v;requestRebuild();}};$('studInputs').append(l,i);});
 function seg(id,key,cb){$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{state[key]=b.dataset.v;cb&&cb(b.dataset.v);rebuild();if(key==='preset')setView(state.view,true);});}
@@ -1451,7 +1505,7 @@ $('typeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{const v=b.data
     if(v==='amp'&&r.amp&&p.k>=3)state.ptypes[k]='diff';});});
   rebuild();document.querySelectorAll('#typeSeg button').forEach(x=>x.classList.toggle('on',x===b));});seg('ledSeg','led');seg('ledColSeg','ledColor',()=>{state.ledHex=null;});
 $('moodSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.night=b.dataset.v==='night';rebuild();});
-[['bottom','bottom'],['cleat','cleat'],['ceil','ceil'],['booth','booth'],['gap','gap'],['ampH','ampH'],['ampGap','ampGap']].forEach(([id,k])=>{$(id).oninput=e=>{state[k]=parseFloat(e.target.value);requestRebuild();};});
+[['bottom','bottom'],['cleat','cleat'],['ceil','ceil'],['booth','booth'],['gap','gap'],['ampH','ampH'],['ampGap','ampGap'],['ampSoffit','ampSoffit']].forEach(([id,k])=>{$(id).oninput=e=>{state[k]=parseFloat(e.target.value);requestRebuild();};});
 ['walls','obstacles','hardware','xray','studs','ear','ledge','ampTrim','framing','curtains','rugs','cutaway','seamless'].forEach(k=>{const el=$('t_'+k);el.checked=state[k];el.onchange=()=>{state[k]=el.checked;rebuild();};});
 $('ctrlBtn').onclick=()=>$('panel').classList.toggle('open');$('closePanel').onclick=()=>$('panel').classList.remove('open');
 $('warnPill').onclick=()=>$('panel').classList.add('open');
@@ -1496,6 +1550,7 @@ function renderUI(){
   $('gap').value=state.gap;$('gapOut').textContent=fIn(state.gap);
   $('ampH').value=state.ampH;$('ampHOut').textContent=fBoth(state.ampH);
   $('ampGap').value=state.ampGap;$('ampGapOut').textContent=fIn(state.ampGap);
+  {const f=ampFit();$('ampSoffit').value=state.ampSoffit;$('ampSoffitOut').textContent=`${fFt(state.ampSoffit)} (${f.heads} head${f.heads===1?'':'s'})`;}
   const A=s.amp,ab=state.ceil-state.ampGap-state.ampH;
   $('ampHint').textContent=`Panels run ${fFt(ab)} to ${fFt(ab+state.ampH)} above floor (covering ${fIn(state.ceil-ab)} from the ceiling down). ${A.slats} slats from ${A.boards} boards, ${fIn(Math.max(0,A.offEach))} offcut each.${wSentence(s.amp.ps.filter(x=>!x.rip))}`;
   const rows=[
@@ -1526,7 +1581,7 @@ function renderUI(){
   $('stats').innerHTML='<table>'+rows.map(r=>r[0]==='sub'?`<tr><td class="sub" colspan="2">${r[1]}</td></tr>`:`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')+'</table>';
   const bad=warns.filter(w=>w[0]==='bad').length;
   $('warns').innerHTML=warns.length?warns.map(w=>`<div class="w-${w[0]}">${w[1]}</div>`).join(''):'<div class="w-ok">No overlaps, ceiling or clearance problems.</div>';
-  const pill=$('warnPill');pill.style.display=warns.length?'inline-block':'none';pill.style.background=bad?'var(--bad)':'var(--warn)';pill.textContent=`${warns.length} warning${warns.length>1?'s':''}`;
+  const pill=$('warnPill');pill.style.display=warns.length?'inline-block':'none';pill.style.background=bad?'var(--bad)':'var(--warn)';pill.textContent=innerWidth<900?`⚠ ${warns.length}`:`${warns.length} warning${warns.length>1?'s':''}`;
   const cl=buildCutList();$('cutlist').innerHTML=cl.html;$('cutSteps').innerHTML=CUT_STEPS.map(x=>`<li>${x}</li>`).join('');
   renderLightUI();
   updateTray();
@@ -1784,12 +1839,11 @@ function boothDetail(){
 }
 /* ---------- amp head wall: its own build sheet ---------- */
 function ampElevation(){
-  const W=AMPW.L, H=state.ceil, inW=W-2*AMP_CASE;
+  const F=ampFit(), W=AMPW.L, H=F.soffit, inW=W-2*AMP_CASE;
   const ml=4, mr=4, mt=5, mb=11;
   const vbW=ml+W+mr, vbH=mt+H+mb, sw=vbW/330, fs=vbW/30;
   const X=x=>ml+x, Y=y=>mt+(H-y);
-  const isoTop=ISO_H, shelfBot=isoTop+4, shelfTop=H-4;
-  const pitch=(shelfTop-shelfBot)/SHELF_TIERS;
+  const isoTop=ISO_H, shelfBot=F.shelfBot, shelfTop=F.shelfTop, pitch=F.pitch;
   let o='';
   o+=`<rect x="${X(0)}" y="${mt}" width="${W}" height="${H}" fill="#fbfaf7" stroke="${IKL}" stroke-width="${(sw*1.4).toFixed(3)}"/>`;
   /* the two isolation cabinets, dashed because they do not fit this box in depth */
@@ -1799,7 +1853,7 @@ function ampElevation(){
      o+=`<rect x="${X(x+ISO_WALL+ISO_SIDE).toFixed(2)}" y="${Y(isoTop-ISO_WALL-ISO_TOP).toFixed(2)}" width="${CAB_W.toFixed(2)}" height="${CAB_H.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${sw}"/>`;
      o+=`<text x="${X(x+ISO_W/2).toFixed(2)}" y="${(Y(isoTop-ISO_H/2)+fs*.35).toFixed(2)}" text-anchor="middle" font-size="${(fs*.85).toFixed(2)}" font-weight="700" fill="${IKM}">4x12</text>`;}}
   /* shelves and heads */
-  for(let t=0;t<SHELF_TIERS;t++){
+  for(let t=0;t<F.tiers;t++){
     const sy=shelfBot+t*pitch;
     o+=`<rect x="${X(AMP_CASE).toFixed(2)}" y="${Y(sy+SHELF_T).toFixed(2)}" width="${inW.toFixed(2)}" height="${SHELF_T}" fill="#cfc8bd" stroke="${IKL}" stroke-width="${sw}"/>`;
     const hg=(inW-HEADS_PER_TIER*HEAD_W)/(HEADS_PER_TIER+1);
@@ -1807,7 +1861,7 @@ function ampElevation(){
       o+=`<rect x="${X(hx).toFixed(2)}" y="${Y(sy+SHELF_T+HEAD_H).toFixed(2)}" width="${HEAD_W}" height="${HEAD_H}" fill="${IKW}" stroke="${IKL}" stroke-width="${sw}"/>`;
       for(let v=1;v<4;v++)o+=`<line x1="${X(hx+HEAD_W*v/4).toFixed(2)}" y1="${Y(sy+SHELF_T+HEAD_H-1).toFixed(2)}" x2="${X(hx+HEAD_W*v/4).toFixed(2)}" y2="${Y(sy+SHELF_T+1).toFixed(2)}" stroke="${IKM}" stroke-width="${(sw*.7).toFixed(3)}"/>`;}
   }
-  o+=`<text x="${X(W/2).toFixed(2)}" y="${(Y(shelfTop+1.5)).toFixed(2)}" text-anchor="middle" font-size="${(fs*.8).toFixed(2)}" font-weight="700" fill="${IKM}">${SHELF_TIERS*HEADS_PER_TIER} HEADS ON ${SHELF_TIERS} SHELVES</text>`;
+  o+=`<text x="${X(W/2).toFixed(2)}" y="${(Y(shelfTop+1.5)).toFixed(2)}" text-anchor="middle" font-size="${(fs*.8).toFixed(2)}" font-weight="700" fill="${IKM}">${F.heads} HEADS ON ${F.tiers} SHELVES</text>`;
   o+=dimH(X(0),X(W),mt+H+fs*.9,fIn(W),sw,fs);
   o+=dimV(Y(H),Y(0),ml-1.5,fFt(H),sw,fs);
   return ikWrap(vbW,vbH,o);
@@ -1831,34 +1885,34 @@ function ampDepthPlan(){
   return ikWrap(vbW,vbH,o);
 }
 function ampWallDetail(){
-  const over=ISO_D-AMP_D, fits=over<=0;
+  const over=ISO_D-AMP_D, fits=over<=0, F=ampFit();
   const inW=AMPW.L-2*AMP_CASE;
   const head=kv([
     ['Box, width x depth',`${fIn(AMPW.L)} x ${fIn(AMP_D)}`,'box'],['Box depth','existing overhang, fixed'],
     ['Box height',fFt(state.ceil),'box'],
-    ['Heads',`${SHELF_TIERS*HEADS_PER_TIER} on ${SHELF_TIERS} shelves`,'shelf'],
+    ['Overhang underside',fFt(F.soffit),'box'],['Heads that fit',`${F.heads} on ${F.tiers} shelves`,'shelf'],
     ['Head envelope',`${fIn(HEAD_W)} x ${fIn(HEAD_H)} x ${fIn(HEAD_D)} deep`,'shelf'],
     ['Cabinet',`${fIn(CAB_W)} x ${fIn(CAB_H)} x ${fIn(CAB_D)} deep`,'iso'],
     ['Iso enclosure, each',`${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep`,'iso'],
   ]);
   const shelving=`<p class="tnote">Heads are the easy half. At ${fIn(HEAD_D)} deep they sit in a ${fIn(AMP_D)} box with ${fIn(AMP_D-HEAD_D)} to spare for cable and air.</p>`
     +matTable([
-      ['Shelves',`${SHELF_TIERS} at ${fIn(inW)} x ${fIn(AMP_D-2)} deep`],
+      ['Shelves',`${F.tiers} at ${fIn(inW)} x ${fIn(AMP_D-2)} deep`],
       ['Shelf stock','3/4" ply, doubled at the front edge to 1 1/2"'],
-      ['Tier pitch',fIn((state.ceil-4-(ISO_H+4))/SHELF_TIERS)],
+      ['Tier pitch',fIn(F.pitch)],
       ['Heads per shelf',`${HEADS_PER_TIER} at ${fIn(HEAD_W)} wide`],
       ['Shelf bearers','2x2 cleats screwed to the box studs, both ends and the back'],
       ['Load','a full-size head is 40 to 50 lb; two per shelf means a 100 lb shelf'],
       ['Air','leave the back of every bay open and vent the box top and bottom'],
     ]);
-  const switcher=`<p class="tnote">One guitar in, one of ${SHELF_TIERS*HEADS_PER_TIER} heads out, with every head kept safe.</p>`
+  const switcher=`<p class="tnote">One guitar in, one of ${F.heads} heads out, with every head kept safe.</p>`
     +`<ol class="stepn">
-      <li><b>Input side.</b> A ${SHELF_TIERS*HEADS_PER_TIER}-way amp switcher with transformer-isolated outputs, one per head. Isolation here is what stops the ground loop you would otherwise get from ${SHELF_TIERS*HEADS_PER_TIER} amps sharing a wall.</li>
+      <li><b>Input side.</b> A ${F.heads}-way amp switcher with transformer-isolated outputs, one per head. Isolation here is what stops the ground loop you would otherwise get from ${F.heads} amps sharing a wall.</li>
       <li><b>Speaker side is the dangerous half.</b> A tube head must never run without a load. Give every head its own permanent load: a reactive load box or a dummy load rated above the head, wired at all times.</li>
       <li><b>Switch after the load,</b> not before it. The selected head's load-box line feeds the cabinet; the rest stay loaded and silent. Use make-before-break relays so no head is ever momentarily open.</li>
       <li><b>Standby.</b> Switched outlets per shelf so unused heads sit on standby rather than idling hot for hours.</li>
       <li><b>Control.</b> Run the remote to the live room and a second to the booth, so the selection can change without walking to the wall.</li>
-      <li><b>Label every line</b> at both ends. Eight heads, eight loads and two cabinets is 18 cables behind a wall you cannot see into.</li>
+      <li><b>Label every line</b> at both ends. ${F.heads} heads, ${F.heads} loads and two cabinets is ${F.heads*2+2} cables behind a wall you cannot see into.</li>
     </ol>`;
   const isoBuild=`<p class="tnote">Each enclosure is a box within a box, the same idea as the control room at a smaller scale.</p>`
     +matTable([
@@ -1874,7 +1928,7 @@ function ampWallDetail(){
     ]);
   const html=`<div class="ik">${ampElevation()}</div>
     <ol class="lgd">
-      <li><i>1</i><span><b>${SHELF_TIERS} shelves</b>, ${HEADS_PER_TIER} heads each. These fit.</span></li>
+      <li><i>1</i><span><b>${F.tiers} shelves</b>, ${HEADS_PER_TIER} heads each. These fit.</span></li>
       <li><i class="k">!</i><span><b>Two iso cabinets</b>, dashed. Drawn at the size they need to be, which is not the size that fits.</span></li>
     </ol>
     ${head}
@@ -1887,10 +1941,10 @@ function ampWallDetail(){
       <li><b>Skip isolation.</b> Store the cabs in the box and mic them in the room. Fits as-is, but the room has to be quiet when you track.</li>
     </ol><p class="tnote">Half stacks do not change this: a half stack is a head and the same 4x12, so the depth is identical. Nor do smaller cabinets by much, since almost every guitar cab is 11" to 15" deep and the absorption and mic space are what drive the number.</p>`,true)}`}
     ${dd('Shelving','fits as drawn',shelving)}
-    ${dd('Amp Switcher',`${SHELF_TIERS*HEADS_PER_TIER} heads`,switcher)}
+    ${dd('Amp Switcher',`${F.heads} heads`,switcher)}
     ${dd('Iso Cabinet Build','per cabinet',isoBuild)}`;
-  const txt=`AMP HEAD WALL\nBox ${fIn(AMPW.L)} x ${fIn(AMP_D)} x ${fFt(state.ceil)}\n${SHELF_TIERS*HEADS_PER_TIER} heads on ${SHELF_TIERS} shelves\nIso enclosure needed: ${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep, which is ${fIn(over)} deeper than the box.`;
-  return {key:'ampwall',title:'Amp Head Wall',sub:`${SHELF_TIERS*HEADS_PER_TIER} heads over 2 cabinets`,html,txt};
+  const txt=`AMP HEAD WALL\nBox ${fIn(AMPW.L)} x ${fIn(AMP_D)} x ${fFt(state.ceil)}\n${F.heads} heads on ${F.tiers} shelves\nIso enclosure needed: ${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep, which is ${fIn(over)} deeper than the box.`;
+  return {key:'ampwall',title:'Amp Head Wall',sub:`${F.heads} heads over 2 cabinets ${String.fromCharCode(183)} under a ${fFt(F.soffit)} overhang`,html,txt};
 }
 /* ---------- the one detail surface: side rail on desktop, bottom sheet on mobile ---------- */
 const trayEl=()=>document.getElementById('tray');
@@ -1935,6 +1989,8 @@ function trayHide(){const t=trayEl();if(!t)return;t.classList.remove('open');t.s
 function trayClose(){state.sel=null;compView=false;boothView=false;ampView=false;sheetOpen=false;trayHide();rebuild();}
 let compView=false,boothView=false,ampView=false;
 function updateTray(){
+  {const on=(id,v)=>{const e=document.getElementById(id);if(e)e.classList.toggle('on',!!v);};
+   on('compBtn',compView&&!state.sel);on('boothBtn',boothView);on('ampBtn',ampView);}
   const btn=document.getElementById('sheetBtn');
   const elev=!!WALL[state.view];
   if(btn)btn.style.display=(elev||state.sel||compView||boothView||ampView)?'flex':'none';
