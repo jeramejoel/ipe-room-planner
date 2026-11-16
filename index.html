@@ -1485,10 +1485,10 @@ function buildGuide(){
     <li><b>Fabric ceiling, string lights, rugs.</b> 1 day.</li></ol><p>About 3 weeks of weekends for two people, plus drywall drying time.</p>`);
   /* 2. ipe panels */
   const kinds={};panels.filter(p=>p.type==='ipe'&&!p.run.door).forEach(p=>{const k=`${p.k}|${p.H.toFixed(2)}|${p.Lr.toFixed(3)}|${p.nr}`;(kinds[k]=kinds[k]||{p,n:0,ids:[]}).n++;kinds[k].ids.push(p.id);});
-  const prow=Object.values(kinds).sort((a,b)=>b.p.H-a.p.H||b.p.k-a.p.k).map(({p,n,ids})=>[`${p.k}-slat × ${fIn(p.H)}`,n,`${p.k} × ${fIn(p.H)}`,`${p.nr} × ${fIn(p.Lr)}`,fIn(p.Lc),lb(p.weight),ids.join(', ')]);
+  const prow=Object.values(kinds).sort((a,b)=>b.p.H-a.p.H||b.p.k-a.p.k).map(({p,n,ids})=>[`${p.rip?'ripped filler':p.k+'-board'} × ${fIn(p.H)}`,n,`${p.k} × ${fIn(p.H)}`,p.nr?`${p.nr} × ${fIn16(p.Lr)}`:'none',p.nr?fIn16(p.Lc):'none',lb(p.weight),ids.join(', ')]);
   sec('panels','Ipe panels',`<p>Every panel is the same recipe at a different size: 1" × 5 1/2" ipe slats with 1" gaps. Each panel carries two 2x4 rails laid flat: a cleat rail near the top, ripped at 45°, and a plain bottom rail of the same 1 1/2" thickness. The cleat rail hooks over a matching 2x4 on the wall and the bottom rail bears flat against the wall, so the panel hangs parallel and cannot swing in. Everything behind the ipe is painted matte black. An LED strip runs down a groove in the back of every board.</p>
     ${state.gridAlign?`<h3>Setting out</h3><p>Every wall is set out from <b>one datum</b>, not panel by panel. Start at the first run on that wall and step the whole face at <b>${fIn(SLAT_W+state.gap)}</b> centres: ${fIn(SLAT_W)} of board, ${fIn(state.gap)} of gap, all the way along. Runs either side of a door and the boards on the door itself all sit on that same step, which is what carries the pattern across an opening instead of restarting it inside. Do not centre a run between its own ends.</p><p>Where the step does not land exactly on the end of a run, the leftover becomes one ripped board at that end. On a door it becomes the reveal at the jamb instead: a door gets whole boards only.</p>`:''}
-    ${tbl(['Panel','Qty','Ipe slats','2x4 rails','Wall cleat','Weight','Panels'],prow)}
+    ${tbl(['Panel','Qty','Ipe boards','2x4 rails','Wall cleat','Weight','Panels'],prow)}
     <h3>Build one panel</h3><ol>
     <li>Cut the slats (miter saw, stop block). Seal the ends.</li>
     <li>Table saw: 1/2" wide × 1/4" deep groove down the center back of each slat.</li>
