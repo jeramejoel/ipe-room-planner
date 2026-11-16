@@ -219,7 +219,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
     <h3>Dimensions</h3>
     <div class="row"><label for="bottom">Panel bottom above floor</label><output id="bottomOut"></output></div>
     <input type="range" id="bottom" min="0" max="52" step="0.5">
-    <div class="row"><label for="cleat">Notched 2x4 cleat rail (center) above panel bottom</label><output id="cleatOut"></output></div>
+    <div class="row"><label for="cleat">Top 2x4 rail (center) above panel bottom</label><output id="cleatOut"></output></div>
     <input type="range" id="cleat" min="2" max="82" step="0.25">
     <div class="row"><label for="ceil">Ceiling height</label><output id="ceilOut"></output></div>
     <input type="range" id="ceil" min="96" max="144" step="1">
@@ -270,7 +270,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
     <label class="tog"><input type="checkbox" id="t_walls">Walls</label>
     <label class="tog"><input type="checkbox" id="t_obstacles">Obstacles (window, amp wall, bar, booth)</label>
     <label class="tog"><input type="checkbox" id="t_framing">Booth framing (studs, door opening, 2x6 lid)</label>
-    <label class="tog"><input type="checkbox" id="t_hardware">Framing (2x4 rails, wall cleats)</label>
+    <label class="tog"><input type="checkbox" id="t_hardware">Framing (2x4 rails)</label>
     <label class="tog"><input type="checkbox" id="t_xray">X-ray slats (see framing behind)</label>
     <label class="tog"><input type="checkbox" id="t_studs">Stud overlay + cleat stud hits</label>
     <label class="tog"><input type="checkbox" id="t_ear">Ear-height lines (42" seated, 60" standing)</label>
@@ -298,14 +298,13 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 /* ---------- constants (inches, pounds) ----------
-   Framing: 2x4 rails laid flat, long (3 1/2") face screwed to the back of the ipe, back face tight to the wall.
-   The cleat rail has a 45° notch, 3/4" deep, along its lower back edge. A matching 3/4" x 2 1/2" wall cleat
-   (45° top bevel) is screwed to the studs and sits fully inside that notch, so every rail bears on the wall.
+   Framing: plain 2x4 rails laid flat, long (3 1/2") face screwed to the back of the ipe, back face tight to
+   the wall. No French cleat and no notches: each rail is screwed straight through into the studs it crosses.
+   Rails and spacers are painted matte black so they disappear behind the 1" gaps between boards.
    A 1/2" spacer strip on the face of each rail sets the ipe 2" off the wall, so the boards look like they float.
    Stand-off = 1 1/2" 2x4 + 1/2" spacer + 1" ipe = 3". */
-const SLAT_W=5.5, SLAT_T=1, RAIL_T=1.5, RAIL_H=3.5, SPACER_T=.5, FLOAT=RAIL_T+.5, NOTCH_D=0.75, WC_H=2.5, STANDOFF=RAIL_T+.5+SLAT_T,
+const SLAT_W=5.5, SLAT_T=1, RAIL_T=1.5, RAIL_H=3.5, SPACER_T=.5, FLOAT=RAIL_T+.5, STANDOFF=RAIL_T+.5+SLAT_T,
   STOCK=97, KERF=0.125, IPE_PCF=66, BACK_PCF=34, HEAVY=75, RAIL_MAX_SPAN=84, REVEAL=1, STUD_STOCK=96, RAIL_INSET=0.5625;
-const WC_AREA=NOTCH_D*(WC_H+(WC_H-NOTCH_D))/2; /* trapezoid profile, in² */
 const PRESETS={84:{bottom:1},90:{bottom:1},72:{bottom:1},96:{bottom:1},48:{bottom:1}};
 const MIN_RIP=1;            /* narrower than this and a filler is not worth cutting */
 const isTouch=matchMedia('(pointer: coarse)').matches;
@@ -432,9 +431,9 @@ function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(see
 const grain=(()=>{const c=document.createElement('canvas');c.width=64;c.height=512;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,64,512);const r=rng(7);for(let i=0;i<70;i++){x.strokeStyle=`rgba(0,0,0,${0.04+r()*0.09})`;x.lineWidth=0.5+r()*1.6;x.beginPath();let px=r()*64;x.moveTo(px,0);for(let y=0;y<=512;y+=32){px+=(r()-.5)*3;x.lineTo(px,y);}x.stroke();}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.userData.keep=true;return t;})();
 
 const M={
-  rail:new THREE.MeshStandardMaterial({color:'#dcc9a2',roughness:.8}),
-  crail:new THREE.MeshStandardMaterial({color:'#e3b979',roughness:.75}),
-  wcleat:new THREE.MeshStandardMaterial({color:'#8f6f3c',roughness:.8}),
+  /* painted matte black; rendered as charcoal so the framing stays legible against a black room */
+  rail:new THREE.MeshStandardMaterial({color:'#2b2b30',roughness:.9}),
+  crail:new THREE.MeshStandardMaterial({color:'#34343a',roughness:.88}),
   wall:new THREE.MeshStandardMaterial({color:'#d9d3c9',transparent:true,opacity:.22,depthWrite:false,side:THREE.DoubleSide}),
   wallP:new THREE.MeshStandardMaterial({color:'#0b0b0c',roughness:.95}),
   ceilP:new THREE.MeshStandardMaterial({color:'#08080a',roughness:1}),
@@ -463,7 +462,7 @@ const M={
   boothGhost:new THREE.MeshStandardMaterial({color:'#7b8794',transparent:true,opacity:.12,depthWrite:false}),
   plate:new THREE.MeshStandardMaterial({color:'#d8b57a',roughness:.85}),
   header:new THREE.MeshStandardMaterial({color:'#c99a57',roughness:.85}),
-  jack:new THREE.MeshStandardMaterial({color:'#e2c08a',roughness:.85}),
+  jack:new THREE.MeshStandardMaterial({color:'#3a3a40',roughness:.9}),
   studWood:new THREE.MeshStandardMaterial({color:'#c9a971',roughness:.9}),
 };
 Object.values(M).forEach(m=>m.userData.keep=true);
@@ -473,13 +472,8 @@ const DIM='#d6336c';
 function box(w,h,d,mat,x,y,z,parent){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);if(parent)parent.add(m);return m;}
 /* 2D profile (x = depth from wall, y = height, centered on rail) extruded along the wall (local x). */
 function prism(shape,L){const g=new THREE.ExtrudeGeometry(shape,{depth:L,bevelEnabled:false});g.rotateY(-Math.PI/2);g.translate(L/2,0,0);return g;}
-function railShape(notched){const h=RAIL_H/2,s=new THREE.Shape();
-  if(!notched){s.moveTo(0,-h);s.lineTo(RAIL_T,-h);s.lineTo(RAIL_T,h);s.lineTo(0,h);}
-  else{s.moveTo(0,-h+WC_H-NOTCH_D);s.lineTo(0,h);s.lineTo(RAIL_T,h);s.lineTo(RAIL_T,-h);s.lineTo(NOTCH_D,-h);s.lineTo(NOTCH_D,-h+WC_H);}
-  s.closePath();return s;}
-function wallCleatShape(){const h=RAIL_H/2,s=new THREE.Shape();s.moveTo(0,-h);s.lineTo(NOTCH_D,-h);s.lineTo(NOTCH_D,-h+WC_H);s.lineTo(0,-h+WC_H-NOTCH_D);s.closePath();return s;}
-function rail(L,notched,mat,x,y,z,parent){const m=new THREE.Mesh(prism(railShape(notched),L),mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;}
-function wallCleat(L,mat,x,y,z,parent){const m=new THREE.Mesh(prism(wallCleatShape(),L),mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;}
+function railShape(){const h=RAIL_H/2,s=new THREE.Shape();s.moveTo(0,-h);s.lineTo(RAIL_T,-h);s.lineTo(RAIL_T,h);s.lineTo(0,h);s.closePath();return s;}
+function rail(L,_unused,mat,x,y,z,parent){const m=new THREE.Mesh(prism(railShape(),L),mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;}
 
 function label(text,pos,parent,o={}){
   const fs=38,pad=12,c=document.createElement('canvas'),x=c.getContext('2d');x.font=`600 ${fs}px system-ui,sans-serif`;
@@ -509,7 +503,7 @@ function disposeAll(g){g.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o
 
 /* ---------- layout + numbers ---------- */
 let panels=[],stats={},warns=[];
-/* rail centers from panel bottom. The cleat rail is the notched one. */
+/* rail centers from panel bottom. The top rail sits at the cleat height. */
 function railYs(H,yc=state.cleat){let ys=[6,yc];
   if(H-6-yc>9)ys.push(H-6);
   if(yc-6<9)ys=ys.filter(y=>y!==6);
@@ -609,7 +603,7 @@ function layout(){
     const ws=parts.map(q=>q.w);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*g;r.over=r.used-r.avail;
     let s=r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];
     ws.forEach((w,i)=>{const q=parts[i],k=q.k,Lr=q.rip?0:w-2*RAIL_INSET,Lc=Lr,c0=s+(w-Lc)/2,c1=s+(w+Lc)/2;
-      const railIn3=r.door?0:(rys.length-1)*Lr*RAIL_H*RAIL_T+Lr*(RAIL_H*RAIL_T-WC_AREA)+rys.length*Lr*RAIL_H*SPACER_T;
+      const railIn3=r.door?0:rys.length*Lr*RAIL_H*(RAIL_T+SPACER_T);
       const hits=2;
       const key=RUNS.indexOf(r)+'-'+i;const type=r.door||r.overDoor?'ipe':(state.ptypes[key]||'ipe');
       const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,sw:q.sw,rip:q.rip,s0:s,s1:s+w,Lr,Lc,c0,c1,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys:q.rip?[]:rys,slatLb:type==='ipe'?(r.door?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79)*slatLb:k*slatLb*(q.rip?q.rip/SLAT_W:1)):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:q.rip?0:railIn3/1728*BACK_PCF,hits:q.rip?0:hits,nr:q.rip?0:rys.length};
@@ -628,11 +622,11 @@ function layout(){
   const bandLen=RUNS.filter(r=>!r.amp&&!r.booth&&!r.overDoor&&!r.overBar&&!r.door).reduce((a,r)=>a+r.used,0);
   const railCuts={};panels.filter(p=>p.nr>0).forEach(p=>{const L=+p.Lr.toFixed(4);railCuts[L]=(railCuts[L]||0)+p.nr;});
   let twoByBoards=0;Object.entries(railCuts).forEach(([L,n])=>{const per=Math.floor((STUD_STOCK+KERF)/(+L+KERF));twoByBoards+=Math.ceil(n/per);});
-  const hung=panels.filter(p=>p.nr>0);const wallCleatLb=hung.reduce((a,p)=>a+p.Lc*WC_AREA,0)/1728*BACK_PCF;
+  const hung=panels.filter(p=>p.nr>0);const wallCleatLb=0;
   stats={main,amp,booth,over,barG,doorG,hung,rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
     n:{3:panels.filter(p=>p.k===3).length,4:panels.filter(p=>p.k===4).length,5:panels.filter(p=>p.k===5).length},
     ipeTotal:panels.reduce((a,x)=>a+(x.type==='ipe'?x.slatLb:0),0),total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
-    cleatFt:hung.reduce((a,p)=>a+p.Lc,0)/12,railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
+    railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
     usedMain:main.slats*main.H/(main.boards*STOCK),used:(main.slats*main.H+amp.slats*amp.H+booth.slats*booth.H)/(boards*STOCK),
     bandArea:RUNS.reduce((a,r)=>a+r.used*r.sp.H,0),wallArea:PERIM*state.ceil,slatArea:panels.reduce((a,p)=>a+p.k*SLAT_W*p.H,0),
     ledgeOk:main.offEach>=6,ledgeUsed:bandLen,ledgeAvail:main.offEach>=6?main.boards*main.offEach:0};
@@ -656,16 +650,14 @@ function layout(){
   RUNS.forEach(r=>{if(r.over>1e-6)warns.push(['bad',`${r.name} run is ${fIn(r.over)} too long for its wall space. Drop a slat or reduce the gap.`]);});
   const top=state.bottom+state.H;
   if(top>state.ceil)warns.push(['bad',`Panel top (${fFt(top)}) is above the ceiling (${fFt(state.ceil)}).`]);
-  else if(state.ceil-top<NOTCH_D+2)warns.push(['warn',`Only ${fIn(state.ceil-top)} between panel tops and ceiling. Each panel must lift about ${fIn(NOTCH_D+.25)} to drop onto its cleat.`]);
   if(state.bottom<4)warns.push(['warn',`Panel bottoms are ${fIn(state.bottom)} off the floor. Leave room for baseboards and cleaning.`]);
-  if(state.ampGap<NOTCH_D+.25)warns.push(['bad',`Amp wall panels sit ${fIn(state.ampGap)} below the ceiling. They need at least ${fIn(NOTCH_D+.25)} to lift onto the cleat, so they cannot be hung.`]);
   {const dp=panels.find(p=>p.run.door);if(dp)warns.push(['warn',`Ipe on the booth door adds about ${lb(dp.weight)} to the door. The door slats are resawn to 1/2" thick; hang the door on 4 heavy-duty ball-bearing hinges.`]);}
   {const tight=panels.filter(p=>p.type!=='ipe'&&((p.run.panels[0]===p&&p.s0-p.run.refA<DEPTH[p.type])||(p.run.panels.at(-1)===p&&p.run.refB-p.s1<DEPTH[p.type])));
     if(tight.length)warns.push(['warn',`${tight.map(p=>p.id).join(', ')}: ${tight[0].type==='diff'?'diffusers stick out '+fIn(DEPTH.diff):'absorbers stick out '+fIn(DEPTH.abs)} and sit at a corner or edge. Check they clear the neighboring wall or door trim.`]);}
   const heavy=panels.filter(p=>p.weight>HEAVY&&!p.run.door);
-  if(heavy.length)warns.push(['warn',`${heavy.length} panels weigh over ${HEAVY} lb (${heavy.map(p=>p.id).join(', ')}). Two people to hang; wall cleat must hit 2+ studs.`]);
+  if(heavy.length)warns.push(['warn',`${heavy.length} panels weigh over ${HEAVY} lb (${heavy.map(p=>p.id).join(', ')}). Two people to hold while it is screwed off; each rail must hit 2+ studs.`]);
   RUNS.forEach(r=>{if(!r.panels.length||r.door)return;const st=studs(WALL[r.wall]).filter(x=>x>=r.start&&x<=r.end).length;r.cleatStuds=st;
-    if(state.studs&&st<2)warns.push(['warn',`${r.name}: its wall cleat crosses ${st} stud${st===1?'':'s'} (set the stud positions to check). Add toggle bolts between studs if that is right.`]);});
+    if(state.studs&&st<2)warns.push(['warn',`${r.name}: its rails cross ${st} stud${st===1?'':'s'} (set the stud positions to check). With no cleat every panel is screwed off into studs, so add blocking or toggle bolts if that is right.`]);});
   if(state.ledge&&!stats.ledgeOk)warns.push(['warn',`Offcuts are only ${fIn(Math.max(0,main.offEach))} long at this slat length, too short for a cap ledge.`]);
   if(state.ledge&&stats.ledgeOk&&stats.ledgeUsed>stats.ledgeAvail)warns.push(['bad','Not enough offcut length for the cap ledge.']);
 }
@@ -781,9 +773,6 @@ function buildRoom(){
     }
     if(false){const b=box(p.Lc,1.2,.6,new THREE.MeshBasicMaterial({color:hitColor(p.hits)}),cx,p.run.amp?p.bot-1.6:p.bot+p.H+1.6,STANDOFF-.3,pg);b.raycast=()=>{};}
   });
-  /* continuous wall cleat along every run, at the run's cleat height */
-  if(state.hardware||state.xray)RUNS.forEach(r=>{if(!r.panels.length||r.door)return;const g=WALL[r.wall].g,p=r.panels[0];
-    const cm=state.studs?new THREE.MeshStandardMaterial({color:hitColor(r.cleatStuds??2)}):M.wcleat;wallCleat(r.end-r.start-1,cm,(r.start+r.end)/2,p.bot+p.cleat,0,g);});
   /* ipe trim strip closing the lift gap above the amp wall panels (fixed to the box, fitted after the panels hang) */
   if(state.ampTrim&&state.ampGap>0.05)RUNS.filter(r=>r.amp).forEach(r=>{const g=WALL[r.wall].g;const b=box(r.end-r.start,state.ampGap-.0625,SLAT_T,new THREE.MeshStandardMaterial({color:'#6e3f25',map:grain,roughness:.5}),(r.start+r.end)/2,C-(state.ampGap-.0625)/2,FLOAT+SLAT_T/2,g);b.raycast=()=>{};});
 
@@ -886,20 +875,18 @@ function buildExploded(){
   const sg=new THREE.BoxGeometry(SLAT_W,H,SLAT_T);
   for(let i=0;i<k;i++){const s=new THREE.Mesh(sg,slatMat(i));s.position.set(i*(SLAT_W+g1)+SLAT_W/2,H/2,FLOAT+SLAT_T/2+EX.sl);s.castShadow=true;explG.add(s);}
   rys.forEach(y=>{const n=Math.abs(y-cl)<1e-6;rail(Lr,n,n?M.crail:M.rail,w/2,y,EX.rl,explG);});
-  wallCleat(Lc,M.wcleat,w/2,cl,EX.wc,explG);
   box(w+46,H+24,.5,M.bg,w/2,H/2,-.25,explG).receiveShadow=true;
   box(w+46,.5,70,M.floor,w/2,-.25,34,explG).receiveShadow=true;
   label('Exploded 4-slat panel (panel bottom = 0)',V(w/2,H+14,EX.sl/2),explG,{k:1.05});
   const lx=w+4;
   label(`Ipe slats ${fIn(SLAT_W)} × 1" × ${fIn(H)}`,V(lx,H*.88,RAIL_T+EX.sl),explG,{bg:'#6b3f26'});
   const plain=rys.filter(y=>Math.abs(y-cl)>1e-6);
-  if(plain.length)label(`${plain.length} plain 2x4 rail${plain.length>1?'s':''}, long face on ipe`,V(lx,plain[0]+5,RAIL_T/2+EX.rl),explG,{bg:'#8a7650'});
-  label('Notched 2x4 cleat rail (45° notch)',V(lx,cl+6,RAIL_T/2+EX.rl),explG,{bg:'#8a5a14'});
-  label(`Wall cleat ${fIn(Lc)}, 45° bevel, into studs`,V(lx,cl-6,NOTCH_D/2+EX.wc),explG,{bg:'#5f4a28'});
+  if(plain.length)label(`${plain.length} more plain 2x4 rail${plain.length>1?'s':''}, long face on ipe`,V(lx,plain[0]+5,RAIL_T/2+EX.rl),explG,{bg:'#8a7650'});
+  label('Top 2x4 rail, screwed into the studs',V(lx,cl+6,RAIL_T/2+EX.rl),explG,{bg:'#8a5a14'});
   if(state.dims!=='off'){
     dim(explG,V(0,H+5,STANDOFF+EX.sl-RAIL_T),V(w,H+5,STANDOFF+EX.sl-RAIL_T),`Panel width ${fIn(w)}`);
     dim(explG,V(-4,0,RAIL_T+SLAT_T+EX.sl),V(-4,H,RAIL_T+SLAT_T+EX.sl),`Slat ${fBoth(H)}`);
-    dim(explG,V(-4,0,EX.rl),V(-4,cl,EX.rl),`Cleat rail ${fBoth(cl)} up`,{bg:'#8a5a14',color:'#8a5a14'});
+    dim(explG,V(-4,0,EX.rl),V(-4,cl,EX.rl),`Top rail ${fBoth(cl)} up`,{bg:'#8a5a14',color:'#8a5a14'});
     dim(explG,V(SLAT_W,H*.3,RAIL_T+SLAT_T+.1+EX.sl),V(SLAT_W+g1,H*.3,RAIL_T+SLAT_T+.1+EX.sl),`${fIn(g1)} gap`,{off:V(0,4,0)});
     rys.forEach((y,i)=>{if(i<rys.length-1)dim(explG,V(w+1,y,EX.rl+RAIL_T),V(w+1,rys[i+1],EX.rl+RAIL_T),`${fIn(rys[i+1]-y)} o.c.`,{k:.8});});
   }
@@ -911,22 +898,17 @@ function buildSection(){
   railYs(H).forEach(y=>box(L,RAIL_H,SPACER_T,M.jack,0,y,RAIL_T+SPACER_T/2,sectG));
   box(L,H-1,.12,new THREE.MeshBasicMaterial({color:new THREE.Color('#ffb46a').multiplyScalar(2.5),toneMapped:false}),0,H/2,FLOAT-.06,sectG);
   railYs(H).forEach(y=>{const n=Math.abs(y-cl)<1e-6;rail(L,n,n?M.crail:M.rail,0,y,0,sectG);});
-  wallCleat(L,M.wcleat,0,cl,0,sectG);
   box(L,H+16,.5,M.drywall,0,H/2,-.25,sectG);
   box(1.5,H+16,3.5,M.studWood,0,H/2,-.5-1.75,sectG);
   const xe=L/2+.05,h=RAIL_H/2;
   label('Drywall + stud',V(xe,cl+5.5,-1.6),sectG,{bg:'#6b5a3a',k:.95});
-  label('Wall cleat 3/4" × 2 1/2"',V(xe,cl-h-1.1,NOTCH_D/2),sectG,{bg:'#5f4a28',k:.95});
-  label('Notched 2x4 cleat rail',V(xe,cl+h+1.0,RAIL_T/2),sectG,{bg:'#8a5a14',k:.95});
+  label('Plain 2x4 rail, painted black',V(xe,cl+h+1.0,RAIL_T/2),sectG,{bg:'#8a5a14',k:.95});
   label('1" ipe slat, LED strip in a groove on its back',V(xe,cl+h+5,FLOAT+SLAT_T/2+.6),sectG,{bg:'#6b3f26',k:.95});
   label('1/2" spacer: ipe floats 2" off the wall',V(xe,cl+h+7.4,RAIL_T),sectG,{bg:'#8a7650',k:.9});
-  label('45° bearing face',V(xe,cl-h+WC_H-NOTCH_D/2+.2,NOTCH_D/2+.9),sectG,{bg:DIM,k:.9});
-  label(`Lift ${fIn(NOTCH_D+0.25)} to hang or remove`,V(xe,cl-h-5,1.2),sectG,{bg:'#495057',k:.9});
+  label('Structural screws through the rail into every stud',V(xe,cl-h-5,1.2),sectG,{bg:'#495057',k:.9});
   if(state.dims!=='off'){
     dim(sectG,V(xe,cl+h+2.6,0),V(xe,cl+h+2.6,STANDOFF),`${fIn(STANDOFF)} stand-off`,{small:true,off:V(0,.8,0),k:.9});
-    dim(sectG,V(xe,cl-h-2.6,0),V(xe,cl-h-2.6,NOTCH_D),'3/4" notch',{small:true,off:V(0,-.8,0),k:.85});
     dim(sectG,V(xe,cl-h,RAIL_T+.4),V(xe,cl+h,RAIL_T+.4),'3 1/2"',{small:true,off:V(0,0,1.1),k:.85});
-    dim(sectG,V(xe,cl-h,-.9),V(xe,cl-h+WC_H,-.9),'2 1/2"',{small:true,off:V(0,0,-1),k:.85});
   }
 }
 
@@ -969,7 +951,7 @@ function applyVisibility(){const v=state.view;roomG.visible=v!=='detail'&&v!=='s
   updateSheet();}
 
 /* ---------- camera views + touch ---------- */
-const VIEWS=[['iso','3D'],['plan','Plan'],['N','North'],['E','East'],['A','Angled'],['S','South'],['W','West'],['P','Amp wall'],...BOOTHW.map(w=>[w.id,w.short]),['detail','Panel'],['section','Cleat section']];
+const VIEWS=[['iso','3D'],['plan','Plan'],['N','North'],['E','East'],['A','Angled'],['S','South'],['W','West'],['P','Amp wall'],...BOOTHW.map(w=>[w.id,w.short]),['detail','Panel'],['section','Rail section']];
 let tween=null,home=null;
 function fit(w,h,fov){const t=Math.tan(THREE.MathUtils.degToRad(fov)/2);return Math.max(h/2/t,w/2/(t*camera.aspect));}
 function viewPose(v){
@@ -1000,7 +982,7 @@ let legendTimer;
 function updateLegend(){
   const lg=document.getElementById('legend');const v=state.view;
   const g=isTouch?(state.orbit?'Tap any panel for its cut sheet. 1 finger orbits, 2 fingers pinch to zoom, double-tap to zoom in.':'1 finger pans, pinch to zoom. Double-tap to zoom in. Tap ORBIT to rotate.'):(state.orbit?'Drag to orbit, right-drag to pan, scroll to zoom. Double-click to zoom in.':'Drag to pan, scroll to zoom. Double-click to zoom in.');
-  const map={iso:'',plan:'<b>Plan</b>: north is up, origin at the NW corner. ',detail:'<b>Panel</b>: exploded away from the wall. ',section:'<b>Cleat section</b>: assembled panel cut across the notched 2x4 and wall cleat. '};
+  const map={iso:'',plan:'<b>Plan</b>: north is up, origin at the NW corner. ',detail:'<b>Panel</b>: exploded away from the wall. ',section:'<b>Rail section</b>: assembled panel cut across a 2x4 rail. '};
   lg.innerHTML=(v in map?map[v]:`<b>${WALL[v].name}${EXTRA.includes(WALL[v])?'':' wall'}</b>, ${fBoth(WALL[v].L)}, measured from the ${WALL[v].from}. `)+g;
   lg.classList.remove('fade');clearTimeout(legendTimer);legendTimer=setTimeout(()=>lg.classList.add('fade'),isTouch?6000:9000);
 }
@@ -1092,39 +1074,34 @@ function fastenChain(p){
   const node=(t,sub)=>`<div class="cn"><b>${t}</b><span>${sub}</span></div>`;
   const arrow=t=>`<div class="ar">${String.fromCharCode(8595)} ${t}</div>`;
   if(p.run.door)return `<div class="chain">${node(`${p.k} ipe board${p.k>1?'s':''}`,`resawn to ${fIn(.5)} thick, ${fIn(p.H)} long`)}${arrow('stainless #8, driven from inside the door')}${node('Booth door','solid core, 4 ball-bearing hinges')}</div>`;
-  if(p.rip)return `<div class="chain">${node('1 ripped ipe filler',`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}${arrow(`stainless #8 ${String.fromCharCode(215)} 2 1/2 into the wall cleat, every 16"`)}${node('Wall cleat',`3/4" ply, ${fIn(WC_H)} wide, already in place`)}${arrow('2 structural 1/4" x 3 1/8" at every stud')}${node('Stud','16" on center')}</div>`;
+  if(p.rip)return `<div class="chain">${node('1 ripped ipe filler',`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}${arrow(`stainless #8 ${String.fromCharCode(215)} 2 1/2 into the rails of the panel beside it, every 16"`)}${node('2x4 rails of the neighbouring panel','already screwed off into the studs')}${arrow('nothing further: the neighbour carries it')}${node('Stud','16" on center')}</div>`;
   return `<div class="chain">
     ${node(`${p.k} ipe board${p.k>1?'s':''}`,`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}
     ${arrow(`${p.k*2*p.nr} ${String.fromCharCode(215)} stainless #8 ${String.fromCharCode(215)} 2 1/2, two per board at every rail`)}
-    ${node(`${p.nr} ${String.fromCharCode(215)} 2x4 rail, laid flat`,`${fIn(p.Lr)} long, 1/2" ply spacer on the face`)}
-    ${arrow(`45${String.fromCharCode(176)} notch drops over the cleat: no screws, the notch carries the weight`)}
-    ${node('Wall cleat',`3/4" ply, ${fIn(WC_H)} wide, bevel up, one continuous piece per run`)}
-    ${arrow(`2 ${String.fromCharCode(215)} structural 1/4" x 3 1/8" at every stud it crosses`)}
+    ${node(`${p.nr} ${String.fromCharCode(215)} plain 2x4 rail, laid flat`,`${fIn(p.Lr)} long, no notches, 1/2" ply spacer on the face, painted matte black`)}
+    ${arrow(`2 ${String.fromCharCode(215)} structural 1/4" x 3 1/8" through each rail at every stud it crosses`)}
     ${node('Stud','16" on center')}
   </div>`;
 }
-/* section through the cleat: wall, wall cleat, notched rail, spacer, ipe.
+/* section through a rail: wall, plain 2x4 screwed to the stud, spacer, ipe.
    Labels live in HTML under the drawing, so the geometry can fill the box. */
 function cleatSection(){
   const D=STANDOFF,Hs=7.0,ml=1.5,mr=1.5,mt=1.1,mb=2.6;
   const vbW=ml+D+mr, vbH=mt+Hs+mb, sw=.05, fs=.92;
   const X=x=>ml+x, Y=y=>mt+(Hs-y);
-  const rb=2.2, rt=rb+RAIL_H, cb=rb+NOTCH_D-WC_H;
+  const rb=2.0, rt=rb+RAIL_H;
   let o='';
-  /* existing wall */
   o+=`<rect x="${(X(0)-.9).toFixed(2)}" y="${mt.toFixed(2)}" width=".9" height="${Hs.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${sw}"/>`;
   for(let i=0;i<7;i++){const y=mt+i*(Hs/7)+.3;o+=`<line x1="${(X(0)-.9).toFixed(2)}" y1="${y.toFixed(2)}" x2="${X(0).toFixed(2)}" y2="${(y-.5).toFixed(2)}" stroke="${IKM}" stroke-width="${(sw*.7).toFixed(3)}"/>`;}
-  /* ipe slat, full height, floating 2" off the wall */
   o+=`<rect x="${X(RAIL_T+SPACER_T).toFixed(2)}" y="${mt.toFixed(2)}" width="${SLAT_T}" height="${Hs.toFixed(2)}" fill="${IKW}" stroke="${IKL}" stroke-width="${sw}"/>`;
-  /* 1/2" ply spacer on the face of the rail */
-  o+=`<rect x="${X(RAIL_T).toFixed(2)}" y="${Y(rt).toFixed(2)}" width="${SPACER_T}" height="${RAIL_H}" fill="#fff" stroke="${IKL}" stroke-width="${sw}"/>`;
-  /* wall cleat: 3/4" ply, 2 1/2" tall, 45 degree bevel on top */
-  o+=`<path d="M${X(0).toFixed(2)} ${Y(rb+NOTCH_D).toFixed(2)} L${X(NOTCH_D).toFixed(2)} ${Y(rb).toFixed(2)} L${X(NOTCH_D).toFixed(2)} ${Y(cb).toFixed(2)} L${X(0).toFixed(2)} ${Y(cb).toFixed(2)} Z" fill="${IKC}" stroke="${IKL}" stroke-width="${sw}"/>`;
-  /* 2x4 rail laid flat, 45 degree notch 3/4" deep on the lower back edge */
-  o+=`<path d="M${X(0).toFixed(2)} ${Y(rt).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(rt).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(rb).toFixed(2)} L${X(NOTCH_D).toFixed(2)} ${Y(rb).toFixed(2)} L${X(0).toFixed(2)} ${Y(rb+NOTCH_D).toFixed(2)} Z" fill="${IKS}" stroke="${IKL}" stroke-width="${(sw*1.3).toFixed(3)}"/>`;
+  o+=`<rect x="${X(RAIL_T).toFixed(2)}" y="${Y(rt).toFixed(2)}" width="${SPACER_T}" height="${RAIL_H}" fill="#55524e" stroke="${IKL}" stroke-width="${sw}"/>`;
+  o+=`<rect x="${X(0).toFixed(2)}" y="${Y(rt).toFixed(2)}" width="${RAIL_T}" height="${RAIL_H}" fill="#2e2c2a" stroke="${IKL}" stroke-width="${(sw*1.3).toFixed(3)}"/>`;
+  {const y=Y(rb+RAIL_H/2);
+   o+=`<line x1="${(X(0)-.8).toFixed(2)}" y1="${y.toFixed(2)}" x2="${X(RAIL_T).toFixed(2)}" y2="${y.toFixed(2)}" stroke="${IKL}" stroke-width="${(sw*1.6).toFixed(3)}"/>`;
+   o+=`<circle cx="${X(RAIL_T-.12).toFixed(2)}" cy="${y.toFixed(2)}" r="${(sw*4).toFixed(2)}" fill="${IKL}"/>`;}
   o+=dimH(X(0),X(D),mt+Hs+fs*.75,fIn(D),sw,fs);
-  o+=ikBadge(X(RAIL_T*.56),Y(rt-1.1),'1',fs);
-  o+=ikBadge(X(NOTCH_D*.5),Y(rb+NOTCH_D*.42),'2',fs);
+  o+=ikBadge(X(RAIL_T*.5),Y(rt-1.0),'1',fs);
+  o+=ikBadge(X(RAIL_T+SPACER_T*.5),Y(rb+.9),'2',fs);
   o+=ikBadge(X(RAIL_T+SPACER_T+SLAT_T*.5),Y(Hs-1.0),'3',fs);
   return ikWrap(vbW,vbH,o);
 }
@@ -1160,9 +1137,9 @@ function wallSheet(v){
   o+=`<line x1="${X(0)}" x2="${X(L)}" y1="${Y(0)+12}" y2="${Y(0)+12}" stroke="${night?'#d9d3c9':'#1d1d1f'}" stroke-width="${sw}"/><text x="${X(L/2)}" y="${Y(0)+12+fs*1.25}" text-anchor="middle" font-weight="700" fill="${night?'#f1e6d8':'#1d1d1f'}">${w.name}: ${fBoth(L)} (from ${w.from})</text>`;
   o+='</svg>';
   /* table */
-  const rows=ps.map(({p,off})=>{const n=p.rys.length;return [p.id,p.type==='ipe'?p.k:p.type==='diff'?'diffuser':'absorber',`${fIn(p.w)} × ${fIn(p.H)}`,`${fIn(p.bot)} to ${fFt(p.bot+p.H)}`,p.run.door?'none: screwed through the door':`${n} × ${fIn(p.Lr)} (1 notched)`,p.run.door?'none':fIn(p.Lc),fIn(p.s0+off)];});
-  let t=`<table class="cut"><tr><th>Panel</th><th>Slats</th><th>W × H</th><th>Above floor</th><th>2x4 rails</th><th>Wall cleat</th><th>Starts at</th></tr>`+rows.map(r=>'<tr>'+r.map((c,i)=>`<td${i===1?' class="n"':''}>${c}</td>`).join('')+'</tr>').join('')+'</table>';
-  let txt=`${w.name.toUpperCase()} (${fFt(L)}, measured from the ${w.from})\n`+rows.map(r=>`${r[0]}: ${r[1]} slats, ${r[2]}, ${r[3]} above floor, rails ${r[4]}, wall cleat ${r[5]}, starts ${r[6]} from ${w.from}`).join('\n');
+  const rows=ps.map(({p,off})=>{const n=p.rys.length;return [p.id,p.type==='ipe'?p.k:p.type==='diff'?'diffuser':'absorber',`${fIn(p.w)} × ${fIn(p.H)}`,`${fIn(p.bot)} to ${fFt(p.bot+p.H)}`,p.run.door?'none: screwed through the door':(n?`${n} × ${fIn(p.Lr)}`:'none'),fIn(p.s0+off)];});
+  let t=`<table class="cut"><tr><th>Panel</th><th>Slats</th><th>W × H</th><th>Above floor</th><th>2x4 rails</th><th>Starts at</th></tr>`+rows.map(r=>'<tr>'+r.map((c,i)=>`<td${i===1?' class="n"':''}>${c}</td>`).join('')+'</tr>').join('')+'</table>';
+  let txt=`${w.name.toUpperCase()} (${fFt(L)}, measured from the ${w.from})\n`+rows.map(r=>`${r[0]}: ${r[1]} slats, ${r[2]}, ${r[3]} above floor, rails ${r[4]}, starts ${r[5]} from ${w.from}`).join('\n');
   let fh='';const fw=framing.walls[v];if(fw){
     const fr=fw.cuts.map(c=>[c.label.split(': ')[1]||c.label,`${c.n} × ${fIn(c.len)} ${c.lum}`]);
     fr.unshift(['Wall',`${w.leaf==='outer'?'Outer leaf, to the ceiling':'Inner leaf, booth height'}: ${fIn(fw.len)} long × ${fFt(fw.H)} tall, studs 16" on center`]);
@@ -1191,7 +1168,7 @@ function buildCutList(){
   row('Bar top (5 boards edge-glued, 20" deep with the overhang)',`5 × ${fIn(BAR_L+2)}`,'cut from 5 extra boards; the 22" offcuts become door casing');
   row('Boards to buy',`${s.boards+5} + 5 spare`);
   sec('2x4 (8 ft), panel rails');
-  Object.entries(s.railCuts).sort((a,b)=>b[0]-a[0]).forEach(([L,n])=>{const notched=s.hung.filter(p=>Math.abs(p.Lr-L)<1e-3).length;row(`Rails at ${fIn(+L)}`,`${n}`,`${notched} get the 45° notch (cleat rail), ${n-notched} plain`);});
+  Object.entries(s.railCuts).sort((a,b)=>b[0]-a[0]).forEach(([L,n])=>{row(`Rails at ${fIn(+L)}`,`${n}`,'plain 2x4, laid flat, no notches, painted matte black');});
   {const sp=panels.filter(p=>p.nr>0&&p.type==='ipe');const n=sp.reduce((a,p)=>a+p.nr,0);
     row('Spacer strips on the rail faces (1/2" plywood, 3 1/2" wide)',`${n} strips`,`same length as each rail; sets the ipe 2" off the wall. About ${Math.ceil(sp.reduce((a,p)=>a+p.nr*p.Lr*RAIL_H,0)/144/32*1.15)} sheets of 1/2" plywood, or rip from 1x4`);
     if(state.led==='back')row('LED groove down the center back of every board',`${s.slats-s.doorG.slats} boards`,'1/2" wide × 1/4" deep, full length, table saw with the fence at 2 1/2"; the strip sits in it facing the wall and passes over the rails');}
@@ -1203,10 +1180,10 @@ function buildCutList(){
   packByStock(all2x4).forEach(b=>row(`${b.ft} ft 2x4s to buy (rails + framing)`,`${b.boards} + ${Math.ceil(b.boards*.08)} spare`,'packed with 1/8" kerf'));
   packByStock(all2x6).forEach(b=>row(`${b.ft} ft 2x6s to buy (headers + lid)`,`${b.boards} + 1 spare`));
   packByStock(all2x10).forEach(b=>row(`${b.ft} ft 2x10s to buy (inner window header)`,`${b.boards}`));
-  sec('Wall cleats: one continuous cleat per run, into every stud');
-  {const runs=RUNS.filter(r=>r.panels.length&&!r.door&&r.panels.some(p=>p.nr>0));const lf=runs.reduce((a,r)=>a+(r.end-r.start-1),0)/12;
-    runs.forEach(r=>row(`${r.name}`,`1 × ${fIn(r.end-r.start-1)}`,`level at ${fFt(r.panels[0].bot+r.panels[0].cleat)} to the top of the bevel`));
-    row('Wall cleat stock: 3/4" plywood ripped 2 1/2" wide, top beveled 45°',`${lf.toFixed(0)} ft`,`about ${Math.ceil(lf/136)} sheet${lf>136?'s':''} of 3/4" plywood (17 strips per sheet); splice over a stud. The wedges from the notches are scrap.`);}
+  sec('Mounting: every rail screwed into the studs');
+  {const runs=RUNS.filter(r=>r.panels.length&&!r.door&&r.panels.some(p=>p.nr>0));
+    runs.forEach(r=>row(`${r.name}`,`${r.panels.filter(p=>p.nr>0).length} panel${r.panels.filter(p=>p.nr>0).length===1?'':'s'}`,`top rail level at ${fFt(r.panels[0].bot+r.panels[0].cleat)}; mark the studs along this run before lifting anything`));
+    row('Matte black paint for rails and spacers','1 quart','every rail and spacer, both faces and all edges, before the ipe goes on');}
   if(s.types&&(s.types.diff||s.types.abs)){sec('Diffuser and absorber panels (replace ipe panels 1 for 1)');
     s.types.rows.forEach(r=>row(r[0],r[1],r[2]||''));}
   sec('Sound isolation, drywall, doors');
@@ -1221,7 +1198,7 @@ function buildCutList(){
   sec('Fasteners and finish');
   const slatScrews=panels.reduce((a,p)=>a+p.k*(p.run.door?3:p.nr)*2,0);
   row('Stainless #8 × 2 1/2" screws, through the 2x4 and spacer into the ipe',`${slatScrews} (+10%)`,'2 per slat per rail; predrill and countersink, ipe is very hard');
-  row('Structural screws 1/4" × 3 1/8", wall cleats into studs',`${RUNS.filter(r=>r.panels.length&&!r.door).reduce((a,r)=>a+2*(Math.floor((r.end-r.start)/16)+1),0)} (+10%)`,'2 at every stud the cleat crosses');
+  row('Structural screws 1/4" × 3 1/8", rails into studs',`${panels.filter(x=>x.nr>0).reduce((a,x)=>a+2*x.nr*Math.max(2,x.hits),0)} (+10%)`,'2 through every rail at every stud it crosses');
   row('Framing screws 3"',`about ${framing.F.filter(m=>m.kind!=='plate').length*4+framing.joists.length*6}`);
   row('Ipe end-grain sealer + penetrating oil','1 qt each');
   sec('Ceiling fabric and rugs');
@@ -1238,14 +1215,13 @@ function buildCutList(){
 }
 const CUT_STEPS=[
   '<b>Ipe on the miter saw.</b> Square one factory end of each 97" board (take about 1/4"), set a stop block at the slat length (90" main band) and cut. Cut the bar, amp wall and door lengths the same way. Seal the cut ends the same day.',
-  '<b>2x4 rails on the miter saw.</b> Set a stop block for each rail length in the list and cut all of one length at once. Pick the straightest 2x4s for the notched cleat rails.',
+  '<b>2x4 rails on the miter saw.</b> Set a stop block for each rail length in the list and cut all of one length at once. Pick the straightest 2x4s for the top rails. No notching: every rail is a plain 2x4.',
   '<b>LED groove (table saw).</b> On the back of every board cut a 1/2" wide × 1/4" deep groove down the center (fence at 2 1/2", two passes). The LED strip lies in it facing the wall, so it passes over the rails and lights the wall behind each board. Leave the wire end at the bottom.',
-  '<b>Notch, cut 1 (table saw, 45°).</b> Rail flat, wall face down, bottom edge against the fence. Blade tilted 45° away from the fence, 3/4" high, meeting the table 1 3/4" from the fence. Nothing comes free.',
-  '<b>Notch, cut 2 (table saw, 90°).</b> Rail on its bottom edge, ipe face against the fence, blade 2 1/2" high and 3/4" from the fence. The wedge drops on the open side: it is that panel\'s wall cleat. Featherboard and push stick, test on scrap first.',
-  '<b>Assemble panels face down.</b> Slats face down with 1" spacers. Glue and pin a 1/2" spacer strip to the face of each rail, then lay the rails square across the slats (notch toward the wall, at the cleat line) and screw through the 2x4 and spacer into the ipe with #8 × 2 1/2" screws, 2 per slat per rail. Press the LED strip into each board\'s groove before the panel is hung.',
+  '<b>Paint the rails and spacers matte black.</b> They sit behind a 1" gap between every board, so any bare wood reads as a stripe. Paint before assembly, both faces and all edges.',
+  '<b>Assemble panels face down.</b> Slats face down with 1" spacers. Glue and pin a 1/2" spacer strip to the face of each rail, then lay the rails square across the slats and screw through the 2x4 and spacer into the ipe with #8 × 2 1/2" screws, 2 per slat per rail. Press the LED strip into each board\'s groove before the panel goes up.',
   '<b>Booth outer leaf.</b> Frame the north and east walls to the room ceiling with 10 ft 2x4s, studs 16" on center, door opening in the north wall. Sill gasket under the bottom plate, screw the top plate to the ceiling joists, insulate, 2 layers of 5/8" drywall with damping compound on the room side only.',
   '<b>Booth inner leaf.</b> Frame 4 walls 1" away from the outer leaf and from the room walls (use 1" foam blocks as temporary spacers, then pull them). Sill gasket under every plate, door opening lined up with the outer door. Lay the 2x6 lid joists across the north and south top plates, insulate, then 2 layers of 5/8" drywall on the booth side and the lid underside. Nothing may touch both leaves.',
-  '<b>Hang.</b> Screw each wall cleat level into studs at the cleat height (outside panels into the outer leaf, inside panels into the inner leaf), wire the LED channels to their zone dimmers, then lift each panel 1" and drop it onto its cleat.',
+  '<b>Mount.</b> Snap a level line for each rail, find and mark the studs, then hold the panel to the line and drive 2 structural 1/4" × 3 1/8" screws through every rail at every stud it crosses (outside panels into the outer leaf, inside panels into the inner leaf). Wire the LED channels to their zone dimmers as you go. Two people for anything over 75 lb.',
 ];
 /* ---------- build guide ---------- */
 function buildGuide(){
@@ -1258,20 +1234,21 @@ function buildGuide(){
     <li><b>Electrical rough-in:</b> circuits and boxes for the LED power supplies, dimmers and string lights. Licensed electrician. 1 day.</li>
     <li><b>Insulation, 2 layers of drywall, tape, paint the whole room black.</b> 3 to 4 days with drying.</li>
     <li><b>Doors and window:</b> hang both doors, set both panes, trim in ipe. 1 to 2 days.</li>
-    <li><b>Cut and build all ipe panels</b> (slats, grooves, rails, notches, spacers, LEDs). 4 to 6 days.</li>
-    <li><b>Wall cleats, then hang the panels</b> wall by wall and plug in the LED zones. 2 days, 2 people.</li>
+    <li><b>Cut and build all ipe panels</b> (slats, grooves, rails, spacers, black paint, LEDs). 4 to 6 days.</li>
+    <li><b>Screw the panels off</b> wall by wall, into the studs, and plug in the LED zones. 2 days, 2 people.</li>
     <li><b>Fabric ceiling, string lights, rugs.</b> 1 day.</li></ol><p>About 3 weeks of weekends for two people, plus drywall drying time.</p>`);
   /* 2. ipe panels */
   const kinds={};panels.filter(p=>p.type==='ipe'&&!p.run.door).forEach(p=>{const k=`${p.k}|${p.H.toFixed(2)}|${p.Lr.toFixed(3)}|${p.nr}`;(kinds[k]=kinds[k]||{p,n:0,ids:[]}).n++;kinds[k].ids.push(p.id);});
-  const prow=Object.values(kinds).sort((a,b)=>b.p.H-a.p.H||b.p.k-a.p.k).map(({p,n,ids})=>[`${p.k}-slat × ${fIn(p.H)}`,n,`${p.k} × ${fIn(p.H)}`,`${p.nr} × ${fIn(p.Lr)} (1 notched)`,`${p.nr} × ${fIn(p.Lr)}`,fIn(p.Lc),lb(p.weight),ids.join(', ')]);
-  sec('panels','Ipe panels',`<p>Every panel is the same recipe at a different size: 1" × 5 1/2" ipe slats with 1" gaps, on 2x4 rails laid flat, with a 1/2" spacer strip on each rail so the ipe floats 2" off the wall. The top rail is notched at 45° and hangs on a matching wall cleat. An LED strip runs down a groove in the back of every board.</p>
-    ${tbl(['Panel','Qty','Ipe slats','2x4 rails','1/2" spacers','Wall cleat','Weight','Panels'],prow)}
+  const prow=Object.values(kinds).sort((a,b)=>b.p.H-a.p.H||b.p.k-a.p.k).map(({p,n,ids})=>[`${p.k}-slat × ${fIn(p.H)}`,n,`${p.k} × ${fIn(p.H)}`,`${p.nr} × ${fIn(p.Lr)}`,`${p.nr} × ${fIn(p.Lr)}`,lb(p.weight),ids.join(', ')]);
+  sec('panels','Ipe panels',`<p>Every panel is the same recipe at a different size: 1" × 5 1/2" ipe slats with 1" gaps, on 2x4 rails laid flat, with a 1/2" spacer strip on each rail so the ipe floats 2" off the wall. The rails are plain 2x4s with no notches, painted matte black, and each one is screwed straight through into the studs it crosses. An LED strip runs down a groove in the back of every board.</p>
+    ${tbl(['Panel','Qty','Ipe slats','2x4 rails','1/2" spacers','Weight','Panels'],prow)}
     <h3>Build one panel</h3><ol>
     <li>Cut the slats (miter saw, stop block). Seal the ends.</li>
     <li>Table saw: 1/2" wide × 1/4" deep groove down the center back of each slat.</li>
-    <li>Cut the 2 rails per panel (miter saw, stop block): a bottom rail 6" up and the notched cleat rail 12" below the top. Two rails keep the backlight even; the ipe spans the gap easily because it carries no load. On the cleat rail, make the two notch cuts (see the cleat section view): 45° cut 3/4" deep, then the 90° cut 2 1/2" high. The wedge is scrap.</li>
+    <li>Cut the 2 rails per panel (miter saw, stop block): a bottom rail 6" up and the top rail 12" below the top. Both are plain 2x4s laid flat, no notches and no shaping. Two rails keep the backlight even; the ipe spans the gap easily because it carries no load.</li>
+    <li>Paint the rails and the spacer strips matte black, both faces and all edges, and let them dry before assembly. They sit behind a 1" gap, so bare wood reads as a stripe.</li>
     <li>Rip 1/2" plywood into 3 1/2" strips, cut them to rail length, glue and pin one to the face of each rail.</li>
-    <li>Lay the slats face down on a flat bench with 1" spacer blocks. Set the rails square across them, rail centers at the heights in the cut sheet, ends 9/16" in from the panel edges, notch toward the wall.</li>
+    <li>Lay the slats face down on a flat bench with 1" spacer blocks. Set the rails square across them, rail centers at the heights in the cut sheet, ends 9/16" in from the panel edges.</li>
     <li>Predrill and screw through rail and spacer into each slat: 2 stainless #8 × 2 1/2" screws per slat per rail.</li>
     <li>Press the LED strip into each groove, solder or clip the leads at the bottom, label the panel ID on a rail.</li></ol>`);
   /* 3. hanging */
@@ -1280,11 +1257,11 @@ function buildGuide(){
      if(!rg.has(kk))rg.set(kk,{q,n:0,runs:new Set()});const G=rg.get(kk);G.n++;G.runs.add(q.run.name);});
    const list=[...rg.values()].sort((a,b)=>b.n-a.n);
    sec('bespoke','Bespoke cuts: ripped fillers',`<p>A run of full ${fIn(SLAT_W)} boards almost never lands exactly on the wall. Instead of leaving a gap at the end of a run, the leftover is ripped into filler boards so every run reads as one continuous ipe surface. These are the only bespoke pieces in the build. Everything else is a repeat, and the Components panel groups them for you.</p>
-   <p><b>Measure each one on site before ripping.</b> The wall lengths here were scaled from a hand drawing, so the real gap will differ. Rip on the table saw, seal the cut edge the same day, and screw the filler to the wall cleat and to the edge of its neighbour. A filler gets no 2x4 rails of its own.</p>
+   <p><b>Measure each one on site before ripping.</b> The wall lengths here were scaled from a hand drawing, so the real gap will differ. Rip on the table saw, seal the cut edge the same day, and screw the filler into the rails of the panel beside it, every 16". A filler gets no rails of its own.</p>
    ${list.length?`<table class="cut"><tr><th>Rip to width</th><th>Length</th><th>Qty</th><th>Where it goes</th></tr>`+list.map(G=>`<tr><td><b>${fIn(G.q.sw)}</b></td><td>${fIn(G.q.H)}</td><td class="n">${G.n}</td><td>${[...G.runs].join('; ')}</td></tr>`).join('')+`</table><p>${list.reduce((a,G)=>a+G.n,0)} ripped pieces in all. Rip them from the offcuts left by the slat cuts where the length allows.</p>`:'<p>At the current settings every run lands on full boards, so there are no bespoke cuts. Turn on seamless runs in Controls if you want the ends closed.</p>'}`);}
-  sec('hang','Wall cleats and hanging',`<p>Each run gets one continuous wall cleat: 3/4" plywood ripped 2 1/2" wide with a 45° bevel on top, long point up and away from the wall, screwed into every stud it crosses. Panels can then hang anywhere along it, and no panel depends on hitting studs on its own.</p>
-    ${tbl(['Run','Panels','Cleat top above floor','Panel bottom to top'],hang)}
-    <ol><li>Snap a level line at the cleat height for the run. Find and mark studs.</li><li>Screw the cleat into every stud with 2 structural screws (1/4" × 3 1/8"); splice lengths over a stud.</li><li>Two people: lift the panel 1", slide it to the wall, and drop the notch over the cleat. Check the 1" gap to the next panel with a spacer block.</li><li>Panels are 3 slats wide at most (about 60 lb at 90"), so two people can lift and seat them easily.</li></ol>`);
+  sec('hang','Mounting the panels',`<p>There is no French cleat. Every rail is a plain 2x4 laid flat, painted matte black, and each panel is screwed straight through its rails into the studs behind it. That is simpler to cut, but it means <b>each panel has to land on studs</b>: mark them along the whole run before you lift anything, and add blocking where a panel would otherwise catch only one.</p>
+    ${tbl(['Run','Panels','Top rail above floor','Panel bottom to top'],hang)}
+    <ol><li>Snap a level line for the top rail of the run, and a second for each lower rail. Find and mark every stud along the run.</li><li>Paint the rails and spacers matte black if that is not already done. They sit behind a 1" gap and bare wood reads as a stripe.</li><li>Two people: hold the panel to the line and drive <b>2 structural screws (1/4" × 3 1/8")</b> through every rail at every stud it crosses. Check the 1" gap to the next panel with a spacer block as you go.</li><li>Panels are 3 slats wide at most (about 61 lb at 90"), so two people can hold one while it is screwed off.</li><li>Ripped fillers get no rails: screw them to the rails of the panel beside them, every 16".</li></ol>`);
   /* 4. booth framing */
   const wallTbl=(ids)=>ids.map(id=>{const w=fr.walls[id];return `<h3>${WALL[id].name.replace('Booth ','')}: ${fIn(w.len)} long × ${fFt(w.H)} tall</h3>`+tbl(['Piece','Qty × length','Lumber'],w.cuts.map(c=>[c.label.split(': ')[1],`${c.n} × ${fIn(c.len)}`,c.lum]));}).join('');
   sec('outer','Booth outer walls',`<p>Two new walls on the north and east sides of the booth, from the floor to the room ceiling, built with 10 ft 2x4s. They hold the outer pane of the long window and the outer door. Drywall goes on the room side only.</p>${wallTbl(['BN','BE'])}
@@ -1305,7 +1282,7 @@ function buildGuide(){
     <ol><li>Build a window box for each wall from black 1x stock ripped to that wall's thickness. Screw each box to its own wall only.</li><li>Fix the stops on the far side of each box first. Set the outer pane from the room side and the inner pane from inside the booth, each on setting blocks with glazing tape, then screw the near stops on (screws, not nails, so either pane can come out later for cleaning or replacement). Tilt the inner pane 5° with a tapered stop.</li><li>Line the jambs between panes with felt; close the 1" gap between the boxes with backer rod and acoustic sealant.</li><li>Bar: 2x4 frame against the outer wall, top from 5 ipe boards edge-glued to 20" deep.</li></ol>`);
   /* 7. diffusers and absorbers */
   const D=panels.filter(p=>p.type==='diff'),A=panels.filter(p=>p.type==='abs');
-  sec('diff','Diffusers and absorbers (optional swaps)',`<p>Any panel 3 or more slats wide can be swapped for one of these. They keep the same size and hang on the same notched rails and cleats. Currently: ${D.length} diffusers, ${A.length} absorbers.</p>
+  sec('diff','Diffusers and absorbers (optional swaps)',`<p>Any panel 3 or more slats wide can be swapped for one of these. They keep the same size and mount on the same plain 2x4 rails. Currently: ${D.length} diffusers, ${A.length} absorbers.</p>
     <h3>QRD diffuser</h3><ol><li>1/2" plywood back, the full panel size less 1/4".</li><li>${QRD.length+1} fins, 1/2" × ${DIFF_D}" × panel height, faced with a 1/2" ipe strip; glue and screw to the back at equal spacing.</li><li>Well floors from 1/2" plywood set back 0, 1, 4, 2, 2, 4, 1" from the front, on cleats glued to the fins.</li><li>Paint the back and floors black; screw the rails to the back.</li></ol>
     <h3>Absorber</h3><ol><li>1x3 frame the panel size, 2" mineral wool board inside.</li><li>Wrap in black acoustic fabric, staple on the back, add ipe edge strips.</li><li>Screw the rails to the frame.</li></ol>`);
   /* 8. LEDs */
@@ -1408,7 +1385,6 @@ function renderUI(){
     ...Object.entries(s.railCuts).map(([L,n])=>[`2x4 cuts at ${fIn(+L)}`,n]),
     ['2x4 total',s.railFt.toFixed(1)+' ft'],['8 ft 2x4s to buy',s.twoByBoards],
     ['Notched rails (45°, 3/4" deep)',s.hung.length],
-    ['Wall cleat stock, continuous per run',(RUNS.filter(r=>r.panels.length&&!r.door).reduce((a,r)=>a+(r.end-r.start-1),0)/12).toFixed(1)+' ft'],
     ['sub','Coverage'],
     ['Band length around room',fBoth(s.bandLen)],['Band area / gross wall area',pct(s.bandArea/s.wallArea)],['Ipe face / gross wall area',pct(s.slatArea/s.wallArea)],
   ];
@@ -1442,7 +1418,7 @@ function panelDetail(p){
     ['Boards',`${k} x ${fIn(p.sw)} wide`,'slat'],
     ['Bottom / top above floor',`${fIn(p.bot)} / ${fFt(top)}`,'h'],
     nr?['2x4 rail length',fIn(p.Lr),'lr']:null,
-    p.cleat!=null&&nr?['Cleat rail, below the top',fIn(p.H-p.cleat),'cleat']:null,
+    p.cleat!=null&&nr?['Top rail, below the top',fIn(p.H-p.cleat),'cleat']:null,
     nr>1?['Bottom brace, up from the bottom',fIn(Math.min.apply(null,p.rys)),'brace']:null,
     ['Weight',`<span style="color:${p.weight>HEAVY?'var(--warn)':'inherit'}">${lb(p.weight)}</span>`]
   ].filter(Boolean));
@@ -1450,9 +1426,8 @@ function panelDetail(p){
   if(ipe)mats.push([`Ipe slats, cut to ${fIn(p.H)}`,`${k} from 1 x 5 1/2 x 97`]);
   else mats.push([p.type==='diff'?'QRD diffuser blank':'Absorber blank',`1 at ${fIn(p.w)} x ${fIn(p.H)}`]);
   if(nr){
-    mats.push([`2x4 rails, cut to ${fIn(p.Lr)}`,`${nr} (1 notched)`]);
+    mats.push([`Plain 2x4 rails, cut to ${fIn(p.Lr)}`,`${nr}`]);
     mats.push([`1/2" ply spacer strips, ${fIn(p.Lr)}`,`${nr}`]);
-    mats.push([`Wall cleat: 3/4" ply, ${fIn(WC_H)} wide, 45${String.fromCharCode(176)} bevel`,fIn(p.Lc)]);
     if(ipe)mats.push(['Stainless #8 x 2 1/2 screws',`${k*2*nr}`]);
     mats.push(['Structural screws 1/4" x 3 1/8" into studs',`${Math.max(2,p.hits*2)}`]);
   } else mats.push(['Screwed through the door from inside','no rails']);
@@ -1461,12 +1436,12 @@ function panelDetail(p){
   if(ipe){const cpb=Math.max(1,Math.floor((STOCK+KERF)/(p.H+KERF)));steps.push(`Cut ${k} slats to <b>${fIn(p.H)}</b>. ${cpb} cut${cpb>1?'s':''} per ${STOCK}" board at this length.`);}
   if(nr){
     steps.push(`Cut ${nr} 2x4 rails to <b>${fIn(p.Lr)}</b> (panel width less ${fIn(2*RAIL_INSET)}, so the rails sit ${fIn16(RAIL_INSET)} in from each edge).`);
-    steps.push(`Notch the cleat rail: <b>45${String.fromCharCode(176)}, ${fIn(NOTCH_D)} deep</b> along its lower back edge, full length.`);
     steps.push(`Rip ${nr} spacer strips from 1/2" ply to ${fIn(p.Lr)} and screw one to the face of each rail. That is what floats the ipe ${fIn(SPACER_T+RAIL_T)} off the wall.`);
+    steps.push(`Paint the rails and spacers <b>matte black</b> before the ipe goes on: they show through the ${fIn(state.gap)} gaps.`);
   }
   if(ipe)steps.push(`Lay the slats face down with <b>${fIn(state.gap)}</b> spacer blocks between them and square the panel up.`);
-  if(nr&&ipe)steps.push(`Predrill and drive <b>2 screws per slat at each rail</b> (${k*2*nr} total). Cleat rail sits ${cl}; the brace sits ${fIn(Math.min.apply(null,p.rys.length?p.rys:[0]))} up from the bottom.`);
-  if(nr)steps.push(`Hang it: lift ${fIn(1)}, slide to the wall and drop the notch over the wall cleat.`);
+  if(nr&&ipe)steps.push(`Predrill and drive <b>2 screws per slat at each rail</b> (${k*2*nr} total). Top rail sits ${cl}; the lower brace sits ${fIn(Math.min.apply(null,p.rys.length?p.rys:[0]))} up from the bottom.`);
+  if(nr)steps.push(`Hold it to the line and screw off: <b>2 structural 1/4" x 3 1/8"</b> through every rail at every stud it crosses. Two people for anything over ${HEAVY} lb.`);
   const pos=kv([['Run',p.run.name],[`Along the wall from the ${w.from}`,`${fIn(p.s0)} to ${fIn(p.s1)}`],['Plan X,Y start',pt(p.s0)],['Plan X,Y end',pt(p.s1)],['Stud hits',`<span style="color:${hitColor(p.hits)}">${p.hits}${state.studs?'':' (stud overlay off)'}</span>`]]);
   const back=`<button class="prow back" data-back="1"><i>&lsaquo;</i><span>${compView?'All components':'All panels on the '+p.wall.name.toLowerCase()+' wall'}</span></button>`;
   const html=`${back}${swap}<div class="ik">${panelDiagram(p)}</div>
@@ -1476,7 +1451,7 @@ function panelDetail(p){
     <p class="tnote" style="margin-top:9px">Tap any measurement to light it up on the drawing.</p>
     ${dd('What screws into what','',fastenChain(p),true)}
     ${dd('Materials for this panel','',matTable(mats))}
-    ${dd('Cut, notch and drill',`${steps.length} steps`,`<ol class="stepn">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>`+(nr?`<div class="ik sect">${cleatSection()}</div><p class="ikcap"><b>1</b> 2x4 rail laid flat, back tight to the wall. <b>2</b> 45${String.fromCharCode(176)} notch ${fIn(NOTCH_D)} deep over the wall cleat. <b>3</b> ${fIn(SPACER_T)} spacer + ${fIn(SLAT_T)} ipe, so the boards float ${fIn(RAIL_T+SPACER_T)} off the wall.</p>`:''))}
+    ${dd('Cut, notch and drill',`${steps.length} steps`,`<ol class="stepn">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>`+(nr?`<div class="ik sect">${cleatSection()}</div><p class="ikcap"><b>1</b> Plain 2x4 rail laid flat, painted black, screwed straight through into the stud. <b>2</b> ${fIn(SPACER_T)} spacer, also black. <b>3</b> ${fIn(SLAT_T)} ipe, floating ${fIn(RAIL_T+SPACER_T)} off the wall.</p>`:''))}
     ${dd('Where it sits','',pos)}`;
   const txt=`${p.id} ${kind} on ${p.run.name}\n${fIn(p.w)} x ${fIn(p.H)}, ${fIn(p.bot)} to ${fFt(top)} above floor, ${lb(p.weight)}\n\nMATERIALS\n`
     +mats.map(m=>`${m[0].replace(/<[^>]+>/g,'')}: ${m[1]}`).join('\n')
@@ -1490,7 +1465,7 @@ function wallDetail(v){
   const rows=ps.map(({p,off})=>`<button class="prow" data-pid="${p.id}"><b>${p.id}</b><span>${p.type==='ipe'?p.k+'-slat':p.type==='diff'?'diffuser':'absorber'} ${String.fromCharCode(183)} ${fIn(p.w)} x ${fIn(p.H)}<br>${fIn(p.s0+off)} from the ${w.from} ${String.fromCharCode(183)} ${lb(p.weight)}</span><i>&rsaquo;</i></button>`).join('');
   const list=ps.length?rows:'<p class="tnote">No ipe panels on this face.</p>';
   const html=`<div class="ik diag">${r.svg}</div>
-    <p class="ikcap">Dashed lines are the 2x4 rails behind the ipe; orange is the notched cleat rail. Dashed tan boxes are booth framing.</p>
+    <p class="ikcap">Dashed lines are the 2x4 rails behind the ipe; the top rail is marked. Dashed tan boxes are booth framing.</p>
     ${kv([['Wall length',fBoth(w.L)],['Measured from',w.from],['Ipe panels on this face',ps.length||'none']])}
     ${dd('Panels on this wall',`tap for cut sheet`,list,true)}
     ${r.framing?dd('Framing','',r.framing):''}`;
@@ -1575,7 +1550,7 @@ function trayShow(d){
   const rs=body.querySelector('#ckReset');if(rs)rs.onclick=()=>{checks={};saveChecks();rebuild();};
   /* tapping a measurement fades everything on the drawing except what it names */
   const hint=body.querySelector('#ikhint');
-  const NAMES={w:'Overall width of the panel',h:'Height, and where it sits above the floor',slat:'The ipe boards',lr:'The 2x4 rails behind the boards',cleat:'Notched cleat rail: this is what hangs on the wall',brace:'Bottom brace: holds the panel plumb'};
+  const NAMES={w:'Overall width of the panel',h:'Height, and where it sits above the floor',slat:'The ipe boards',lr:'The 2x4 rails behind the boards',cleat:'Top rail: screwed through into the studs',brace:'Bottom brace: holds the panel plumb'};
   const marks=()=>body.querySelectorAll('.ik [data-dm],.ik [data-pt2]');
   const clear=()=>{marks().forEach(el=>el.classList.remove('fade','pop'));body.querySelectorAll('[data-hl].on').forEach(x=>x.classList.remove('on'));if(hint)hint.textContent='';};
   body.querySelectorAll('[data-hl]').forEach(tr=>{
