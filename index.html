@@ -89,7 +89,7 @@ td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums
 /* IKEA-style line drawings */
 .ik{background:#fff;border:1px solid var(--line);border-radius:10px;margin:4px 0 11px;overflow:hidden}
 .ik svg{display:block;width:100%;height:auto}
-.ik.sect svg{width:auto;max-width:100%;max-height:220px;margin:12px auto}
+.ik.sect svg{width:100%;max-width:100%;max-height:330px;margin:10px auto}
 .ikcap{font-size:11.5px;color:var(--mut);margin:-5px 0 12px}
 .kv{width:100%;border-collapse:collapse;font-size:12.5px}
 .kv td{padding:7px 0;border-bottom:1px solid #f4f1ec;vertical-align:top}
@@ -443,9 +443,9 @@ const grain=(()=>{const c=document.createElement('canvas');c.width=64;c.height=5
 
 const M={
   /* painted matte black; rendered as charcoal so the framing stays legible against a black room */
-  rail:new THREE.MeshStandardMaterial({color:'#2b2b30',roughness:.9}),
-  crail:new THREE.MeshStandardMaterial({color:'#3a3a42',roughness:.88}),
-  wcleat:new THREE.MeshStandardMaterial({color:'#4a4a54',roughness:.88}),
+  rail:new THREE.MeshStandardMaterial({color:'#24242a',roughness:.92}),
+  crail:new THREE.MeshStandardMaterial({color:'#4e4e5a',roughness:.86}),
+  wcleat:new THREE.MeshStandardMaterial({color:'#9a948c',roughness:.82}),
   wall:new THREE.MeshStandardMaterial({color:'#d9d3c9',transparent:true,opacity:.22,depthWrite:false,side:THREE.DoubleSide}),
   wallP:new THREE.MeshStandardMaterial({color:'#0b0b0c',roughness:.95}),
   ceilP:new THREE.MeshStandardMaterial({color:'#08080a',roughness:1}),
@@ -628,6 +628,10 @@ function layout(){
     /* Round every panel to 1/16" so rails and components still group into repeatable
        cuts. Whatever is left after that is a few hundredths and goes to the end reveals. */
     parts.forEach(q=>{const w=q.rip?q.rip:q.k*SLAT_W+(q.k-1)*eg;q.w=Math.round(w*16)/16;if(q.rip)q.rip=q.w,q.sw=q.w;});
+    /* Rounding can leave the run a sixteenth long or short. Solve the gap between panels
+       once more against the rounded widths so the run still lands exactly on its bounds. */
+    {const nG=parts.length-1,wsum=parts.reduce((a,q)=>a+q.w,0);
+     if(nG>0){const g2=(r.avail-wsum)/nG;if(g2>=g-MAX_GAP_CREEP&&g2<=g+MAX_GAP_CREEP)eg=g2;}}
     r.g=eg;r.parts=parts;
     const ws=parts.map(q=>q.w);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*eg;r.over=r.used-r.avail;
     let s=r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];const gg=eg;
@@ -1056,7 +1060,7 @@ function wallObstacles(v,Ht){
 /* ---------- IKEA-style line drawings: panel front/back, and the cleat section ----------
    One visual language: thin black outlines, one wood tone, one accent, numbered badges,
    and only the dimensions you need in your hand at the saw. */
-const IKL='#1d1d1f',IKM='#8d857b',IKW='#e3d2b6',IKC='#f6d9a8',IKS='#efe9e0';
+const IKL='#1d1d1f',IKM='#8d857b',IKW='#e3d2b6',IKC='#f6d9a8',IKS='#efe9e0',IKA='#d6336c';
 const ikEsc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 function ikWrap(vbW,vbH,body){return `<svg viewBox="0 0 ${vbW.toFixed(2)} ${vbH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" font-family="system-ui,-apple-system,sans-serif">${body}</svg>`;}
 function dimH(x1,x2,y,txt,sw,fs,col){const c=col||IKM,t=fs*.34;
@@ -1135,35 +1139,51 @@ function fastenChain(p){
     ${node('Stud','16" on center')}
   </div>`;
 }
-/* section through the cleat: wall, the two nested 2x4 halves, ipe.
-   Labels live in HTML under the drawing, so the geometry can fill the box. */
+/* Section through the cleat. Both halves are painted black on site, but a drawing where
+   they are both black shows nothing, so the two pieces are told apart by tone, the 45
+   degree bearing face is drawn in the accent colour, and a dashed ghost shows the panel
+   half lifted clear. Labels sit beside the section so the drawing can fill the width. */
 function cleatSection(){
-  const D=STANDOFF,Hs=7.0,ml=1.5,mr=1.5,mt=1.1,mb=2.6;
-  const vbW=ml+D+mr, vbH=mt+Hs+mb, sw=.05, fs=.92;
+  const D=STANDOFF,Hs=8.6,ml=1.5,lab=8.8,mt=1.0,mb=2.5;
+  const vbW=ml+D+lab, vbH=mt+Hs+mb, sw=.055, fs=.52;
   const X=x=>ml+x, Y=y=>mt+(Hs-y);
-  const rb=1.9, rt=rb+RAIL_H;              /* the 3 1/2" band the nested cleat occupies */
-  const cutB=rb+CLEAT_CUT, cutF=rb+CLEAT_CUT+RAIL_T;   /* the 45 degree face */
+  const rb=1.8, rt=rb+RAIL_H;
+  const cutB=rb+CLEAT_CUT, cutF=rb+CLEAT_CUT+RAIL_T;
+  const LIFT=CLEAT_RISE+.7, LX=X(D)+1.5;
+  const panelHalf=dy=>`M${X(0).toFixed(2)} ${Y(cutB+dy).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(cutF+dy).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(rt+dy).toFixed(2)} L${X(0).toFixed(2)} ${Y(rt+dy).toFixed(2)} Z`;
+  const lead=(fromX,y,txt,col)=>`<line x1="${fromX.toFixed(2)}" y1="${Y(y).toFixed(2)}" x2="${(LX-.25).toFixed(2)}" y2="${Y(y).toFixed(2)}" stroke="${col||IKM}" stroke-width="${(sw*.8).toFixed(3)}"/>`
+    +`<text x="${LX.toFixed(2)}" y="${(Y(y)+fs*.34).toFixed(2)}" font-size="${fs.toFixed(2)}" font-weight="700" fill="${col||IKL}">${txt}</text>`;
   let o='';
-  /* existing wall */
-  o+=`<rect x="${(X(0)-.9).toFixed(2)}" y="${mt.toFixed(2)}" width=".9" height="${Hs.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${sw}"/>`;
-  for(let i=0;i<7;i++){const y=mt+i*(Hs/7)+.3;o+=`<line x1="${(X(0)-.9).toFixed(2)}" y1="${y.toFixed(2)}" x2="${X(0).toFixed(2)}" y2="${(y-.5).toFixed(2)}" stroke="${IKM}" stroke-width="${(sw*.7).toFixed(3)}"/>`;}
-  /* ipe board, full height, floating 1 1/2" off the wall */
+  /* existing wall, hatched */
+  o+=`<rect x="${(X(0)-.95).toFixed(2)}" y="${mt.toFixed(2)}" width=".95" height="${Hs.toFixed(2)}" fill="#f2efe9" stroke="${IKL}" stroke-width="${sw}"/>`;
+  for(let i=0;i<10;i++){const y=mt+i*(Hs/10)+.25;o+=`<line x1="${(X(0)-.95).toFixed(2)}" y1="${y.toFixed(2)}" x2="${X(0).toFixed(2)}" y2="${(y-.5).toFixed(2)}" stroke="#b8b0a4" stroke-width="${(sw*.7).toFixed(3)}"/>`;}
+  /* ipe board */
   o+=`<rect x="${X(RAIL_T).toFixed(2)}" y="${mt.toFixed(2)}" width="${SLAT_T}" height="${Hs.toFixed(2)}" fill="${IKW}" stroke="${IKL}" stroke-width="${sw}"/>`;
-  /* lower half: the wall cleat, bevel up and away from the wall */
-  o+=`<path d="M${X(0).toFixed(2)} ${Y(rb).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(rb).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(cutF).toFixed(2)} L${X(0).toFixed(2)} ${Y(cutB).toFixed(2)} Z" fill="#6f6a63" stroke="${IKL}" stroke-width="${(sw*1.2).toFixed(3)}"/>`;
-  /* upper half: the panel's cleat rail, bevel down and toward the wall */
-  o+=`<path d="M${X(0).toFixed(2)} ${Y(cutB).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(cutF).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(rt).toFixed(2)} L${X(0).toFixed(2)} ${Y(rt).toFixed(2)} Z" fill="#2e2c2a" stroke="${IKL}" stroke-width="${(sw*1.2).toFixed(3)}"/>`;
-  /* the structural screw through the wall cleat */
-  {const y=Y(rb+CLEAT_CUT*.5);
-   o+=`<line x1="${(X(0)-.8).toFixed(2)}" y1="${y.toFixed(2)}" x2="${X(RAIL_T*.9).toFixed(2)}" y2="${y.toFixed(2)}" stroke="${IKL}" stroke-width="${(sw*1.6).toFixed(3)}"/>`;
-   o+=`<circle cx="${X(RAIL_T*.9).toFixed(2)}" cy="${y.toFixed(2)}" r="${(sw*4).toFixed(2)}" fill="${IKL}"/>`;}
-  /* the lift arrow */
-  o+=`<path d="M${X(D+.55).toFixed(2)} ${Y(rt+1.6).toFixed(2)} L${X(D+.55).toFixed(2)} ${Y(rt+.2).toFixed(2)}" stroke="${IKM}" stroke-width="${sw}" fill="none"/>`;
-  o+=`<path d="M${X(D+.3).toFixed(2)} ${Y(rt+1.3).toFixed(2)} L${X(D+.55).toFixed(2)} ${Y(rt+1.7).toFixed(2)} L${X(D+.8).toFixed(2)} ${Y(rt+1.3).toFixed(2)} Z" fill="${IKM}"/>`;
-  o+=dimH(X(0),X(D),mt+Hs+fs*.75,fIn(D),sw,fs);
-  o+=ikBadge(X(RAIL_T*.5),Y(rt-.7),'1',fs);
-  o+=ikBadge(X(RAIL_T*.5),Y(rb+.45),'2',fs);
-  o+=ikBadge(X(RAIL_T+SLAT_T*.5),Y(Hs-1.0),'3',fs);
+  /* lower half, fixed to the wall: white */
+  o+=`<path d="M${X(0).toFixed(2)} ${Y(rb).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(rb).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(cutF).toFixed(2)} L${X(0).toFixed(2)} ${Y(cutB).toFixed(2)} Z" fill="#e7ecf1" stroke="${IKL}" stroke-width="${(sw*1.3).toFixed(3)}"/>`;
+  /* upper half, on the panel: grey */
+  o+=`<path d="${panelHalf(0)}" fill="#b9b2a7" stroke="${IKL}" stroke-width="${(sw*1.3).toFixed(3)}"/>`;
+  /* the one surface that carries the panel */
+  o+=`<line x1="${X(0).toFixed(2)}" y1="${Y(cutB).toFixed(2)}" x2="${X(RAIL_T).toFixed(2)}" y2="${Y(cutF).toFixed(2)}" stroke="${IKA}" stroke-width="${(sw*2.8).toFixed(3)}" stroke-linecap="round"/>`;
+  /* where the panel half starts: lifted clear */
+  o+=`<path d="${panelHalf(LIFT)}" fill="none" stroke="${IKM}" stroke-width="${sw}" stroke-dasharray="${(sw*4).toFixed(2)} ${(sw*3).toFixed(2)}"/>`;
+  {const ax=X(RAIL_T*.45), y0=Y(rt+LIFT)+.3, y1=Y(rt)-.25;
+   o+=`<line x1="${ax.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${ax.toFixed(2)}" y2="${y1.toFixed(2)}" stroke="${IKA}" stroke-width="${(sw*1.5).toFixed(3)}"/>`;
+   o+=`<path d="M${(ax-.26).toFixed(2)} ${(y1-.4).toFixed(2)} L${ax.toFixed(2)} ${y1.toFixed(2)} L${(ax+.26).toFixed(2)} ${(y1-.4).toFixed(2)} Z" fill="${IKA}"/>`;}
+  /* structural screw through the wall half into the stud */
+  {const y=Y(rb+CLEAT_CUT*.45);
+   o+=`<line x1="${(X(0)-.85).toFixed(2)}" y1="${y.toFixed(2)}" x2="${X(RAIL_T*.92).toFixed(2)}" y2="${y.toFixed(2)}" stroke="${IKL}" stroke-width="${(sw*1.7).toFixed(3)}"/>`;
+   o+=`<circle cx="${X(RAIL_T*.92).toFixed(2)}" cy="${y.toFixed(2)}" r="${(sw*4).toFixed(2)}" fill="${IKL}"/>`;}
+  /* labels beside the drawing */
+  o+=lead(X(RAIL_T+SLAT_T),Hs-1.0,`${fIn(SLAT_T)} ipe board`);
+  o+=lead(X(RAIL_T*.5),rt+LIFT*.55,`lift ${fIn(CLEAT_RISE+.25)} to hang`,IKA);
+  o+=lead(X(RAIL_T*.3),rt-.75,'cleat rail, on panel');
+  o+=lead(X(RAIL_T),(cutB+cutF)/2,`45${String.fromCharCode(176)} bearing face`,IKA);
+  o+=lead(X(RAIL_T*.8),rb+.7,'wall cleat, into studs');
+  o+=dimH(X(0),X(D),mt+Hs+fs*1.1,fIn(D),sw,fs*1.25);
+  o+=ikBadge(X(RAIL_T*.42),Y(rt-.75),'1',fs*1.35);
+  o+=ikBadge(X(RAIL_T*.8),Y(rb+.7),'2',fs*1.35);
+  o+=ikBadge(X(RAIL_T+SLAT_T*.5),Y(Hs-1.0),'3',fs*1.35);
   return ikWrap(vbW,vbH,o);
 }
 function wallSheet(v){
@@ -1519,7 +1539,7 @@ function panelDetail(p){
     <p class="tnote" style="margin-top:9px">Tap any measurement to light it up on the drawing.</p>
     ${dd('What screws into what','',fastenChain(p),true)}
     ${dd('Materials for this panel','',matTable(mats))}
-    ${dd('Cut, notch and drill',`${steps.length} steps`,`<ol class="stepn">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>`+(nr?`<div class="ik sect">${cleatSection()}</div><p class="ikcap"><b>1</b> 2x4 cleat rail on the panel. <b>2</b> Matching 2x4 wall cleat, screwed into the studs. The two halves come from one 45${String.fromCharCode(176)} rip and nest back to ${fIn(RAIL_T)}. <b>3</b> ${fIn(SLAT_T)} ipe, floating ${fIn(RAIL_T)} off the wall.</p>`:''))}
+    ${dd('Cut, rip and drill',`${steps.length} steps`,`<ol class="stepn">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>`+(nr?`<div class="ik sect">${cleatSection()}</div><p class="ikcap"><b>1</b> grey: the cleat rail screwed to the panel. <b>2</b> pale blue: the matching wall cleat, screwed into the studs. Both come from one 45${String.fromCharCode(176)} rip of a single 2x4 and nest back to ${fIn(RAIL_T)}; on site both are painted matte black. The pink line is the 45${String.fromCharCode(176)} bearing face, the only surface carrying the panel, and the dashed outline is the panel half lifted ${fIn(CLEAT_RISE+.25)} clear of it. <b>3</b> ${fIn(SLAT_T)} ipe, floating ${fIn(RAIL_T)} off the wall.</p>`:''))}
     ${dd('Where it sits','',pos)}`;
   const txt=`${p.id} ${kind} on ${p.run.name}\n${fIn(p.w)} x ${fIn(p.H)}, ${fIn(p.bot)} to ${fFt(top)} above floor, ${lb(p.weight)}\n\nMATERIALS\n`
     +mats.map(m=>`${m[0].replace(/<[^>]+>/g,'')}: ${m[1]}`).join('\n')
