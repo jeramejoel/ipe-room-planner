@@ -11,7 +11,8 @@
 html,body{margin:0;height:100%;height:100dvh;overflow:hidden;background:#ece8e1;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 #top{position:fixed;left:0;right:0;top:0;padding:calc(10px + var(--st)) calc(12px + var(--sr)) 0 calc(12px + var(--sl));pointer-events:none;z-index:5}
-#titleRow{display:flex;align-items:center;gap:8px;pointer-events:auto}
+#titleRow{display:flex;align-items:center;gap:8px;pointer-events:auto;overflow-x:auto;scrollbar-width:none}
+#titleRow::-webkit-scrollbar{display:none}
 #titleRow h1{font-size:15px;margin:0;font-weight:700;background:var(--card);padding:6px 10px;border-radius:10px;box-shadow:0 1px 6px #0002;white-space:nowrap}
 #warnPill{display:none;background:var(--bad);color:#fff;border:0;border-radius:999px;padding:6px 10px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap}
 #views{display:flex;gap:6px;overflow-x:auto;padding:8px 0 6px;pointer-events:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -55,16 +56,95 @@ td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums
 .sub{font-weight:700;padding-top:10px;color:var(--mut);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
 #warns div{padding:8px 10px;border-radius:8px;margin:5px 0;font-size:12.5px}
 .w-bad{background:#ffe3e3;color:#a61e1e}.w-warn{background:#fff1db;color:#8a4b00}.w-ok{background:#e6f6ea;color:#1f6b31}
-#info{position:fixed;left:calc(70px + var(--sl));bottom:calc(16px + var(--sb));z-index:6;background:#fff;border-radius:14px;box-shadow:0 4px 18px #0003;padding:12px 14px;width:min(330px,calc(100vw - 200px));display:none;font-size:12.5px}
-@media (max-width:759px){#info{left:calc(12px + var(--sl));right:calc(12px + var(--sr));width:auto;bottom:auto;top:calc(142px + var(--st));z-index:6}}
-#sheet{position:fixed;z-index:8;background:#fff;box-shadow:0 -4px 24px #0003;display:none;flex-direction:column;-webkit-user-select:text;user-select:text}
-#sheet.open{display:flex}
-@media (min-width:760px){#sheet{left:calc(70px + var(--sl));bottom:calc(16px + var(--sb));width:min(620px,calc(100vw - 480px));max-height:58vh;border-radius:16px}}
-@media (max-width:759px){#sheet{left:0;right:0;bottom:0;max-height:52dvh;border-radius:18px 18px 0 0;padding-bottom:var(--sb)}}
-#sheetHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
-#sheetHead b{font-size:14.5px}
-#sheetHead button{border:0;background:#f1eee9;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer;min-height:36px}
-#sheetBody{overflow:auto;padding:10px 14px 14px;overscroll-behavior:contain}
+/* ---------- detail tray: side rail on desktop, bottom sheet on mobile ---------- */
+#tray{position:fixed;z-index:8;background:#fff;display:none;flex-direction:column;-webkit-user-select:text;user-select:text;overscroll-behavior:contain;box-shadow:0 6px 32px #00000030}
+#tray.shown{display:flex}
+@media (min-width:760px){#tray{top:calc(12px + var(--st));right:calc(12px + var(--sr));width:384px;max-height:calc(100dvh - 24px - var(--st) - var(--sb));border-radius:14px;transform:translateX(110%)}#tray.open{transform:none}}
+@media (max-width:759px){#tray{left:0;right:0;bottom:0;max-height:92dvh;border-radius:18px 18px 0 0;padding-bottom:var(--sb);transform:translateY(100%)}#tray.open{transform:none}}
+@media (prefers-reduced-motion:no-preference){
+  @media (min-width:760px){#tray{transition:transform .2s cubic-bezier(.16,1,.3,1)}}
+  @media (max-width:759px){#tray{transition:transform .24s ease-out}}
+  #tray.drag{transition:none}
+  #trayBody.swap{animation:trayfade .2s cubic-bezier(.16,1,.3,1)}
+  @keyframes trayfade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+}
+#trayGrab{display:none}
+@media (max-width:759px){#trayGrab{display:block;padding:9px 0 3px;cursor:grab;touch-action:none}#trayGrab i{display:block;width:36px;height:4px;border-radius:999px;background:#d4cec5;margin:0 auto}}
+#trayHead{flex:0 0 auto;display:flex;flex-direction:column;gap:10px;padding:13px 16px 11px}
+#trayTop{display:flex;align-items:flex-start;gap:8px}
+#trayTitle{flex:1;min-width:0;font-size:15.5px;font-weight:700;line-height:1.25}
+#trayTitle span{display:block;font-size:12px;font-weight:500;color:var(--mut);margin-top:3px}
+#trayHead button{flex:0 0 auto;border:0;background:#f1eee9;border-radius:9px;padding:7px 10px;font-weight:600;font-size:12.5px;cursor:pointer;min-height:34px;color:var(--ink)}
+#trayRule{height:3px;border-radius:999px;background:var(--acc)}
+#trayBody{flex:1 1 auto;min-height:0;overflow:auto;padding:2px 16px 20px;overscroll-behavior:contain}
+/* progressive disclosure: the overview is open, the depth is behind summaries */
+.dd{border-top:1px solid var(--line)}
+.dd>summary{list-style:none;cursor:pointer;padding:12px 0;font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;min-height:42px}
+.dd>summary::-webkit-details-marker{display:none}
+.dd>summary b{flex:1;min-width:0;font-weight:700}
+.dd>summary small{font-weight:500;color:var(--mut);font-size:12px;font-variant-numeric:tabular-nums}
+.dd>summary::after{content:'+';font-size:18px;font-weight:600;color:var(--mut);line-height:1;width:16px;text-align:center}
+.dd[open]>summary::after{content:'\2013'}
+.ddb{padding:0 0 15px}
+/* IKEA-style line drawings */
+.ik{background:#fff;border:1px solid var(--line);border-radius:10px;margin:4px 0 11px;overflow:hidden}
+.ik svg{display:block;width:100%;height:auto}
+.ik.sect svg{width:auto;max-width:100%;max-height:220px;margin:12px auto}
+.ikcap{font-size:11.5px;color:var(--mut);margin:-5px 0 12px}
+.kv{width:100%;border-collapse:collapse;font-size:12.5px}
+.kv td{padding:7px 0;border-bottom:1px solid #f4f1ec;vertical-align:top}
+.kv td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;padding-left:10px}
+.kv tr:last-child td{border-bottom:0}
+.mat{width:100%;border-collapse:collapse;font-size:12.5px}
+.mat th{text-align:left;font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;padding:0 8px 6px 0;border-bottom:1px solid var(--line);font-weight:700}
+.mat th:last-child,.mat td:last-child{text-align:right;padding-right:0}
+.mat td{padding:7px 8px 7px 0;border-bottom:1px solid #f4f1ec}
+.mat td:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.stepn{margin:0;padding-left:0;list-style:none;counter-reset:sn}
+.stepn li{counter-increment:sn;position:relative;padding:0 0 11px 30px;font-size:13px;line-height:1.5}
+.stepn li::before{content:counter(sn);position:absolute;left:0;top:0;width:21px;height:21px;border-radius:50%;background:var(--ink);color:#fff;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.tnote{font-size:12.5px;color:var(--mut);margin:0 0 11px;line-height:1.5}
+.prow{display:flex;width:100%;align-items:center;gap:10px;text-align:left;border:0;border-bottom:1px solid #f4f1ec;background:none;padding:10px 0;cursor:pointer;font:inherit;color:var(--ink);min-height:48px}
+.prow:last-child{border-bottom:0}
+.prow b{font-weight:700;font-size:13px;flex:0 0 auto;min-width:26px}
+.prow span{flex:1;min-width:0;font-size:12px;color:var(--mut);line-height:1.4}
+.prow i{font-style:normal;color:var(--mut);font-size:17px;flex:0 0 auto;width:12px;text-align:center}
+.prow:hover{background:#faf8f5}
+.prow.back{border-bottom:1px solid var(--line);margin-bottom:10px}
+.prow.back span{font-weight:600;color:var(--ink);font-size:12.5px}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.tscroll>table{width:max-content;min-width:100%}
+.crow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f4f1ec}
+.crow:last-child{border-bottom:0}
+.cmini{flex:0 0 auto;width:34px;height:52px;display:flex;align-items:center;justify-content:center;background:#faf8f5;border:1px solid var(--line);border-radius:6px;padding:3px}
+.cmini svg{width:100%;height:100%}
+.cmeta{flex:1;min-width:0}
+.cmeta b{display:block;font-size:12.5px;font-weight:700}
+.cmeta span{display:block;font-size:11.5px;color:var(--mut);line-height:1.35}
+.cmeta .cids{font-size:10.5px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cchk{flex:0 0 auto;display:flex;flex-direction:column;gap:3px}
+.cchk label{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--mut);cursor:pointer;min-height:22px}
+.cchk input{width:17px;height:17px;accent-color:var(--ok);margin:0}
+.cgo{flex:0 0 auto;border:0;background:none;font-size:17px;color:var(--mut);cursor:pointer;width:22px;padding:0}
+.prog{margin:0 0 10px}
+.progt{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-bottom:4px}
+.progt b{color:var(--ink);font-variant-numeric:tabular-nums}
+.progb{height:6px;border-radius:999px;background:#eee9e1;overflow:hidden}
+.progb i{display:block;height:100%;background:var(--ok);border-radius:999px;transition:width .25s ease}
+.ik [data-dm],.ik [data-pt2]{transition:opacity .15s ease}
+.ik .fade{opacity:.15}
+.ik .pop rect,.ik .pop line,.ik .pop text,.ik .pop path{stroke-width:inherit}
+tr.hl{cursor:pointer}
+tr.hl:hover td,tr.hl.on td{background:#fdf2f6}
+tr.hl.on td{color:var(--acc)}
+tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
+#ikhint{min-height:15px;font-size:11.5px;font-weight:700;color:var(--acc);margin:-4px 0 8px}
+.chain{display:flex;flex-direction:column;margin:2px 0 4px}
+.chain .cn{display:flex;flex-direction:column;gap:1px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#faf8f5}
+.chain .cn b{font-size:12.5px;font-weight:700}
+.chain .cn span{font-size:11.5px;color:var(--mut);line-height:1.35}
+.chain .ar{padding:5px 0 5px 12px;font-size:11px;color:var(--acc);font-weight:700;line-height:1.35}
+#compBtn{border:0;background:#f1eee9;color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;pointer-events:auto;white-space:nowrap}
 .diag{overflow-x:auto;margin:0 -4px 8px;border:1px solid var(--line);border-radius:10px;background:#fbfaf7}
 .diag svg{display:block}
 .cut{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
@@ -73,7 +153,7 @@ td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums
 .cut td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
 .copy{border:0;background:var(--ink);color:#fff;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;min-height:38px}
 .steps{margin:6px 0 0;padding-left:18px;font-size:12.5px}.steps li{margin:6px 0}
-#nav #sheetBtn{display:none;font-size:11px}
+#nav #sheetBtn{display:none;font-size:10.5px}
 #guide{position:fixed;inset:0;z-index:9;background:#fff;display:none;flex-direction:column;-webkit-user-select:text;user-select:text}
 #guide.open{display:flex}
 #guideHead{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:calc(10px + var(--st)) 16px 10px;border-bottom:1px solid var(--line)}
@@ -96,15 +176,13 @@ td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums
 #ledBar .lb{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--mut)}
 #ledBar .dots{display:flex;gap:4px}#ledBar .dots i{width:16px;height:16px;border-radius:50%;cursor:pointer;display:block;box-shadow:inset 0 0 0 1px #0002}
 @media (max-width:759px){#ledBar{left:calc(70px + var(--sl));right:calc(118px + var(--sr));transform:none;justify-content:space-between;padding:5px 8px;gap:4px}#ledBar input[type=range]{width:auto;flex:1;min-width:40px}#ledBar output,#ledBar .lb,#ledBar .dots{display:none}}
-#info h4{margin:0 0 6px;font-size:15px;padding-right:24px}
-#info .x{position:absolute;right:6px;top:4px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--mut);width:36px;height:36px}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="top">
-  <div id="titleRow"><h1>Ipe Slat Wall</h1><button id="guideBtn">Build guide</button><button id="warnPill"></button></div>
+  <div id="titleRow"><h1>Ipe Slat Wall</h1><button id="guideBtn">Build guide</button><button id="compBtn">Components</button><button id="warnPill"></button></div>
   <div id="views"></div>
   <div id="legend"></div>
 </div>
@@ -113,13 +191,19 @@ td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums
   <button id="zOut" aria-label="Zoom out">−</button>
   <button id="fitBtn" aria-label="Reset view">⌂</button>
   <button id="modeBtn" class="mode" aria-label="Toggle orbit or pan">ORBIT</button>
-  <button id="sheetBtn" class="mode" aria-label="Show cut sheet">CUTS</button>
+  <button id="sheetBtn" class="mode" aria-label="Show details">DETAILS</button>
 </div>
 <div id="ledBar"><span class="lb">LED</span><input type="color" id="qColor" value="#ffb46a" aria-label="LED color"><span class="dots" id="qDots"></span><button id="qDim" aria-label="Dim">−</button><input type="range" id="qLevel" min="0" max="1" step="0.01" aria-label="LED brightness"><button id="qBright" aria-label="Brighten">+</button><output id="qOut"></output></div>
 <button id="ctrlBtn">Controls</button>
-<div id="sheet"><div id="sheetHead"><b id="sheetTitle"></b><span><button id="sheetCopy">Copy</button> <button id="sheetClose">Hide</button></span></div><div id="sheetBody"></div></div>
+<div id="tray" role="dialog" aria-labelledby="trayTitle" aria-hidden="true">
+  <div id="trayGrab" aria-hidden="true"><i></i></div>
+  <div id="trayHead">
+    <div id="trayTop"><div id="trayTitle"></div><button id="trayCopy">Copy</button><button id="trayClose" aria-label="Close details">Close</button></div>
+    <div id="trayRule"></div>
+  </div>
+  <div id="trayBody"></div>
+</div>
 <div id="guide"><div id="guideHead"><b>Build guide</b><span><button id="guideCopy">Copy all</button> <button id="guideClose">Close</button></span></div><div id="guideToc"></div><div id="guideBody"></div></div>
-<div id="info"><button class="x" id="infoX" aria-label="Close">×</button><div id="infoBody"></div></div>
 <div id="panel">
   <div id="grab"></div>
   <div id="panelHead"><b>Controls &amp; build data</b><button id="closePanel">Close</button></div>
@@ -129,6 +213,7 @@ td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums
       <button data-v="72">72"</button><button data-v="84">84"</button><button data-v="90">90"</button><button data-v="96">96"</button><button data-v="48">48"</button>
     </div>
     <p class="hint" id="presetHint"></p>
+    <label class="tog"><input type="checkbox" id="t_seamless">Seamless runs: rip fillers to close the end gaps</label>
   </div>
   <div class="sec">
     <h3>Dimensions</h3>
@@ -221,9 +306,10 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 const SLAT_W=5.5, SLAT_T=1, RAIL_T=1.5, RAIL_H=3.5, SPACER_T=.5, FLOAT=RAIL_T+.5, NOTCH_D=0.75, WC_H=2.5, STANDOFF=RAIL_T+.5+SLAT_T,
   STOCK=97, KERF=0.125, IPE_PCF=66, BACK_PCF=34, HEAVY=75, RAIL_MAX_SPAN=84, REVEAL=1, STUD_STOCK=96, RAIL_INSET=0.5625;
 const WC_AREA=NOTCH_D*(WC_H+(WC_H-NOTCH_D))/2; /* trapezoid profile, in² */
-const PRESETS={84:{bottom:12},90:{bottom:12},72:{bottom:12},96:{bottom:14},48:{bottom:12}};
+const PRESETS={84:{bottom:1},90:{bottom:1},72:{bottom:1},96:{bottom:1},48:{bottom:1}};
+const MIN_RIP=1;            /* narrower than this and a filler is not worth cutting */
 const isTouch=matchMedia('(pointer: coarse)').matches;
-const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,dims:isTouch?'off':'key',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'90',H:90,bottom:12,cleat:78,ampH:62.75,ampGap:1.25,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
+const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'90',H:90,bottom:1,cleat:78,ampH:62.75,ampGap:1.25,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
 
 /* Plan coords: origin NW interior floor corner, +X east, +Y south. Three: x=X, z=Y, y=up. Walls run clockwise. */
 const WALLS=[
@@ -304,6 +390,7 @@ function fIn(v){const r=Math.round(v*8)/8;const neg=r<0;const a=Math.abs(r);cons
 function fFt(v){if(Math.abs(v)<24)return fIn(v);const ft=Math.floor((v+1e-6)/12);return ft+"' "+fIn(v-ft*12);}
 const fBoth=v=>Math.abs(v)<24?fIn(v):fFt(v)+' ('+fIn(v)+')';
 const lb=v=>Number.isFinite(v)?Math.round(v)+' lb':'n/a';
+function fIn16(v){const r=Math.round(v*16)/16;const neg=r<0;const a=Math.abs(r);const wh=Math.floor(a+1e-9);let fr=Math.round((a-wh)*16);let s=wh?String(wh):'';if(fr){const g=gcd(fr,16);s+=(s?' ':'')+(fr/g)+'/'+(16/g);}if(!s)s='0';return (neg?'-':'')+s+'"';}
 const pKs=ps=>[...new Set(ps.map(p=>p.k))].sort((a,b)=>b-a);
 const pW=(ps,k)=>ps.find(p=>p.k===k).weight;
 const wSentence=ps=>{const t=pKs(ps).map(k=>`${k}-slat about ${lb(pW(ps,k))}`);return t.length?' Panel weight: '+t.join(', ')+'.':'';};
@@ -482,7 +569,7 @@ function boothFraming(){
 /* LED strip positions along a run: every panel joint, plus both run ends when there is at least 3/4" to the next stop */
 function ledXs(r){if(state.led==='off'||r.door)return [];const g=state.gap,xs=[];
   if(r.start-r.refA>=.75)xs.push(r.start-Math.min(g/2,(r.start-r.refA)/2));
-  if(state.led==='back'){r.panels.forEach(p=>{if(p.type==='ipe')for(let k=0;k<p.k;k++)xs.push(p.s0+k*(SLAT_W+g)+SLAT_W/2);});return xs;}
+  if(state.led==='back'){r.panels.forEach(p=>{if(p.type==='ipe')for(let k=0;k<p.k;k++)xs.push(p.s0+k*(p.sw+g)+p.sw/2);});return xs;}
   r.panels.forEach((p,i)=>{if(i<r.panels.length-1)xs.push(p.s1+g/2);});
   if(r.refB-r.end>=.75)xs.push(r.end+Math.min(g/2,(r.refB-r.end)/2));
   return xs;}
@@ -505,19 +592,36 @@ function layout(){
   RUNS.forEach(r=>{
     const sp=runSpec(r);r.sp=sp;const rys=r.door?[]:railYs(sp.H,sp.cleat);const slatLb=SLAT_W*SLAT_T*sp.H/1728*IPE_PCF;
     if(r.auto)r.comp=splitSlats(Math.floor((r.b-r.a+g)/(SLAT_W+g)),sp.H>=60?3:4);
-    const ws=r.comp.map(k=>k*SLAT_W+(k-1)*g);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*g;r.avail=r.b-r.a;r.over=r.used-r.avail;
+    r.avail=r.b-r.a;
+    /* Seamless: a run of full 5 1/2" boards rarely lands exactly on the wall, so the leftover
+       is ripped into filler boards at the ends. Every filler is a bespoke cut and is called out. */
+    let parts=r.comp.map(k=>({k,w:k*SLAT_W+(k-1)*g,sw:SLAT_W,rip:0}));
+    if(state.seamless&&!r.door&&parts.length){
+      const base=parts.reduce((a,q)=>a+q.w,0)+(parts.length-1)*g;
+      const rem=r.avail-base;
+      if(rem>=g+MIN_RIP){
+        const wf=(rem-2*g)/2;
+        if(wf>=MIN_RIP){parts.unshift({k:1,w:wf,sw:wf,rip:wf});parts.push({k:1,w:wf,sw:wf,rip:wf});}
+        else{const w1=rem-g;if(w1>=MIN_RIP)parts.push({k:1,w:w1,sw:w1,rip:w1});}
+      }
+    }
+    r.parts=parts;
+    const ws=parts.map(q=>q.w);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*g;r.over=r.used-r.avail;
     let s=r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];
-    ws.forEach((w,i)=>{const k=r.comp[i],Lr=w-2*RAIL_INSET,Lc=Lr,c0=s+(w-Lc)/2,c1=s+(w+Lc)/2;
+    ws.forEach((w,i)=>{const q=parts[i],k=q.k,Lr=q.rip?0:w-2*RAIL_INSET,Lc=Lr,c0=s+(w-Lc)/2,c1=s+(w+Lc)/2;
       const railIn3=r.door?0:(rys.length-1)*Lr*RAIL_H*RAIL_T+Lr*(RAIL_H*RAIL_T-WC_AREA)+rys.length*Lr*RAIL_H*SPACER_T;
       const hits=2;
       const key=RUNS.indexOf(r)+'-'+i;const type=r.door||r.overDoor?'ipe':(state.ptypes[key]||'ipe');
-      const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,s0:s,s1:s+w,Lr,Lc,c0,c1,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys,slatLb:type==='ipe'?(r.door?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79)*slatLb:k*slatLb):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:railIn3/1728*BACK_PCF,hits,nr:rys.length};
+      const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,sw:q.sw,rip:q.rip,s0:s,s1:s+w,Lr,Lc,c0,c1,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys:q.rip?[]:rys,slatLb:type==='ipe'?(r.door?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79)*slatLb:k*slatLb*(q.rip?q.rip/SLAT_W:1)):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:q.rip?0:railIn3/1728*BACK_PCF,hits:q.rip?0:hits,nr:q.rip?0:rys.length};
       p.weight=p.slatLb+p.backLb;
       r.panels.push(p);panels.push(p);s+=w+g;});
     r.end=s-g;
   });
-  const grp=(H,runs)=>{const ps=panels.filter(p=>runs.includes(p.run)&&p.type==='ipe');const n=ps.reduce((a,p)=>a+p.k,0);const cuts=Math.max(1,Math.floor((STOCK+KERF)/(H+KERF)));const boards=Math.ceil(n/cuts);
-    return {H,slats:n,cuts,boards,offEach:STOCK-cuts*(H+KERF),offTotal:boards*STOCK-n*(H+KERF),slatLb:SLAT_W*SLAT_T*H/1728*IPE_PCF,ps};};
+  const grp=(H,runs)=>{const ps=panels.filter(p=>runs.includes(p.run)&&p.type==='ipe');
+    const n=ps.reduce((a,p)=>a+(p.rip?0:p.k),0);                 /* full-width slats */
+    const ripEq=ps.reduce((a,p)=>a+(p.rip?p.rip/SLAT_W:0),0);    /* rips, as board widths */
+    const cuts=Math.max(1,Math.floor((STOCK+KERF)/(H+KERF)));const boards=Math.ceil((n+Math.ceil(ripEq))/cuts);
+    return {H,slats:n,ripEq,cuts,boards,offEach:STOCK-cuts*(H+KERF),offTotal:boards*STOCK-n*(H+KERF),slatLb:SLAT_W*SLAT_T*H/1728*IPE_PCF,ps};};
   const main=grp(state.H,RUNS.filter(r=>!r.amp&&!r.overDoor&&!r.overBar&&!r.door)),amp=grp(state.ampH,RUNS.filter(r=>r.amp)),booth=grp(state.H,[]),barG=grp(state.bottom+state.H-BAR_H-2,RUNS.filter(r=>r.overBar)),doorG=grp(79,RUNS.filter(r=>r.door));
   const overPs=panels.filter(p=>p.run.overDoor);const over={slats:overPs.reduce((a,p)=>a+p.k,0),lb:overPs.reduce((a,p)=>a+p.slatLb,0),pieces:RUNS.filter(r=>r.overDoor).map(r=>({name:r.name,n:r.panels.reduce((a,p)=>a+p.k,0),H:r.sp.H}))};
   const slats=main.slats+amp.slats+booth.slats+over.slats+barG.slats+doorG.slats,boards=main.boards+amp.boards+booth.boards+barG.boards+doorG.boards;
@@ -525,9 +629,9 @@ function layout(){
   const railCuts={};panels.filter(p=>p.nr>0).forEach(p=>{const L=+p.Lr.toFixed(4);railCuts[L]=(railCuts[L]||0)+p.nr;});
   let twoByBoards=0;Object.entries(railCuts).forEach(([L,n])=>{const per=Math.floor((STUD_STOCK+KERF)/(+L+KERF));twoByBoards+=Math.ceil(n/per);});
   const hung=panels.filter(p=>p.nr>0);const wallCleatLb=hung.reduce((a,p)=>a+p.Lc*WC_AREA,0)/1728*BACK_PCF;
-  stats={main,amp,booth,over,barG,doorG,hung,slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
+  stats={main,amp,booth,over,barG,doorG,hung,rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
     n:{3:panels.filter(p=>p.k===3).length,4:panels.filter(p=>p.k===4).length,5:panels.filter(p=>p.k===5).length},
-    ipeTotal:main.slats*main.slatLb+amp.slats*amp.slatLb+booth.slats*booth.slatLb+over.lb+barG.slats*barG.slatLb+doorG.slats*doorG.slatLb,total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
+    ipeTotal:panels.reduce((a,x)=>a+(x.type==='ipe'?x.slatLb:0),0),total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
     cleatFt:hung.reduce((a,p)=>a+p.Lc,0)/12,railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
     usedMain:main.slats*main.H/(main.boards*STOCK),used:(main.slats*main.H+amp.slats*amp.H+booth.slats*booth.H)/(boards*STOCK),
     bandArea:RUNS.reduce((a,r)=>a+r.used*r.sp.H,0),wallArea:PERIM*state.ceil,slatArea:panels.reduce((a,p)=>a+p.k*SLAT_W*p.H,0),
@@ -603,8 +707,8 @@ function buildRoom(){
     const tag=(o,w)=>{o.userData.walls=w;return o;};
     box(36,80,.4,M.door,28,40,.2,N);
     [[10-CASING/2,41.25,CASING,82.5],[46+CASING/2,41.25,CASING,82.5],[28,80+CASING/2,36+2*CASING,CASING]].forEach(([x,y,w,h])=>box(w,h,.75,M.casing,x,y,.375,N));
-    label('Room door',V(28,90,2),N,{k:.85,bg:'#5c7c99'});
-    tag(box(88,C,20,M.obst,129,C/2,10,og),['N','P']);tag(label('Amp wall / screen',V(129,Math.max(20,(C-state.ampGap-state.ampH)/2),24),og,{k:.85,bg:'#57534e'}),['N','P']);
+    if(key)label('Room door',V(28,90,2),N,{k:.85,bg:'#5c7c99'});
+    tag(box(88,C,20,M.obst,129,C/2,10,og),['N','P']);if(key)tag(label('Amp wall / screen',V(129,Math.max(20,(C-state.ampGap-state.ampH)/2),24),og,{k:.85,bg:'#57534e'}),['N','P']);
     {const bm=state.framing?M.boothGhost:M.booth,Hc=C,Hb=state.booth,fr=framing;
       const solid=(x0,x1,y0,y1,h,views)=>{const b=box(x1-x0,h,y1-y0,bm,(x0+x1)/2,h/2,(y0+y1)/2,og);b.castShadow=!state.framing;b.receiveShadow=true;tag(b,views);return b;};
       /* outer leaf */
@@ -628,8 +732,8 @@ function buildRoom(){
         const pi=box(WIN_W-.5,WIN_H-.5,.25,M.glass,WIN_S_IN,yc,-1.5,gI);pi.rotation.x=5*Math.PI/180;
         [[WIN_S_OUT-WIN_W/2-CASING/2,CASING,WIN_H+2*CASING,yc],[WIN_S_OUT+WIN_W/2+CASING/2,CASING,WIN_H+2*CASING,yc]].forEach(([x,w,h,y])=>box(w,h,.75,M.casing,x,y,.375,gO));
         box(WIN_W,CASING,.75,M.casing,WIN_S_OUT,WIN_SILL-CASING/2,.375,gO);box(WIN_W,CASING,.75,M.casing,WIN_S_OUT,WIN_SILL+WIN_H+CASING/2,.375,gO);
-        label('Window, 2 panes',V(WIN_S_OUT,WIN_SILL+WIN_H+8,3),gO,{k:.8,bg:'#5c7c99'});}
-      label('Booth doors: outer swings out, inner swings in',V(DOOR_S_OUT,92,3),WALL.BE.g,{k:.85,bg:'#5c7c99'});
+        if(key)label('Window, 2 panes',V(WIN_S_OUT,WIN_SILL+WIN_H+8,3),gO,{k:.8,bg:'#5c7c99'});}
+      if(key)label('Booth doors: outer swings out, inner swings in',V(DOOR_S_OUT,92,3),WALL.BE.g,{k:.85,bg:'#5c7c99'});
       /* door swing arcs on the floor (hinges on the north jamb) */
       {const yh=DOOR_Y-DOOR_W/2,arc=(x0,dir)=>{const pts=[];for(let a=0;a<=90;a+=5){const t=a*Math.PI/180;pts.push(V(x0+dir*DOOR_W*Math.sin(t),2.2,yh+DOOR_W*Math.cos(t)));}
         const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:'#9ec3e6',dashSize:2,gapSize:1.5}));l.computeLineDistances();l.raycast=()=>{};og.add(l);
@@ -637,7 +741,7 @@ function buildRoom(){
         arc(BX,1);arc(IN_E,-1);}
       /* bar against the outer north face */
       const g=WALL.BN.g;const bar=box(BAR_L,BAR_H,BAR_D,M.bar,(BAR_S0+BAR_S1)/2,BAR_H/2,BAR_D/2,g);bar.castShadow=true;
-      box(BAR_L+2,1.5,BAR_D+2,M.casing,(BAR_S0+BAR_S1)/2,BAR_H+.75,BAR_D/2+1,g);label('Bar',V((BAR_S0+BAR_S1)/2,BAR_H+6,BAR_D),g,{k:.85,bg:'#57534e'});}
+      box(BAR_L+2,1.5,BAR_D+2,M.casing,(BAR_S0+BAR_S1)/2,BAR_H+.75,BAR_D/2+1,g);if(key)label('Bar',V((BAR_S0+BAR_S1)/2,BAR_H+6,BAR_D),g,{k:.85,bg:'#57534e'});}
     if(state.framing){
       framing.F.forEach(m=>{const g=WALL[m.id].g;const mat=m.kind==='plate'?M.plate:m.kind==='header'?M.header:m.kind==='jack'?M.jack:M.studWood;
         const b=box(m.s1-m.s0,m.y1-m.y0,ST,mat,(m.s0+m.s1)/2,(m.y0+m.y1)/2,-DWL-ST/2,g);b.castShadow=true;});
@@ -645,11 +749,11 @@ function buildRoom(){
       tag(label(`Double wall: outer leaf to the ceiling, 1" gap, inner leaf + ${framing.joists.length} 2x6 lid joists`,V(54,state.booth+16,160),og,{k:.85,bg:'#8a5a14'}),[]);
     }
     tag(box(46,30,30,M.obst,(IN_W+IN_E)/2,15,IN_S-15,og),['BIS']);
-    tag(label('Control / vocal booth',V(54,state.booth+9,160),og,{k:.85,bg:'#4a5560'}),[]);
+    if(key)tag(label('Control / vocal booth',V(54,state.booth+9,160),og,{k:.85,bg:'#4a5560'}),[]);
     if(full)tag(label('Desk',V((IN_W+IN_E)/2,36,IN_S-15),og,{k:.8,bg:'#57534e'}),['BIS']);
   }
 
-  const geoCache={};const slatGeoFor=h=>geoCache[h]||(geoCache[h]=new THREE.BoxGeometry(SLAT_W,h,SLAT_T));let si=0;
+  const geoCache={};const slatGeoFor=(h,w=SLAT_W)=>{const k=h+'|'+w.toFixed(3);return geoCache[k]||(geoCache[k]=new THREE.BoxGeometry(w,h,SLAT_T));};let si=0;
   const Z_SLAT=FLOAT+SLAT_T/2,Z_DOOR=SLAT_T/2+.05;
   panels.forEach(p=>{
     const g=p.wall.g;const pg=new THREE.Group();g.add(pg);p.group=pg;
@@ -662,13 +766,13 @@ function buildRoom(){
         [[p.s0+.5,p.H],[p.s1-.5,p.H]].forEach(([x,h])=>box(.75,h,2.6,M.casing,x,p.bot+h/2,RAIL_T+1.3,pg));}
     }
     else for(let i=0;i<p.k;i++){
-      const sx=p.s0+i*(SLAT_W+state.gap),lite=p.run.door&&sx+SLAT_W>DOOR_S_OUT-LITE_W/2&&sx<DOOR_S_OUT+LITE_W/2;
-      if(lite){[[p.bot,LITE_B-1],[LITE_T+1,p.bot+p.H]].forEach(([y0,y1])=>{const b=box(SLAT_W,y1-y0,SLAT_T,M.casing,sx+SLAT_W/2,(y0+y1)/2,Z_DOOR,pg);b.userData.pid=p.id;b.castShadow=true;});si++;continue;}
+      const sx=p.s0+i*(p.sw+state.gap),lite=p.run.door&&sx+p.sw>DOOR_S_OUT-LITE_W/2&&sx<DOOR_S_OUT+LITE_W/2;
+      if(lite){[[p.bot,LITE_B-1],[LITE_T+1,p.bot+p.H]].forEach(([y0,y1])=>{const b=box(p.sw,y1-y0,SLAT_T,M.casing,sx+p.sw/2,(y0+y1)/2,Z_DOOR,pg);b.userData.pid=p.id;b.castShadow=true;});si++;continue;}
       const r=rng(1000+si++);const col=new THREE.Color('#7d4a2c');col.offsetHSL((r()-.5)*.02,(r()-.5)*.08,(r()-.5)*.09);
       const m=new THREE.MeshStandardMaterial({color:col,map:grain,roughness:.55,transparent:state.xray,opacity:state.xray?.28:1,depthWrite:!state.xray});
       if(p.run.over>1e-6)m.emissive.set('#7a0000');
       if(state.sel===p.id)m.emissive.set('#6a4500');
-      const sm=new THREE.Mesh(slatGeoFor(p.H),m);sm.position.set(p.s0+i*(SLAT_W+state.gap)+SLAT_W/2,p.bot+p.H/2,p.run.door?Z_DOOR:Z_SLAT);
+      const sm=new THREE.Mesh(slatGeoFor(p.H,p.sw),m);sm.position.set(p.s0+i*(p.sw+state.gap)+p.sw/2,p.bot+p.H/2,p.run.door?Z_DOOR:Z_SLAT);
       sm.castShadow=!state.xray;sm.userData.pid=p.id;pg.add(sm);
     }
     const cx=(p.s0+p.s1)/2;
@@ -884,6 +988,7 @@ function setOrbit(on){state.orbit=on;controls.enableRotate=on;
   const b=document.getElementById('modeBtn');b.textContent=on?'ORBIT':'PAN';b.classList.toggle('on',!on);}
 function goTo(pose,dur=650){tween={from:{p:camera.position.clone(),t:controls.target.clone(),f:camera.fov},to:pose,t0:performance.now(),dur};}
 function setView(v,instant){
+  if(v!==state.view)state.sel=null;
   state.view=v;if(WALL[v])sheetOpen=true;applyVisibility();home=viewPose(v);goTo(home,instant?0:650);
   setOrbit(!FLAT.has(v));
   controls.maxPolarAngle=v==='section'||v==='detail'?Math.PI:Math.PI*.495;
@@ -894,7 +999,7 @@ function setView(v,instant){
 let legendTimer;
 function updateLegend(){
   const lg=document.getElementById('legend');const v=state.view;
-  const g=isTouch?(state.orbit?'1 finger orbits, 2 fingers pinch to zoom and drag to pan. Double-tap to zoom in.':'1 finger pans, pinch to zoom. Double-tap to zoom in. Tap ORBIT to rotate.'):(state.orbit?'Drag to orbit, right-drag to pan, scroll to zoom. Double-click to zoom in.':'Drag to pan, scroll to zoom. Double-click to zoom in.');
+  const g=isTouch?(state.orbit?'Tap any panel for its cut sheet. 1 finger orbits, 2 fingers pinch to zoom, double-tap to zoom in.':'1 finger pans, pinch to zoom. Double-tap to zoom in. Tap ORBIT to rotate.'):(state.orbit?'Drag to orbit, right-drag to pan, scroll to zoom. Double-click to zoom in.':'Drag to pan, scroll to zoom. Double-click to zoom in.');
   const map={iso:'',plan:'<b>Plan</b>: north is up, origin at the NW corner. ',detail:'<b>Panel</b>: exploded away from the wall. ',section:'<b>Cleat section</b>: assembled panel cut across the notched 2x4 and wall cleat. '};
   lg.innerHTML=(v in map?map[v]:`<b>${WALL[v].name}${EXTRA.includes(WALL[v])?'':' wall'}</b>, ${fBoth(WALL[v].L)}, measured from the ${WALL[v].from}. `)+g;
   lg.classList.remove('fade');clearTimeout(legendTimer);legendTimer=setTimeout(()=>lg.classList.add('fade'),isTouch?6000:9000);
@@ -916,11 +1021,118 @@ function wallObstacles(v,Ht){
     default:return [];
   }
 }
+/* ---------- IKEA-style line drawings: panel front/back, and the cleat section ----------
+   One visual language: thin black outlines, one wood tone, one accent, numbered badges,
+   and only the dimensions you need in your hand at the saw. */
+const IKL='#1d1d1f',IKM='#8d857b',IKW='#e3d2b6',IKC='#f6d9a8',IKS='#efe9e0';
+const ikEsc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function ikWrap(vbW,vbH,body){return `<svg viewBox="0 0 ${vbW.toFixed(2)} ${vbH.toFixed(2)}" preserveAspectRatio="xMidYMid meet" font-family="system-ui,-apple-system,sans-serif">${body}</svg>`;}
+function dimH(x1,x2,y,txt,sw,fs,col){const c=col||IKM,t=fs*.34;
+  return `<line x1="${x1.toFixed(2)}" y1="${y.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y.toFixed(2)}" stroke="${c}" stroke-width="${sw}"/>`
+   +`<line x1="${x1.toFixed(2)}" y1="${(y-t).toFixed(2)}" x2="${x1.toFixed(2)}" y2="${(y+t).toFixed(2)}" stroke="${c}" stroke-width="${sw}"/>`
+   +`<line x1="${x2.toFixed(2)}" y1="${(y-t).toFixed(2)}" x2="${x2.toFixed(2)}" y2="${(y+t).toFixed(2)}" stroke="${c}" stroke-width="${sw}"/>`
+   +`<text x="${((x1+x2)/2).toFixed(2)}" y="${(y+fs*1.1).toFixed(2)}" text-anchor="middle" font-size="${fs.toFixed(2)}" font-weight="700" fill="${c}">${txt}</text>`;}
+function dimV(y1,y2,x,txt,sw,fs,col){const c=col||IKM,t=fs*.34;
+  return `<line x1="${x.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${c}" stroke-width="${sw}"/>`
+   +`<line x1="${(x-t).toFixed(2)}" y1="${y1.toFixed(2)}" x2="${(x+t).toFixed(2)}" y2="${y1.toFixed(2)}" stroke="${c}" stroke-width="${sw}"/>`
+   +`<line x1="${(x-t).toFixed(2)}" y1="${y2.toFixed(2)}" x2="${(x+t).toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${c}" stroke-width="${sw}"/>`
+   +`<text x="${(x-fs*.45).toFixed(2)}" y="${((y1+y2)/2+fs*.34).toFixed(2)}" text-anchor="end" font-size="${fs.toFixed(2)}" font-weight="700" fill="${c}">${txt}</text>`;}
+function ikBadge(x,y,n,fs){const r=fs*.68;
+  return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="${IKL}"/><text x="${x.toFixed(2)}" y="${(y+fs*.33).toFixed(2)}" text-anchor="middle" font-size="${(fs*.82).toFixed(2)}" font-weight="700" fill="#fff">${n}</text>`;}
+
+/* front and back of one panel. Deliberately plain: boards, rails, screws, three dimensions.
+   Groups carry data-pt2 / data-dm so the measurement list can highlight what it belongs to. */
+function panelDiagram(p){
+  const g=state.gap,W=p.w,H=p.H,k=p.k,ipe=p.type==='ipe',BW=p.sw;
+  const ry=p.rys.length?p.rys.slice():[];
+  const loR=ry.length?Math.min.apply(null,ry):H/2, hiR=ry.length?Math.max.apply(null,ry):H/2;
+  let Bk=Math.max(13,loR+RAIL_H), Tk=Math.max(13,H-hiR+RAIL_H);
+  const Ck=9, BK=(H-Bk-Tk)>15;
+  const dH=BK?Bk+Ck+Tk:H;
+  const my=y=>!BK?y:(y<=Bk?y:(y>=H-Tk?dH-(H-y):Bk+Ck*(y-Bk)/(H-Bk-Tk)));
+  const ml=24,mr=10,mt=15,mb=21,gx=20;
+  const vbW=ml+W+gx+W+mr, vbH=mt+dH+mb;
+  const sw=vbW/620, fs=vbW/40;
+  const XA=ml, XB=ml+W+gx, Y=y=>mt+(dH-my(y));
+  let o='';
+  o+=`<text x="${XA}" y="${(mt-fs*.42).toFixed(2)}" font-size="${(fs*.76).toFixed(2)}" font-weight="700" fill="${IKM}">FRONT</text>`;
+  o+=`<text x="${XB}" y="${(mt-fs*.42).toFixed(2)}" font-size="${(fs*.76).toFixed(2)}" font-weight="700" fill="${IKM}">BACK</text>`;
+  /* the ipe boards */
+  o+=`<g data-pt2="slat">`;
+  if(ipe)for(let i=0;i<k;i++){const x=XA+i*(BW+g);
+    o+=`<rect x="${x.toFixed(2)}" y="${mt.toFixed(2)}" width="${BW.toFixed(2)}" height="${dH.toFixed(2)}" fill="${p.rip?'#d7b183':IKW}" stroke="${IKL}" stroke-width="${sw}"/>`;}
+  else o+=`<rect x="${XA}" y="${mt.toFixed(2)}" width="${W}" height="${dH.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${sw}"/><text x="${(XA+W/2).toFixed(2)}" y="${(mt+dH/2).toFixed(2)}" text-anchor="middle" font-size="${fs.toFixed(2)}" font-weight="700" fill="${IKM}">${p.type==='diff'?'QRD':'ABS'}</text>`;
+  o+=`</g>`;
+  /* back outline */
+  o+=`<rect x="${XB}" y="${mt.toFixed(2)}" width="${W}" height="${dH.toFixed(2)}" fill="none" stroke="${IKL}" stroke-width="${sw}" stroke-dasharray="${(sw*5).toFixed(2)} ${(sw*3).toFixed(2)}"/>`;
+  if(!ry.length&&ipe)o+=`<text x="${(XB+W/2).toFixed(2)}" y="${(mt+dH/2).toFixed(2)}" text-anchor="middle" font-size="${(fs*.8).toFixed(2)}" fill="${IKM}">no rails</text>`;
+  ry.forEach(yc=>{
+    const notched=p.cleat!=null&&Math.abs(yc-p.cleat)<1e-6;
+    const yTop=Y(yc+RAIL_H/2), hh=Y(yc-RAIL_H/2)-yTop;
+    o+=`<g data-pt2="${notched?'cleat':'brace'}">`;
+    o+=`<rect x="${(XB+RAIL_INSET).toFixed(2)}" y="${yTop.toFixed(2)}" width="${p.Lr.toFixed(2)}" height="${hh.toFixed(2)}" fill="${notched?IKC:IKS}" stroke="${IKL}" stroke-width="${sw}"/>`;
+    if(notched)o+=`<path d="M${(XB+RAIL_INSET).toFixed(2)} ${(yTop+hh).toFixed(2)} l${(hh*.5).toFixed(2)} ${(-hh*.5).toFixed(2)}" fill="none" stroke="${IKL}" stroke-width="${sw}"/>`;
+    if(ipe)for(let i=0;i<k;i++){const cx=XB+i*(BW+g)+BW/2;
+      (BW>3?[cx-BW/4,cx+BW/4]:[cx]).forEach(sx=>{const r=sw*2.4,cy=yTop+hh/2;
+        o+=`<circle cx="${sx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${r.toFixed(2)}" fill="#fff" stroke="${IKL}" stroke-width="${sw*.9}"/>`
+          +`<line x1="${(sx-r*.7).toFixed(2)}" y1="${(cy-r*.7).toFixed(2)}" x2="${(sx+r*.7).toFixed(2)}" y2="${(cy+r*.7).toFixed(2)}" stroke="${IKL}" stroke-width="${sw*.8}"/>`;});}
+    o+=`</g>`;
+  });
+  if(BK){const yb=mt+(dH-(Bk+Ck/2));
+    const zig=x0=>{let d=`M${x0.toFixed(2)} ${yb.toFixed(2)}`;const n=7,st=W/n;for(let i=0;i<n;i++)d+=` l${(st/2).toFixed(2)} ${(-fs*.3).toFixed(2)} l${(st/2).toFixed(2)} ${(fs*.3).toFixed(2)}`;
+      return `<rect x="${(x0-sw).toFixed(2)}" y="${(yb-fs*.52).toFixed(2)}" width="${(W+sw*2).toFixed(2)}" height="${(fs*1.04).toFixed(2)}" fill="#fff"/><path d="${d}" fill="none" stroke="${IKL}" stroke-width="${(sw*1.1).toFixed(2)}"/>`;};
+    o+=zig(XA)+zig(XB);}
+  o+=`<g data-dm="h">${dimV(Y(H),Y(0),ml-fs*.5,fBoth(H),sw,fs)}</g>`;
+  o+=`<g data-dm="w">${dimH(XA,XA+W,mt+dH+fs*.9,fIn(W),sw,fs)}</g>`;
+  if(ry.length)o+=`<g data-dm="lr">${dimH(XB+RAIL_INSET,XB+W-RAIL_INSET,mt+dH+fs*.9,fIn(p.Lr),sw,fs)}</g>`;
+  return ikWrap(vbW,vbH,o);
+}
+/* what screws into what, as a plain chain */
+function fastenChain(p){
+  const node=(t,sub)=>`<div class="cn"><b>${t}</b><span>${sub}</span></div>`;
+  const arrow=t=>`<div class="ar">${String.fromCharCode(8595)} ${t}</div>`;
+  if(p.run.door)return `<div class="chain">${node(`${p.k} ipe board${p.k>1?'s':''}`,`resawn to ${fIn(.5)} thick, ${fIn(p.H)} long`)}${arrow('stainless #8, driven from inside the door')}${node('Booth door','solid core, 4 ball-bearing hinges')}</div>`;
+  if(p.rip)return `<div class="chain">${node('1 ripped ipe filler',`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}${arrow(`stainless #8 ${String.fromCharCode(215)} 2 1/2 into the wall cleat, every 16"`)}${node('Wall cleat',`3/4" ply, ${fIn(WC_H)} wide, already in place`)}${arrow('2 structural 1/4" x 3 1/8" at every stud')}${node('Stud','16" on center')}</div>`;
+  return `<div class="chain">
+    ${node(`${p.k} ipe board${p.k>1?'s':''}`,`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}
+    ${arrow(`${p.k*2*p.nr} ${String.fromCharCode(215)} stainless #8 ${String.fromCharCode(215)} 2 1/2, two per board at every rail`)}
+    ${node(`${p.nr} ${String.fromCharCode(215)} 2x4 rail, laid flat`,`${fIn(p.Lr)} long, 1/2" ply spacer on the face`)}
+    ${arrow(`45${String.fromCharCode(176)} notch drops over the cleat: no screws, the notch carries the weight`)}
+    ${node('Wall cleat',`3/4" ply, ${fIn(WC_H)} wide, bevel up, one continuous piece per run`)}
+    ${arrow(`2 ${String.fromCharCode(215)} structural 1/4" x 3 1/8" at every stud it crosses`)}
+    ${node('Stud','16" on center')}
+  </div>`;
+}
+/* section through the cleat: wall, wall cleat, notched rail, spacer, ipe.
+   Labels live in HTML under the drawing, so the geometry can fill the box. */
+function cleatSection(){
+  const D=STANDOFF,Hs=7.0,ml=1.5,mr=1.5,mt=1.1,mb=2.6;
+  const vbW=ml+D+mr, vbH=mt+Hs+mb, sw=.05, fs=.92;
+  const X=x=>ml+x, Y=y=>mt+(Hs-y);
+  const rb=2.2, rt=rb+RAIL_H, cb=rb+NOTCH_D-WC_H;
+  let o='';
+  /* existing wall */
+  o+=`<rect x="${(X(0)-.9).toFixed(2)}" y="${mt.toFixed(2)}" width=".9" height="${Hs.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${sw}"/>`;
+  for(let i=0;i<7;i++){const y=mt+i*(Hs/7)+.3;o+=`<line x1="${(X(0)-.9).toFixed(2)}" y1="${y.toFixed(2)}" x2="${X(0).toFixed(2)}" y2="${(y-.5).toFixed(2)}" stroke="${IKM}" stroke-width="${(sw*.7).toFixed(3)}"/>`;}
+  /* ipe slat, full height, floating 2" off the wall */
+  o+=`<rect x="${X(RAIL_T+SPACER_T).toFixed(2)}" y="${mt.toFixed(2)}" width="${SLAT_T}" height="${Hs.toFixed(2)}" fill="${IKW}" stroke="${IKL}" stroke-width="${sw}"/>`;
+  /* 1/2" ply spacer on the face of the rail */
+  o+=`<rect x="${X(RAIL_T).toFixed(2)}" y="${Y(rt).toFixed(2)}" width="${SPACER_T}" height="${RAIL_H}" fill="#fff" stroke="${IKL}" stroke-width="${sw}"/>`;
+  /* wall cleat: 3/4" ply, 2 1/2" tall, 45 degree bevel on top */
+  o+=`<path d="M${X(0).toFixed(2)} ${Y(rb+NOTCH_D).toFixed(2)} L${X(NOTCH_D).toFixed(2)} ${Y(rb).toFixed(2)} L${X(NOTCH_D).toFixed(2)} ${Y(cb).toFixed(2)} L${X(0).toFixed(2)} ${Y(cb).toFixed(2)} Z" fill="${IKC}" stroke="${IKL}" stroke-width="${sw}"/>`;
+  /* 2x4 rail laid flat, 45 degree notch 3/4" deep on the lower back edge */
+  o+=`<path d="M${X(0).toFixed(2)} ${Y(rt).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(rt).toFixed(2)} L${X(RAIL_T).toFixed(2)} ${Y(rb).toFixed(2)} L${X(NOTCH_D).toFixed(2)} ${Y(rb).toFixed(2)} L${X(0).toFixed(2)} ${Y(rb+NOTCH_D).toFixed(2)} Z" fill="${IKS}" stroke="${IKL}" stroke-width="${(sw*1.3).toFixed(3)}"/>`;
+  o+=dimH(X(0),X(D),mt+Hs+fs*.75,fIn(D),sw,fs);
+  o+=ikBadge(X(RAIL_T*.56),Y(rt-1.1),'1',fs);
+  o+=ikBadge(X(NOTCH_D*.5),Y(rb+NOTCH_D*.42),'2',fs);
+  o+=ikBadge(X(RAIL_T+SPACER_T+SLAT_T*.5),Y(Hs-1.0),'3',fs);
+  return ikWrap(vbW,vbH,o);
+}
 function wallSheet(v){
   const w=WALL[v],L=w.L,Ht=w.leaf==='inner'?state.booth-DWL:state.ceil,g=state.gap;
   let ps=panels.filter(p=>p.wall.id===v).map(p=>({p,off:0}));
   if(v==='N')ps=ps.concat(panels.filter(p=>p.wall.id==='P').map(p=>({p,off:AMPW.p0[0]})));
-  const ml=36,mr=10,mt=26,mb=30,vbW=L+ml+mr,vbH=Ht+mt+mb;
+  const ml=54,mr=12,mt=26,mb=30,vbW=L+ml+mr,vbH=Ht+mt+mb;
   const cw=Math.min(innerWidth-40,590),px=Math.max(cw,vbW*1.55),sc=px/vbW,fs=10.5/sc,sw=1/sc;
   const X=x=>ml+x,Y=y=>mt+(Ht-y),night=state.night;
   const ledCol=LED_COLORS[state.ledColor];
@@ -933,15 +1145,15 @@ function wallSheet(v){
     if(p.type==='diff'){const ww=wellW(p.w);o+=`<rect x="${X(x0).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${p.w}" height="${p.H}" fill="#141416" stroke="#7d4a2c" stroke-width="${sw}"/>`;
       QRD.forEach((d,j)=>{o+=`<rect x="${X(x0+FIN_T+j*(ww+FIN_T)).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${ww.toFixed(2)}" height="${p.H}" fill="#7d4a2c" fill-opacity="${(.15+d*.18).toFixed(2)}"/>`;});}
     else if(p.type==='abs')o+=`<rect x="${X(x0).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${p.w}" height="${p.H}" fill="#2a2a2e" stroke="#7d4a2c" stroke-width="${1.5*sw}"/><text x="${X(x0+p.w/2)}" y="${Y(p.bot+p.H/2)}" text-anchor="middle" fill="#bbb">absorber</text>`;
-    else for(let i=0;i<p.k;i++)o+=`<rect x="${X(x0+i*(SLAT_W+g)).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${SLAT_W}" height="${p.H}" fill="#7d4a2c" stroke="#4e2c18" stroke-width="${sw*.6}"/>`;
+    else for(let i=0;i<p.k;i++)o+=`<rect x="${X(x0+i*(p.sw+g)).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${p.sw.toFixed(2)}" height="${p.H}" fill="${p.rip?'#9c6239':'#7d4a2c'}" stroke="#4e2c18" stroke-width="${sw*.6}"/>`;
     p.rys.forEach(y=>{const n=Math.abs(y-p.cleat)<1e-6;o+=`<line x1="${X(x0+.56).toFixed(2)}" x2="${X(x0+p.w-.56).toFixed(2)}" y1="${Y(p.bot+y).toFixed(2)}" y2="${Y(p.bot+y).toFixed(2)}" stroke="${n?'#ff9d2e':'#e8d3a8'}" stroke-width="${(n?2.2:1.4)*sw}" stroke-dasharray="${n?'none':4*sw+' '+2*sw}"/>`;});
-    o+=`<text x="${X(x0+p.w/2).toFixed(2)}" y="${(Y(p.bot+p.H)-fs*.45).toFixed(2)}" text-anchor="middle" font-weight="700" fill="${night?'#f1e6d8':'#1d1d1f'}">${p.id} · ${fIn(p.w)}</text>`;
   });
   {const runs=[...new Set(ps.map(({p,off})=>p.run.wall+'|'+off+'|'+RUNS.indexOf(p.run)))];runs.forEach(k=>{const [ , off, ri]=k.split('|');const r=RUNS[+ri];ledXs(r).forEach(x=>{o+=`<rect x="${X(x+ +off-.3).toFixed(2)}" y="${Y(r.sp.bot+r.sp.H-.5).toFixed(2)}" width=".6" height="${r.sp.H-1}" fill="${ledCol}"/>`;});});}
   /* height dims for each distinct panel band on this wall */
-  const seen=new Set();let dx=ml-4;
+  const seen=new Set();
   ps.forEach(({p,off})=>{const key=p.bot+'|'+p.H;if(seen.has(key))return;seen.add(key);
-    const xL=seen.size===1?X(-4):X(p.s0+off-3);const lines=[[0,p.bot,fFt(p.bot)],[p.bot,p.bot+p.H,fBoth(p.H)],[p.bot+p.H,Ht,fFt(Ht-p.bot-p.H)]];
+    if(seen.size>1)return;
+    const xL=X(-5);const lines=[[0,p.bot,fFt(p.bot)],[p.bot,p.bot+p.H,fBoth(p.H)],[p.bot+p.H,Ht,fFt(Ht-p.bot-p.H)]];
     lines.forEach(([a,b,t])=>{if(b-a<.3)return;o+=`<line x1="${xL}" x2="${xL}" y1="${Y(a)}" y2="${Y(b)}" stroke="${DIM}" stroke-width="${1.2*sw}"/><line x1="${xL-1.5}" x2="${xL+1.5}" y1="${Y(a)}" y2="${Y(a)}" stroke="${DIM}" stroke-width="${1.2*sw}"/><line x1="${xL-1.5}" x2="${xL+1.5}" y1="${Y(b)}" y2="${Y(b)}" stroke="${DIM}" stroke-width="${1.2*sw}"/>`;
       o+=`<text x="${xL-1.2}" y="${(Y((a+b)/2)+fs*.35).toFixed(2)}" text-anchor="end" fill="${DIM}" font-weight="700">${t}</text>`;});
     if(p.cleat==null)return;const yc=p.bot+p.cleat;o+=`<path d="M${xL+1} ${Y(yc)} l${2.6} ${-1.5} v3 z" fill="#ff9d2e"/><text x="${xL+4}" y="${(Y(yc)-fs*.5).toFixed(2)}" fill="#ff9d2e" font-weight="700">cleat ${fFt(yc)}</text>`;});
@@ -951,25 +1163,17 @@ function wallSheet(v){
   const rows=ps.map(({p,off})=>{const n=p.rys.length;return [p.id,p.type==='ipe'?p.k:p.type==='diff'?'diffuser':'absorber',`${fIn(p.w)} × ${fIn(p.H)}`,`${fIn(p.bot)} to ${fFt(p.bot+p.H)}`,p.run.door?'none: screwed through the door':`${n} × ${fIn(p.Lr)} (1 notched)`,p.run.door?'none':fIn(p.Lc),fIn(p.s0+off)];});
   let t=`<table class="cut"><tr><th>Panel</th><th>Slats</th><th>W × H</th><th>Above floor</th><th>2x4 rails</th><th>Wall cleat</th><th>Starts at</th></tr>`+rows.map(r=>'<tr>'+r.map((c,i)=>`<td${i===1?' class="n"':''}>${c}</td>`).join('')+'</tr>').join('')+'</table>';
   let txt=`${w.name.toUpperCase()} (${fFt(L)}, measured from the ${w.from})\n`+rows.map(r=>`${r[0]}: ${r[1]} slats, ${r[2]}, ${r[3]} above floor, rails ${r[4]}, wall cleat ${r[5]}, starts ${r[6]} from ${w.from}`).join('\n');
-  const fw=framing.walls[v];if(fw){
+  let fh='';const fw=framing.walls[v];if(fw){
     const fr=fw.cuts.map(c=>[c.label.split(': ')[1]||c.label,`${c.n} × ${fIn(c.len)} ${c.lum}`]);
     fr.unshift(['Wall',`${w.leaf==='outer'?'Outer leaf, to the ceiling':'Inner leaf, booth height'}: ${fIn(fw.len)} long × ${fFt(fw.H)} tall, studs 16" on center`]);
     if(fw.door)fr.push(['Door rough opening',`${fIn(RO_W)} × ${fIn(RO_H)}, centered ${fIn((fw.door[0]+fw.door[1])/2)} along this face`]);
     if(v==='BN')fr.push(['Bar',`${fIn(BAR_L)} × ${fIn(BAR_D)} deep × ${fIn(BAR_H)} tall, ${fIn(BAR_X0)} from the west wall; ipe above it from ${fIn(BAR_H+2)}`]);
-    t+=`<h3 style="margin:12px 0 4px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em">Framing: 2x4 studs, 2 layers 5/8" drywall on the ${w.leaf==='outer'?'room':'booth'} side</h3><table class="cut">`+fr.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')+'</table>';
+    fh=`<p class="tnote">2x4 studs, 2 layers 5/8" drywall on the ${w.leaf==='outer'?'room':'booth'} side.</p><table class="kv">`+fr.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')+'</table>';
     txt+='\nFRAMING\n'+fr.map(r=>`${r[0]}: ${r[1]}`).join('\n');}
-  if(!ps.length){t='<p class="hint">No ipe panels on this face.</p>'+t;}
-  return {svg:o,html:t,txt};
+  if(!ps.length){t='<p class="tnote">No ipe panels on this face.</p>'+t;}
+  return {svg:o,html:t,framing:fh,txt,ps};
 }
-function updateSheet(){
-  const v=state.view,elev=!!WALL[v];const btn=document.getElementById('sheetBtn');if(btn)btn.style.display=elev?'flex':'none';
-  const sh=document.getElementById('sheet');if(!sh)return;
-  if(!elev||!sheetOpen||!panels.length){sh.classList.remove('open');return;}
-  const r=wallSheet(v);sh.dataset.txt=r.txt;
-  document.getElementById('sheetTitle').textContent=`Cut sheet: ${WALL[v].name}`;
-  document.getElementById('sheetBody').innerHTML=`<div class="diag">${r.svg}</div><p class="hint" style="margin:0 0 6px">Dashed lines are the 2x4 rails behind the ipe; orange is the notched cleat rail. Dashed tan boxes are booth framing.</p>${r.html}`;
-  sh.classList.add('open');
-}
+function updateSheet(){updateTray();}
 /* ---------- whole-room materials and cut list ---------- */
 function buildCutList(){
   const s=stats,out=[],T=[];const sec=(h)=>{out.push(`<tr><td class="sub" colspan="3">${h}</td></tr>`);T.push('\n'+h.toUpperCase());};
@@ -1072,6 +1276,12 @@ function buildGuide(){
     <li>Press the LED strip into each groove, solder or clip the leads at the bottom, label the panel ID on a rail.</li></ol>`);
   /* 3. hanging */
   const hang=RUNS.filter(r=>r.panels.length&&!r.door).map(r=>[r.name,r.panels.length,fFt(r.sp.bot+(r.sp.cleat??0)),`${fFt(r.sp.bot)} to ${fFt(r.sp.bot+r.sp.H)}`]);
+  {const rg=new Map();(s.rips||[]).forEach(q=>{const kk=q.sw.toFixed(3)+'|'+q.H.toFixed(3);
+     if(!rg.has(kk))rg.set(kk,{q,n:0,runs:new Set()});const G=rg.get(kk);G.n++;G.runs.add(q.run.name);});
+   const list=[...rg.values()].sort((a,b)=>b.n-a.n);
+   sec('bespoke','Bespoke cuts: ripped fillers',`<p>A run of full ${fIn(SLAT_W)} boards almost never lands exactly on the wall. Instead of leaving a gap at the end of a run, the leftover is ripped into filler boards so every run reads as one continuous ipe surface. These are the only bespoke pieces in the build. Everything else is a repeat, and the Components panel groups them for you.</p>
+   <p><b>Measure each one on site before ripping.</b> The wall lengths here were scaled from a hand drawing, so the real gap will differ. Rip on the table saw, seal the cut edge the same day, and screw the filler to the wall cleat and to the edge of its neighbour. A filler gets no 2x4 rails of its own.</p>
+   ${list.length?`<table class="cut"><tr><th>Rip to width</th><th>Length</th><th>Qty</th><th>Where it goes</th></tr>`+list.map(G=>`<tr><td><b>${fIn(G.q.sw)}</b></td><td>${fIn(G.q.H)}</td><td class="n">${G.n}</td><td>${[...G.runs].join('; ')}</td></tr>`).join('')+`</table><p>${list.reduce((a,G)=>a+G.n,0)} ripped pieces in all. Rip them from the offcuts left by the slat cuts where the length allows.</p>`:'<p>At the current settings every run lands on full boards, so there are no bespoke cuts. Turn on seamless runs in Controls if you want the ends closed.</p>'}`);}
   sec('hang','Wall cleats and hanging',`<p>Each run gets one continuous wall cleat: 3/4" plywood ripped 2 1/2" wide with a 45° bevel on top, long point up and away from the wall, screwed into every stud it crosses. Panels can then hang anywhere along it, and no panel depends on hitting studs on its own.</p>
     ${tbl(['Run','Panels','Cleat top above floor','Panel bottom to top'],hang)}
     <ol><li>Snap a level line at the cleat height for the run. Find and mark studs.</li><li>Screw the cleat into every stud with 2 structural screws (1/4" × 3 1/8"); splice lengths over a stud.</li><li>Two people: lift the panel 1", slide it to the wall, and drop the notch over the cleat. Check the 1" gap to the next panel with a spacer block.</li><li>Panels are 3 slats wide at most (about 60 lb at 90"), so two people can lift and seat them easily.</li></ol>`);
@@ -1139,13 +1349,21 @@ $('typeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{const v=b.data
   rebuild();document.querySelectorAll('#typeSeg button').forEach(x=>x.classList.toggle('on',x===b));});seg('ledSeg','led');seg('ledColSeg','ledColor',()=>{state.ledHex=null;});
 $('moodSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.night=b.dataset.v==='night';rebuild();});
 [['bottom','bottom'],['cleat','cleat'],['ceil','ceil'],['booth','booth'],['gap','gap'],['ampH','ampH'],['ampGap','ampGap']].forEach(([id,k])=>{$(id).oninput=e=>{state[k]=parseFloat(e.target.value);requestRebuild();};});
-['walls','obstacles','hardware','xray','studs','ear','ledge','ampTrim','framing','strings','curtains','rugs','cutaway'].forEach(k=>{const el=$('t_'+k);el.checked=state[k];el.onchange=()=>{state[k]=el.checked;rebuild();};});
+['walls','obstacles','hardware','xray','studs','ear','ledge','ampTrim','framing','strings','curtains','rugs','cutaway','seamless'].forEach(k=>{const el=$('t_'+k);el.checked=state[k];el.onchange=()=>{state[k]=el.checked;rebuild();};});
 $('ctrlBtn').onclick=()=>$('panel').classList.toggle('open');$('closePanel').onclick=()=>$('panel').classList.remove('open');
-$('warnPill').onclick=()=>$('panel').classList.add('open');$('infoX').onclick=()=>{state.sel=null;$('info').style.display='none';rebuild();};
+$('warnPill').onclick=()=>$('panel').classList.add('open');
 $('zIn').onclick=()=>zoomBy(.7);$('zOut').onclick=()=>zoomBy(1/.7);$('fitBtn').onclick=()=>{home=viewPose(state.view);goTo(home);};
-$('sheetClose').onclick=()=>{sheetOpen=false;updateSheet();};$('sheetBtn').onclick=()=>{sheetOpen=!sheetOpen;updateSheet();};
-$('sheetCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('sheet').dataset.txt||'');$('sheetCopy').textContent='Copied';}catch(e){$('sheetCopy').textContent='Copy blocked';}setTimeout(()=>$('sheetCopy').textContent='Copy',1600);};
+$('trayClose').onclick=trayClose;
+$('sheetBtn').onclick=()=>{if(state.sel){trayClose();}else{sheetOpen=!sheetOpen;updateTray();}};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('tray').classList.contains('open'))trayClose();});
+(()=>{const gr=$('trayGrab'),t=$('tray');let y0=null,dy=0;
+  gr.addEventListener('pointerdown',e=>{y0=e.clientY;dy=0;try{gr.setPointerCapture(e.pointerId);}catch(_){}t.classList.add('drag');});
+  gr.addEventListener('pointermove',e=>{if(y0===null)return;dy=Math.max(0,e.clientY-y0);t.style.transform=`translateY(${dy}px)`;});
+  const end=()=>{if(y0===null)return;t.classList.remove('drag');t.style.transform='';if(dy>120)trayClose();y0=null;};
+  gr.addEventListener('pointerup',end);gr.addEventListener('pointercancel',end);})();
+$('trayCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('tray').dataset.txt||'');$('trayCopy').textContent='Copied';}catch(e){$('trayCopy').textContent='Blocked';}setTimeout(()=>$('trayCopy').textContent='Copy',1600);};
 $('copyCuts').onclick=async()=>{try{await navigator.clipboard.writeText(buildCutList().txt+'\n\nHOW TO CUT\n'+CUT_STEPS.map((x,i)=>(i+1)+'. '+x.replace(/<[^>]+>/g,'')).join('\n'));$('copyMsg').textContent='Copied.';}catch(e){$('copyMsg').textContent='Copy was blocked here; select the text instead.';}};
+$('compBtn').onclick=()=>{compView=!compView;if(compView)state.sel=null;updateTray();};
 $('guideBtn').onclick=openGuide;$('guideClose').onclick=()=>$('guide').classList.remove('open');
 $('guideCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('guide').dataset.txt||'');$('guideCopy').textContent='Copied';}catch(e){$('guideCopy').textContent='Copy blocked';}setTimeout(()=>$('guideCopy').textContent='Copy all',1600);};
 $('modeBtn').onclick=()=>{setOrbit(!state.orbit);updateLegend();};
@@ -1161,7 +1379,7 @@ function renderUI(){
   document.querySelectorAll('#moodSeg button').forEach(b=>b.classList.toggle('on',(b.dataset.v==='night')===state.night));
   $('ledHint').textContent=`${fFt(stats.led.ft*12)} of LED strip in ${stats.led.count} strips${state.led==='back'?', one down the back of each board, washing the black wall 2" behind it':''}.`;
   const s=stats,H=state.H;const pct=v=>(v*100).toFixed(1)+'%';
-  $('presetHint').textContent=`${s.cuts} cut${s.cuts>1?'s':''} per board, ${fIn(Math.max(0,s.offEach))} offcut per board (${((1-s.usedMain)*100).toFixed(0)}% of the ipe left over).${wSentence(s.main.ps)}`;
+  $('presetHint').textContent=`${s.cuts} cut${s.cuts>1?'s':''} per board, ${fIn(Math.max(0,s.offEach))} offcut per board (${((1-s.usedMain)*100).toFixed(0)}% of the ipe left over).${wSentence(s.main.ps.filter(x=>!x.rip))}`;
   $('bottom').max=Math.max(0,state.ceil-H);$('bottom').value=state.bottom;$('bottomOut').textContent=`${fIn(state.bottom)} (top ${fFt(state.bottom+H)})`;
   $('cleat').min=RAIL_H/2;$('cleat').max=H-RAIL_H/2;$('cleat').value=state.cleat;$('cleatOut').textContent=`${fIn(state.cleat)} (${fFt(state.bottom+state.cleat)} above floor)`;
   $('ceil').value=state.ceil;$('ceilOut').textContent=fFt(state.ceil);
@@ -1170,19 +1388,20 @@ function renderUI(){
   $('ampH').value=state.ampH;$('ampHOut').textContent=fBoth(state.ampH);
   $('ampGap').value=state.ampGap;$('ampGapOut').textContent=fIn(state.ampGap);
   const A=s.amp,ab=state.ceil-state.ampGap-state.ampH;
-  $('ampHint').textContent=`Panels run ${fFt(ab)} to ${fFt(ab+state.ampH)} above floor (covering ${fIn(state.ceil-ab)} from the ceiling down). ${A.slats} slats from ${A.boards} boards, ${fIn(Math.max(0,A.offEach))} offcut each.${wSentence(s.amp.ps)}`;
+  $('ampHint').textContent=`Panels run ${fFt(ab)} to ${fFt(ab+state.ampH)} above floor (covering ${fIn(state.ceil-ab)} from the ceiling down). ${A.slats} slats from ${A.boards} boards, ${fIn(Math.max(0,A.offEach))} offcut each.${wSentence(s.amp.ps.filter(x=>!x.rip))}`;
   const rows=[
     ['sub','Panels'],
-    ['Panels',`${panels.length} (${[5,4,3].filter(k=>s.n[k]).map(k=>s.n[k]+' × '+k+'-slat').join(', ')})`],
+    ['Panels',`${panels.filter(x=>!x.rip).length} (${[5,4,3].filter(k=>s.n[k]).map(k=>s.n[k]+' × '+k+'-slat').join(', ')})`],
+    ['Ripped fillers (bespoke)',s.rips.length||'none'],
     ['4-slat / 3-slat width',`${fIn(4*SLAT_W+3*state.gap)} / ${fIn(3*SLAT_W+2*state.gap)}`],
     ['Slats, main band',`${s.main.slats} at ${fIn(s.main.H)}`],['Slats, amp wall',`${s.amp.slats} at ${fIn(s.amp.H)}`],['Slats total',s.slats],
     ['Bottom / top above floor',`${fIn(state.bottom)} / ${fFt(state.bottom+H)}`],['Bare wall above',fFt(state.ceil-state.bottom-H)],
     ['Cleat rail center',`${fIn(state.cleat)} up panel, ${fFt(state.bottom+state.cleat)} above floor`],
     ['sub','Stock yield (97" boards)'],
-    ['Boards, main band',`${s.main.boards} (${fIn(Math.max(0,s.main.offEach))} offcut each)`],['Boards, amp wall',`${s.amp.boards} (${fIn(Math.max(0,s.amp.offEach))} offcut each)`],['Boards total',s.boards],
+    ['Boards, main band',`${s.main.boards} (${fIn(Math.max(0,s.main.offEach))} offcut each)`],['Boards, amp wall',`${s.amp.boards} (${fIn(Math.max(0,s.amp.offEach))} offcut each)`],['Boards total',s.boards],['Rip allowance for fillers',s.rips.length?`${Math.ceil(s.main.ripEq+s.amp.ripEq)} board-widths across ${s.rips.length} pieces`:'none'],
     ['Total offcut',(Math.max(0,s.offTotal)/12).toFixed(1)+' ft'],['Stock used',pct(s.used)],
     ['sub','Weight (ipe 66 lb/ft³, framing 34 lb/ft³)'],
-    ['One slat',s.slatLb.toFixed(1)+' lb'],['Main panel',wCell(s.main.ps)],['Amp wall panel',wCell(s.amp.ps)],['All ipe',lb(s.ipeTotal)],['Everything on the walls',lb(s.total)],
+    ['One slat',s.slatLb.toFixed(1)+' lb'],['Main panel',wCell(s.main.ps.filter(x=>!x.rip))],['Amp wall panel',wCell(s.amp.ps.filter(x=>!x.rip))],['All ipe',lb(s.ipeTotal)],['Everything on the walls',lb(s.total)],
     ['sub','Framing'],
     ['Stand-off, wall to slat face',fIn(STANDOFF)],
     
@@ -1202,25 +1421,187 @@ function renderUI(){
   const pill=$('warnPill');pill.style.display=warns.length?'inline-block':'none';pill.style.background=bad?'var(--bad)':'var(--warn)';pill.textContent=`${warns.length} warning${warns.length>1?'s':''}`;
   const cl=buildCutList();$('cutlist').innerHTML=cl.html;$('cutSteps').innerHTML=CUT_STEPS.map(x=>`<li>${x}</li>`).join('');
   renderLightUI();
-  if(state.sel)showInfo(panels.find(p=>p.id===state.sel));
+  updateTray();
 }
-function showInfo(p){
-  if(!p){$('info').style.display='none';return;}
-  const w=p.wall,pt=s=>`(${(w.p0[0]+w.u[0]*s).toFixed(1)}, ${(w.p0[1]+w.u[1]*s).toFixed(1)})`;
-  const swap=p.run.door||p.run.overDoor||p.k<3?(p.k<3&&!p.run.door&&!p.run.overDoor?'<p class="hint">Too narrow for a diffuser or absorber (needs 3+ slats wide).</p>':''):`<div class="seg" style="margin:8px 0">${[['ipe','Ipe slats'],['diff','Diffuser'],['abs','Absorber']].map(([v,t])=>`<button data-pt="${v}" class="${p.type===v?'on':''}">${t}</button>`).join('')}</div>`;
-  $('infoBody').innerHTML=`<h4>${p.id} · ${p.type==='ipe'?p.k+'-slat panel':p.type==='diff'?'QRD diffuser':'Absorber'}</h4>${swap}
-  <div style="color:var(--mut)">${p.run.name}</div>
-  <table>
-  <tr><td>Width × height</td><td>${fIn(p.w)} × ${fIn(p.H)}</td></tr>
-  <tr><td>Along wall (from ${w.from})</td><td>${fIn(p.s0)} to ${fIn(p.s1)}</td></tr>
-  <tr><td>Plan X,Y start / end</td><td>${pt(p.s0)} / ${pt(p.s1)}</td></tr>
-  <tr><td>Bottom / top above floor</td><td>${fIn(p.bot)} / ${fIn(p.bot+p.H)}</td></tr>
-  <tr><td>Weight</td><td style="color:${p.weight>HEAVY?'var(--warn)':'inherit'}">${lb(p.weight)}</td></tr>
-  <tr><td>Rails / wall cleat</td><td>${p.nr} × ${fIn(p.Lr)} / ${fIn(p.Lc)}</td></tr>
-  <tr><td>Stud hits</td><td style="color:${hitColor(p.hits)}">${p.hits}${state.studs?'':' (turn on stud overlay)'}</td></tr>
-  </table>`;
-  $('info').style.display='block';
-  $('infoBody').querySelectorAll('[data-pt]').forEach(b=>b.onclick=()=>{state.ptypes[p.key]=b.dataset.pt;rebuild();});
+function dd(title,note,body,open){
+  return `<details class="dd"${open?' open':''}><summary><b>${title}</b>${note?`<small>${note}</small>`:''}</summary><div class="ddb">${body}</div></details>`;}
+function kv(rows){return '<table class="kv">'+rows.map(r=>`<tr${r[2]?` class="hl" data-hl="${r[2]}" tabindex="0"`:''}><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')+'</table>';}
+function matTable(rows){return '<table class="mat"><tr><th>Item</th><th>Qty</th></tr>'+rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')+'</table>';}
+
+/* everything you need for ONE panel: drawing, materials, cuts, drilling, position */
+function panelDetail(p){
+  const w=p.wall,ipe=p.type==='ipe',nr=p.nr,k=p.k;
+  const pt=t=>`${(w.p0[0]+w.u[0]*t).toFixed(1)}, ${(w.p0[1]+w.u[1]*t).toFixed(1)}`;
+  const kind=ipe?`${k}-slat ipe panel`:p.type==='diff'?'QRD diffuser':'Absorber';
+  const swap=(p.run.door||p.run.overDoor)?'':(k<3
+    ?'<p class="tnote">Too narrow to swap: a diffuser or absorber needs 3 or more slats.</p>'
+    :`<div class="seg" style="margin:2px 0 12px">${[['ipe','Ipe slats'],['diff','Diffuser'],['abs','Absorber']].map(([v,t])=>`<button data-pt="${v}" class="${p.type===v?'on':''}">${t}</button>`).join('')}</div>`);
+  const top=p.bot+p.H;
+  const head=kv([
+    ['Overall size',`${fIn(p.w)} x ${fIn(p.H)}`,'w'],
+    ['Boards',`${k} x ${fIn(p.sw)} wide`,'slat'],
+    ['Bottom / top above floor',`${fIn(p.bot)} / ${fFt(top)}`,'h'],
+    nr?['2x4 rail length',fIn(p.Lr),'lr']:null,
+    p.cleat!=null&&nr?['Cleat rail, below the top',fIn(p.H-p.cleat),'cleat']:null,
+    nr>1?['Bottom brace, up from the bottom',fIn(Math.min.apply(null,p.rys)),'brace']:null,
+    ['Weight',`<span style="color:${p.weight>HEAVY?'var(--warn)':'inherit'}">${lb(p.weight)}</span>`]
+  ].filter(Boolean));
+  const mats=[];
+  if(ipe)mats.push([`Ipe slats, cut to ${fIn(p.H)}`,`${k} from 1 x 5 1/2 x 97`]);
+  else mats.push([p.type==='diff'?'QRD diffuser blank':'Absorber blank',`1 at ${fIn(p.w)} x ${fIn(p.H)}`]);
+  if(nr){
+    mats.push([`2x4 rails, cut to ${fIn(p.Lr)}`,`${nr} (1 notched)`]);
+    mats.push([`1/2" ply spacer strips, ${fIn(p.Lr)}`,`${nr}`]);
+    mats.push([`Wall cleat: 3/4" ply, ${fIn(WC_H)} wide, 45${String.fromCharCode(176)} bevel`,fIn(p.Lc)]);
+    if(ipe)mats.push(['Stainless #8 x 2 1/2 screws',`${k*2*nr}`]);
+    mats.push(['Structural screws 1/4" x 3 1/8" into studs',`${Math.max(2,p.hits*2)}`]);
+  } else mats.push(['Screwed through the door from inside','no rails']);
+  const cl=p.cleat!=null?`${fIn(p.H-p.cleat)} below the panel top`:'n/a';
+  const steps=[];
+  if(ipe){const cpb=Math.max(1,Math.floor((STOCK+KERF)/(p.H+KERF)));steps.push(`Cut ${k} slats to <b>${fIn(p.H)}</b>. ${cpb} cut${cpb>1?'s':''} per ${STOCK}" board at this length.`);}
+  if(nr){
+    steps.push(`Cut ${nr} 2x4 rails to <b>${fIn(p.Lr)}</b> (panel width less ${fIn(2*RAIL_INSET)}, so the rails sit ${fIn16(RAIL_INSET)} in from each edge).`);
+    steps.push(`Notch the cleat rail: <b>45${String.fromCharCode(176)}, ${fIn(NOTCH_D)} deep</b> along its lower back edge, full length.`);
+    steps.push(`Rip ${nr} spacer strips from 1/2" ply to ${fIn(p.Lr)} and screw one to the face of each rail. That is what floats the ipe ${fIn(SPACER_T+RAIL_T)} off the wall.`);
+  }
+  if(ipe)steps.push(`Lay the slats face down with <b>${fIn(state.gap)}</b> spacer blocks between them and square the panel up.`);
+  if(nr&&ipe)steps.push(`Predrill and drive <b>2 screws per slat at each rail</b> (${k*2*nr} total). Cleat rail sits ${cl}; the brace sits ${fIn(Math.min.apply(null,p.rys.length?p.rys:[0]))} up from the bottom.`);
+  if(nr)steps.push(`Hang it: lift ${fIn(1)}, slide to the wall and drop the notch over the wall cleat.`);
+  const pos=kv([['Run',p.run.name],[`Along the wall from the ${w.from}`,`${fIn(p.s0)} to ${fIn(p.s1)}`],['Plan X,Y start',pt(p.s0)],['Plan X,Y end',pt(p.s1)],['Stud hits',`<span style="color:${hitColor(p.hits)}">${p.hits}${state.studs?'':' (stud overlay off)'}</span>`]]);
+  const back=`<button class="prow back" data-back="1"><i>&lsaquo;</i><span>${compView?'All components':'All panels on the '+p.wall.name.toLowerCase()+' wall'}</span></button>`;
+  const html=`${back}${swap}<div class="ik">${panelDiagram(p)}</div>
+    <p class="ikcap">Front is the ipe face. Back shows the rails behind it; circles are screw positions.</p>
+    <div id="ikhint"></div>
+    ${head}
+    <p class="tnote" style="margin-top:9px">Tap any measurement to light it up on the drawing.</p>
+    ${dd('What screws into what','',fastenChain(p),true)}
+    ${dd('Materials for this panel','',matTable(mats))}
+    ${dd('Cut, notch and drill',`${steps.length} steps`,`<ol class="stepn">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>`+(nr?`<div class="ik sect">${cleatSection()}</div><p class="ikcap"><b>1</b> 2x4 rail laid flat, back tight to the wall. <b>2</b> 45${String.fromCharCode(176)} notch ${fIn(NOTCH_D)} deep over the wall cleat. <b>3</b> ${fIn(SPACER_T)} spacer + ${fIn(SLAT_T)} ipe, so the boards float ${fIn(RAIL_T+SPACER_T)} off the wall.</p>`:''))}
+    ${dd('Where it sits','',pos)}`;
+  const txt=`${p.id} ${kind} on ${p.run.name}\n${fIn(p.w)} x ${fIn(p.H)}, ${fIn(p.bot)} to ${fFt(top)} above floor, ${lb(p.weight)}\n\nMATERIALS\n`
+    +mats.map(m=>`${m[0].replace(/<[^>]+>/g,'')}: ${m[1]}`).join('\n')
+    +`\n\nSTEPS\n`+steps.map((x,i)=>`${i+1}. ${x.replace(/<[^>]+>/g,'')}`).join('\n');
+  return {key:'p:'+p.id,title:`${p.id} ${String.fromCharCode(183)} ${kind}`,sub:p.run.name,html,txt};
+}
+
+/* everything for ONE wall face */
+function wallDetail(v){
+  const r=wallSheet(v),w=WALL[v],ps=r.ps||[];
+  const rows=ps.map(({p,off})=>`<button class="prow" data-pid="${p.id}"><b>${p.id}</b><span>${p.type==='ipe'?p.k+'-slat':p.type==='diff'?'diffuser':'absorber'} ${String.fromCharCode(183)} ${fIn(p.w)} x ${fIn(p.H)}<br>${fIn(p.s0+off)} from the ${w.from} ${String.fromCharCode(183)} ${lb(p.weight)}</span><i>&rsaquo;</i></button>`).join('');
+  const list=ps.length?rows:'<p class="tnote">No ipe panels on this face.</p>';
+  const html=`<div class="ik diag">${r.svg}</div>
+    <p class="ikcap">Dashed lines are the 2x4 rails behind the ipe; orange is the notched cleat rail. Dashed tan boxes are booth framing.</p>
+    ${kv([['Wall length',fBoth(w.L)],['Measured from',w.from],['Ipe panels on this face',ps.length||'none']])}
+    ${dd('Panels on this wall',`tap for cut sheet`,list,true)}
+    ${r.framing?dd('Framing','',r.framing):''}`;
+  return {key:'w:'+v,title:`${w.name} wall`,sub:`Elevation ${String.fromCharCode(183)} ${fBoth(w.L)}`,html,txt:r.txt};
+}
+
+/* ---------- repeatable components: every distinct piece, how many, and a plan checklist ---------- */
+const CKEY='ipe.plan.v1';
+let checks=(()=>{try{return JSON.parse(localStorage.getItem(CKEY))||{};}catch(e){return {};}})();
+function saveChecks(){try{localStorage.setItem(CKEY,JSON.stringify(checks));}catch(e){}}
+function compSig(p){return `${p.rip?'rip':'pan'}|${p.k}|${p.w.toFixed(2)}|${p.H.toFixed(2)}|${p.nr}`;}
+function compGroups(){
+  const m=new Map();
+  panels.filter(p=>p.type==='ipe').forEach(p=>{const sig=compSig(p);
+    if(!m.has(sig))m.set(sig,{sig,p,n:0,ids:[]});
+    const g=m.get(sig);g.n++;g.ids.push(p.id);});
+  return [...m.values()].sort((a,b)=>(a.p.rip?1:0)-(b.p.rip?1:0)||b.n-a.n||b.p.H-a.p.H);
+}
+/* a tiny true-to-scale thumbnail of one component */
+function miniPanel(p){
+  const W=p.w,H=p.H,g=state.gap,sw=Math.max(.01,W/50);
+  let o=`<svg viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" preserveAspectRatio="xMidYMid meet">`;
+  for(let i=0;i<p.k;i++)o+=`<rect x="${(i*(p.sw+g)).toFixed(2)}" y="0" width="${p.sw.toFixed(2)}" height="${H.toFixed(2)}" fill="${p.rip?'#d7b183':'#e3d2b6'}" stroke="#1d1d1f" stroke-width="${sw.toFixed(3)}"/>`;
+  p.rys.forEach(y=>{const yy=(H-y).toFixed(2);o+=`<line x1="0" x2="${W.toFixed(2)}" y1="${yy}" y2="${yy}" stroke="#d6336c" stroke-width="${(sw*1.6).toFixed(3)}"/>`;});
+  return o+'</svg>';
+}
+function componentsDetail(){
+  const gs=compGroups();
+  const tot=gs.reduce((a,g)=>a+g.n,0);
+  const done=k=>gs.filter(g=>checks[g.sig+'|'+k]).reduce((a,g)=>a+g.n,0);
+  const nCut=done('cut'),nUp=done('up');
+  const row=g=>{const p=g.p,rip=!!p.rip;
+    return `<div class="crow">
+      <div class="cmini">${miniPanel(p)}</div>
+      <div class="cmeta">
+        <b>${g.n} ${String.fromCharCode(215)} ${rip?'ripped filler':p.k+'-slat panel'}</b>
+        <span>${fIn(p.w)} ${String.fromCharCode(215)} ${fIn(p.H)}${rip?' '+String.fromCharCode(183)+' rip to width':''} ${String.fromCharCode(183)} ${lb(p.weight)} each</span>
+        <span class="cids">${g.ids.slice(0,8).join(', ')}${g.ids.length>8?' +'+(g.ids.length-8)+' more':''}</span>
+      </div>
+      <div class="cchk">
+        <label><input type="checkbox" data-ck="${g.sig}|cut"${checks[g.sig+'|cut']?' checked':''}><span>Cut</span></label>
+        <label><input type="checkbox" data-ck="${g.sig}|up"${checks[g.sig+'|up']?' checked':''}><span>Up</span></label>
+      </div>
+      <button class="cgo" data-pid="${p.id}" aria-label="Open ${p.id} cut sheet">&rsaquo;</button>
+    </div>`;};
+  const std=gs.filter(g=>!g.p.rip),rip=gs.filter(g=>g.p.rip);
+  const bar=(n,t,lbl)=>`<div class="prog"><div class="progt"><span>${lbl}</span><b>${n} of ${t}</b></div><div class="progb"><i style="width:${t?(n/t*100).toFixed(1):0}%"></i></div></div>`;
+  const html=`<p class="tnote">Every distinct piece in the build, grouped so you can cut a whole batch at once. Your ticks are saved in this browser.</p>
+    ${bar(nCut,tot,'Cut')}${bar(nUp,tot,'Hung')}
+    ${dd('Standard panels',`${std.length} component${std.length===1?'':'s'}`,std.map(row).join('')||'<p class="tnote">None.</p>',true)}
+    ${dd('Bespoke ripped fillers',`${rip.reduce((a,g)=>a+g.n,0)} piece${rip.reduce((a,g)=>a+g.n,0)===1?'':'s'}`,
+      (rip.length?`<p class="tnote">These close the end gaps so each run reads as one continuous surface. Measure the real gap on site before ripping.</p>`:'')+(rip.map(row).join('')||'<p class="tnote">None: every run lands on full boards.</p>'),true)}
+    <p class="tnote"><button class="copy" id="ckReset" style="background:#f1eee9;color:var(--ink)">Clear all ticks</button></p>`;
+  const txt='REPEATABLE COMPONENTS\n'+gs.map(g=>`${g.n} x ${g.p.rip?'ripped filler':g.p.k+'-slat panel'} ${fIn(g.p.w)} x ${fIn(g.p.H)} (${g.ids.join(', ')})`).join('\n');
+  return {key:'components',title:'Components',sub:`${gs.length} repeatable pieces ${String.fromCharCode(183)} ${tot} total`,html,txt};
+}
+/* any table inside a panel scrolls sideways rather than squeezing its columns */
+function wrapTables(el){el.querySelectorAll('table').forEach(t=>{const pr=t.parentElement;
+  if(pr&&pr.classList.contains('tscroll'))return;
+  const d=document.createElement('div');d.className='tscroll';t.parentNode.insertBefore(d,t);d.appendChild(t);});}
+/* ---------- the one detail surface: side rail on desktop, bottom sheet on mobile ---------- */
+const trayEl=()=>document.getElementById('tray');
+let trayKey='';
+function trayShow(d){
+  const t=trayEl();if(!t)return;
+  const body=document.getElementById('trayBody');
+  const wasOpen=t.classList.contains('open');
+  document.getElementById('trayTitle').innerHTML=`${d.title}${d.sub?`<span>${d.sub}</span>`:''}`;
+  t.dataset.txt=d.txt||'';
+  const keep=[...body.querySelectorAll('details')].map(x=>x.open);
+  const same=d.key===trayKey;
+  body.innerHTML=d.html;
+  if(same)[...body.querySelectorAll('details')].forEach((x,i)=>{if(keep[i]!==undefined)x.open=keep[i];});
+  else{body.scrollTop=0;body.classList.remove('swap');void body.offsetWidth;body.classList.add('swap');}
+  trayKey=d.key;
+  t.classList.add('shown');t.setAttribute('aria-hidden','false');
+  if(!wasOpen)requestAnimationFrame(()=>t.classList.add('open'));
+  body.querySelectorAll('[data-pt]').forEach(btn=>btn.onclick=()=>{const id=state.sel;const pp=panels.find(x=>x.id===id);if(pp){state.ptypes[pp.key]=btn.dataset.pt;rebuild();}});
+  wrapTables(body);
+  body.querySelectorAll('[data-pid]').forEach(btn=>btn.onclick=()=>{compView=false;state.sel=btn.dataset.pid;rebuild();});
+  body.querySelectorAll('[data-ck]').forEach(cb=>cb.onchange=()=>{checks[cb.dataset.ck]=cb.checked;if(!cb.checked)delete checks[cb.dataset.ck];saveChecks();rebuild();});
+  const rs=body.querySelector('#ckReset');if(rs)rs.onclick=()=>{checks={};saveChecks();rebuild();};
+  /* tapping a measurement fades everything on the drawing except what it names */
+  const hint=body.querySelector('#ikhint');
+  const NAMES={w:'Overall width of the panel',h:'Height, and where it sits above the floor',slat:'The ipe boards',lr:'The 2x4 rails behind the boards',cleat:'Notched cleat rail: this is what hangs on the wall',brace:'Bottom brace: holds the panel plumb'};
+  const marks=()=>body.querySelectorAll('.ik [data-dm],.ik [data-pt2]');
+  const clear=()=>{marks().forEach(el=>el.classList.remove('fade','pop'));body.querySelectorAll('[data-hl].on').forEach(x=>x.classList.remove('on'));if(hint)hint.textContent='';};
+  body.querySelectorAll('[data-hl]').forEach(tr=>{
+    const on=()=>{const k=tr.dataset.hl;
+      marks().forEach(el=>{const me=el.dataset.dm===k||el.dataset.pt2===k;el.classList.toggle('fade',!me);el.classList.toggle('pop',me);});
+      body.querySelectorAll('[data-hl]').forEach(x=>x.classList.toggle('on',x===tr));
+      if(hint)hint.textContent=NAMES[k]||'';};
+    tr.addEventListener('click',on);tr.addEventListener('mouseenter',on);tr.addEventListener('focus',on);
+    tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();on();}});
+  });
+  const tbl=body.querySelector('table.kv');if(tbl)tbl.addEventListener('mouseleave',clear);
+  const bk=body.querySelector('[data-back]');if(bk)bk.onclick=()=>{state.sel=null;if(!compView)sheetOpen=true;rebuild();};
+}
+function trayHide(){const t=trayEl();if(!t)return;t.classList.remove('open');t.setAttribute('aria-hidden','true');trayKey='';
+  setTimeout(()=>{if(!t.classList.contains('open'))t.classList.remove('shown');},220);}
+function trayClose(){state.sel=null;compView=false;sheetOpen=false;trayHide();rebuild();}
+let compView=false;
+function updateTray(){
+  const btn=document.getElementById('sheetBtn');
+  const elev=!!WALL[state.view];
+  if(btn)btn.style.display=(elev||state.sel||compView)?'flex':'none';
+  if(!panels.length){trayHide();return;}
+  if(compView&&!state.sel){trayShow(componentsDetail());return;}
+  if(state.sel){const p=panels.find(x=>x.id===state.sel);if(p){trayShow(panelDetail(p));return;}}
+  if(elev&&sheetOpen){trayShow(wallDetail(state.view));return;}
+  trayHide();
 }
 
 /* ---------- picking: tap selects a panel, double-tap zooms to the point ---------- */
@@ -1242,7 +1623,7 @@ canvas.addEventListener('pointerup',e=>{
   if(state.view==='detail'||state.view==='section')return;
   const h=hitAt(e.clientX,e.clientY,true);
   const id=h?h.object.userData.pid:null;
-  if(id!==state.sel){state.sel=id;if(!id)$('info').style.display='none';rebuild();}
+  if(id!==state.sel){state.sel=id;rebuild();}
 });
 canvas.addEventListener('dblclick',e=>e.preventDefault());
 document.addEventListener('gesturestart',e=>e.preventDefault());
