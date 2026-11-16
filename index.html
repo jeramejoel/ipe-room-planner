@@ -104,6 +104,13 @@ td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums
 .stepn li{counter-increment:sn;position:relative;padding:0 0 11px 30px;font-size:13px;line-height:1.5}
 .stepn li::before{content:counter(sn);position:absolute;left:0;top:0;width:21px;height:21px;border-radius:50%;background:var(--ink);color:#fff;font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .tnote{font-size:12.5px;color:var(--mut);margin:0 0 11px;line-height:1.5}
+.lgd{list-style:none;margin:0 0 10px;padding:0}
+.lgd li{display:flex;align-items:flex-start;gap:9px;padding:5px 0;font-size:12.5px;line-height:1.45;border-bottom:1px solid #f6f3ef}
+.lgd li:last-child{border-bottom:0}
+.lgd li i{flex:0 0 auto;width:18px;height:18px;border-radius:50%;background:var(--ink);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.lgd li i.k{background:var(--acc)}
+.lgd li span{flex:1;min-width:0;color:var(--mut)}
+.lgd li b{color:var(--ink);font-weight:700}
 .prow{display:flex;width:100%;align-items:center;gap:10px;text-align:left;border:0;border-bottom:1px solid #f4f1ec;background:none;padding:10px 0;cursor:pointer;font:inherit;color:var(--ink);min-height:48px}
 .prow:last-child{border-bottom:0}
 .prow b{font-weight:700;font-size:13px;flex:0 0 auto;min-width:26px}
@@ -215,7 +222,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
       <button data-v="72">72"</button><button data-v="84">84"</button><button data-v="90">90"</button><button data-v="96">96"</button><button data-v="48">48"</button>
     </div>
     <p class="hint" id="presetHint"></p>
-    <label class="tog"><input type="checkbox" id="t_seamless">Seamless runs: rip fillers to close the end gaps</label>
+    <label class="tog"><input type="checkbox" id="t_seamless">Close the end of every run with a ripped board</label>
   </div>
   <div class="sec">
     <h3>Dimensions</h3>
@@ -370,20 +377,20 @@ function cornerAngle(wi,wj){const a=[-wi.u[0],-wi.u[1]],b=wj.u;return Math.acos(
 const clearAt=ang=>STANDOFF/Math.tan(ang/2);
 const CL_EA=clearAt(cornerAngle(WALL.E,WALL.A)), CL_AS=clearAt(cornerAngle(WALL.A,WALL.S));
 const RUNS=[
-  {wall:'N',name:'North, door to screen',a:46+CASING+.5,b:85,refA:46,refB:85,comp:[],auto:true},
-  {wall:'N',name:'North, right of screen',a:173,b:264,refA:173,refB:264,comp:[],auto:true},
-  {wall:'E',name:'East',a:STANDOFF+REVEAL,b:162-CL_EA,refA:0,refB:162,comp:[],auto:true},
-  {wall:'A',name:'Angled',a:CL_EA,b:AL-CL_AS,refA:0,refB:AL,comp:[],auto:true},
-  {wall:'S',name:'South, angled corner to booth',a:CL_AS,b:204-BX-STANDOFF-REVEAL,refA:0,refB:204-BX,comp:[],auto:true},
+  {wall:'N',name:'North, door to screen',a:46+CASING+REVEAL,b:85-REVEAL,refA:46,refB:85,comp:[],auto:true},
+  {wall:'N',name:'North, right of screen',a:173+REVEAL,b:264,refA:173,refB:264,comp:[],auto:true},
+  {wall:'E',name:'East',a:STANDOFF+REVEAL,b:162-CL_EA-REVEAL,refA:0,refB:162,comp:[],auto:true},
+  {wall:'A',name:'Angled',a:CL_EA+REVEAL,b:AL-CL_AS-REVEAL,refA:0,refB:AL,comp:[],auto:true},
+  {wall:'S',name:'South, angled corner to booth',a:CL_AS+REVEAL,b:204-BX-STANDOFF-REVEAL,refA:0,refB:204-BX,comp:[],auto:true},
   {wall:'W',name:'West, booth to north corner',a:194-BY+REVEAL,b:194,refA:194-BY,refB:194,comp:[],auto:true},
-  {wall:'P',name:'Amp wall face',a:0,b:88,refA:0,refB:88,comp:[],auto:true,amp:true},
-  {wall:'PW',name:'Amp wall, west side',a:STANDOFF+REVEAL,b:20,refA:0,refB:20,comp:[],auto:true,amp:true},
-  {wall:'PE',name:'Amp wall, east side',a:0,b:20-STANDOFF-REVEAL,refA:0,refB:20,comp:[],auto:true,amp:true},
-  {wall:'BN',name:'Booth outside, east of window',a:.5,b:WIN_S_OUT-WIN_W/2-CASING-.5,refA:0,refB:WIN_S_OUT-WIN_W/2-CASING,comp:[],auto:true,booth:true},
+  {wall:'P',name:'Amp wall face',a:REVEAL,b:88-REVEAL,refA:0,refB:88,comp:[],auto:true,amp:true},
+  {wall:'PW',name:'Amp wall, west side',a:STANDOFF+REVEAL,b:20-REVEAL,refA:0,refB:20,comp:[],auto:true,amp:true},
+  {wall:'PE',name:'Amp wall, east side',a:REVEAL,b:20-STANDOFF-REVEAL,refA:0,refB:20,comp:[],auto:true,amp:true},
+  {wall:'BN',name:'Booth outside, east of window',a:REVEAL,b:WIN_S_OUT-WIN_W/2-CASING-REVEAL,refA:0,refB:WIN_S_OUT-WIN_W/2-CASING,comp:[],auto:true,booth:true},
   {wall:'BN',name:'Booth outside, above the window',a:WIN_S_OUT-WIN_W/2-CASING,b:WIN_S_OUT+WIN_W/2+CASING,refA:WIN_S_OUT-WIN_W/2-CASING,refB:WIN_S_OUT+WIN_W/2+CASING,comp:[],auto:true,overDoor:'win'},
-  {wall:'BN',name:'Booth outside, west of window',a:WIN_S_OUT+WIN_W/2+CASING+.5,b:BX-STANDOFF-REVEAL,refA:WIN_S_OUT+WIN_W/2+CASING,refB:BX,comp:[],auto:true,booth:true},
-  {wall:'BE',name:'Booth outside, south of door',a:STANDOFF+REVEAL,b:DOOR_S_OUT-DOOR_W/2-CASING-.5,refA:0,refB:DOOR_S_OUT-DOOR_W/2-CASING,comp:[],auto:true,booth:true},
-  {wall:'BE',name:'Booth outside, north of door',a:DOOR_S_OUT+DOOR_W/2+CASING+.5,b:194-BY-.5,refA:DOOR_S_OUT+DOOR_W/2+CASING,refB:194-BY,comp:[],auto:true,booth:true},
+  {wall:'BN',name:'Booth outside, west of window',a:WIN_S_OUT+WIN_W/2+CASING+REVEAL,b:BX-STANDOFF-REVEAL,refA:WIN_S_OUT+WIN_W/2+CASING,refB:BX,comp:[],auto:true,booth:true},
+  {wall:'BE',name:'Booth outside, south of door',a:STANDOFF+REVEAL,b:DOOR_S_OUT-DOOR_W/2-CASING-REVEAL,refA:0,refB:DOOR_S_OUT-DOOR_W/2-CASING,comp:[],auto:true,booth:true},
+  {wall:'BE',name:'Booth outside, north of door',a:DOOR_S_OUT+DOOR_W/2+CASING+REVEAL,b:194-BY-REVEAL,refA:DOOR_S_OUT+DOOR_W/2+CASING,refB:194-BY,comp:[],auto:true,booth:true},
   {wall:'BE',name:'Booth door (slats on the door)',a:DOOR_S_OUT-DOOR_W/2,b:DOOR_S_OUT+DOOR_W/2,refA:DOOR_S_OUT-DOOR_W/2,refB:DOOR_S_OUT+DOOR_W/2,comp:[5],door:true},
   {wall:'BE',name:'Booth outside, above booth door',a:DOOR_S_OUT-DOOR_W/2-CASING,b:DOOR_S_OUT+DOOR_W/2+CASING,refA:DOOR_S_OUT-DOOR_W/2-CASING,refB:DOOR_S_OUT+DOOR_W/2+CASING,comp:[],auto:true,overDoor:'room'},
   {wall:'N',name:'North, above room door',a:10-CASING,b:46+CASING,refA:10-CASING,refB:46+CASING,comp:[],auto:true,overDoor:'room'},
@@ -668,8 +675,21 @@ function layout(){
       edges.push({name:r.name,which,inset:Math.max(0,inset),sliver:Math.max(0,sliver),need,kind,gap:r.g});
     });
   });
+  /* Coverage: a stretch of a wall face that no run covers at all. A run stopping short
+     of its reference is a reveal; a stretch with no run over it is a hole, and the edge
+     audit above would never see it because it only looks at runs that exist. */
+  const holes=[];
+  {const faces={};
+   /* the amp wall box and the booth stand against these faces, so no run belongs there */
+   const BLOCKED={N:[[85,173]],S:[[204-BX,204]],W:[[0,194-BY]]};
+   RUNS.forEach(r=>{if(r.door)return;(faces[r.wall]=faces[r.wall]||[]).push([r.refA,r.refB]);});
+   Object.keys(BLOCKED).forEach(id=>{if(faces[id])faces[id]=faces[id].concat(BLOCKED[id]);});
+   Object.keys(faces).forEach(id=>{const w=WALL[id];if(!w||!w.L)return;
+     const spans=faces[id].slice().sort((a,b)=>a[0]-b[0]);let cur=0;
+     spans.forEach(sp=>{if(sp[0]-cur>0.5)holes.push({wall:w.name,from:cur,to:sp[0]});cur=Math.max(cur,sp[1]);});
+     if(w.L-cur>0.5)holes.push({wall:w.name,from:cur,to:w.L});});}
   const hung=panels.filter(p=>p.nr>0);const wallCleatLb=hung.reduce((a,p)=>a+p.Lc*CLEAT_AREA,0)/1728*BACK_PCF;
-  stats={main,amp,booth,over,barG,doorG,hung,edges,rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
+  stats={main,amp,booth,over,barG,doorG,hung,edges,holes,rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
     n:{3:panels.filter(p=>p.k===3).length,4:panels.filter(p=>p.k===4).length,5:panels.filter(p=>p.k===5).length},
     ipeTotal:panels.reduce((a,x)=>a+(x.type==='ipe'?x.slatLb:0),0),total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
     railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
@@ -1298,7 +1318,7 @@ const CUT_STEPS=[
   '<b>2x4 rails on the miter saw.</b> Set a stop block for each rail length in the list and cut all of one length at once. Each panel takes one cleat rail and one plain bottom rail of the same length. Pick the straightest 2x4s for the cleats.',
   '<b>LED groove (table saw).</b> On the back of every board cut a 1/2" wide × 1/4" deep groove down the center (fence at 2 1/2", two passes). The LED strip lies in it facing the wall, so it passes over the rails and lights the wall behind each board. Leave the wire end at the bottom.',
   '<b>French cleats (table saw, 45°).</b> Blade tilted 45°, fence set so the cut enters the back face 1" up the 3 1/2" width. One pass down a 2x4 gives two identical halves: the panel\'s cleat rail and its matching piece of wall cleat. Cut them in pairs so each panel keeps its own match.',
-  '<b>Paint everything behind the ipe matte black.</b> Cleat rails, bottom rails and wall cleats sit behind a 1" gap between every board, so any bare wood reads as a stripe. Paint before assembly, both faces and all edges.',
+  '<b>Paint everything behind the ipe matte black.</b> Cleat rails, bottom rails, and wall cleats sit behind a 1" gap between every board, so any bare wood reads as a stripe. Paint before assembly, both faces and all edges.',
   '<b>Assemble panels face down.</b> Slats face down with 1" spacer blocks. Lay the cleat rail across the top with its 45° face pointing down and toward the wall, and the plain bottom rail across the foot, and screw through the 2x4 into the ipe with #8 × 2 1/2" screws, 2 per slat per rail. Both rails are 1 1/2" thick, so the panel hangs parallel to the wall. Press the LED strip into each board\'s groove before the panel goes up.',
   '<b>Booth outer leaf.</b> Frame the north and east walls to the room ceiling with 10 ft 2x4s, studs 16" on center, door opening in the north wall. Sill gasket under the bottom plate, screw the top plate to the ceiling joists, insulate, 2 layers of 5/8" drywall with damping compound on the room side only.',
   '<b>Booth inner leaf.</b> Frame 4 walls 1" away from the outer leaf and from the room walls (use 1" foam blocks as temporary spacers, then pull them). Sill gasket under every plate, door opening lined up with the outer door. Lay the 2x6 lid joists across the north and south top plates, insulate, then 2 layers of 5/8" drywall on the booth side and the lid underside. Nothing may touch both leaves.',
@@ -1533,14 +1553,24 @@ function panelDetail(p){
   const pos=kv([['Run',p.run.name],[`Along the wall from the ${w.from}`,`${fIn(p.s0)} to ${fIn(p.s1)}`],['Plan X,Y start',pt(p.s0)],['Plan X,Y end',pt(p.s1)],['Stud hits',`<span style="color:${hitColor(p.hits)}">${p.hits}${state.studs?'':' (stud overlay off)'}</span>`]]);
   const back=`<button class="prow back" data-back="1"><i>&lsaquo;</i><span>${compView?'All components':'All panels on the '+p.wall.name.toLowerCase()+' wall'}</span></button>`;
   const html=`${back}${swap}<div class="ik">${panelDiagram(p)}</div>
-    <p class="ikcap">Front is the ipe face. Back shows the rails behind it; circles are screw positions.</p>
+    <ol class="lgd">
+      <li><i>F</i><span><b>Front</b> is the ipe face, as the room sees it.</span></li>
+      <li><i>B</i><span><b>Back</b> is the rails behind it. Circles are screw positions.</span></li>
+    </ol>
     <div id="ikhint"></div>
     ${head}
     <p class="tnote" style="margin-top:9px">Tap any measurement to light it up on the drawing.</p>
-    ${dd('What screws into what','',fastenChain(p),true)}
-    ${dd('Materials for this panel','',matTable(mats))}
-    ${dd('Cut, rip and drill',`${steps.length} steps`,`<ol class="stepn">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>`+(nr?`<div class="ik sect">${cleatSection()}</div><p class="ikcap"><b>1</b> grey: the cleat rail screwed to the panel. <b>2</b> pale blue: the matching wall cleat, screwed into the studs. Both come from one 45${String.fromCharCode(176)} rip of a single 2x4 and nest back to ${fIn(RAIL_T)}; on site both are painted matte black. The pink line is the 45${String.fromCharCode(176)} bearing face, the only surface carrying the panel, and the dashed outline is the panel half lifted ${fIn(CLEAT_RISE+.25)} clear of it. <b>3</b> ${fIn(SLAT_T)} ipe, floating ${fIn(RAIL_T)} off the wall.</p>`:''))}
-    ${dd('Where it sits','',pos)}`;
+    ${dd('What Screws into What','',fastenChain(p),true)}
+    ${dd('Materials','',matTable(mats))}
+    ${dd('Cut, Rip and Drill',`${steps.length} steps`,`<ol class="stepn">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>`+(nr?`<div class="ik sect">${cleatSection()}</div><ol class="lgd">
+      <li><i>1</i><span><b>Cleat rail</b>, screwed to the panel. Grey.</span></li>
+      <li><i>2</i><span><b>Wall cleat</b>, screwed into the studs. Pale blue.</span></li>
+      <li><i>3</i><span><b>Ipe board</b>, ${fIn(SLAT_T)} thick, floating ${fIn(RAIL_T)} off the wall.</span></li>
+      <li><i class="k">45</i><span>The <b>bearing face</b>, in pink. This one surface carries the panel.</span></li>
+      <li><i class="k">&#8595;</i><span>The dashed outline is the panel lifted <b>${fIn(CLEAT_RISE+.25)}</b> clear, which is how it goes on and comes off.</span></li>
+    </ol>
+    <p class="tnote">Both halves come from one 45${String.fromCharCode(176)} rip of a single 2x4 and nest back to ${fIn(RAIL_T)}. On site both are painted matte black; the drawing separates them so you can tell which is which.</p>`:''))}
+    ${dd('Where It Sits','',pos)}`;
   const txt=`${p.id} ${kind} on ${p.run.name}\n${fIn(p.w)} x ${fIn(p.H)}, ${fIn(p.bot)} to ${fFt(top)} above floor, ${lb(p.weight)}\n\nMATERIALS\n`
     +mats.map(m=>`${m[0].replace(/<[^>]+>/g,'')}: ${m[1]}`).join('\n')
     +`\n\nSTEPS\n`+steps.map((x,i)=>`${i+1}. ${x.replace(/<[^>]+>/g,'')}`).join('\n');
@@ -1553,9 +1583,12 @@ function wallDetail(v){
   const rows=ps.map(({p,off})=>`<button class="prow" data-pid="${p.id}"><b>${p.id}</b><span>${p.type==='ipe'?p.k+'-slat':p.type==='diff'?'diffuser':'absorber'} ${String.fromCharCode(183)} ${fIn(p.w)} x ${fIn(p.H)}<br>${fIn(p.s0+off)} from the ${w.from} ${String.fromCharCode(183)} ${lb(p.weight)}</span><i>&rsaquo;</i></button>`).join('');
   const list=ps.length?rows:'<p class="tnote">No ipe panels on this face.</p>';
   const html=`<div class="ik diag">${r.svg}</div>
-    <p class="ikcap">Dashed lines are the 2x4 rails behind the ipe; the top rail is marked. Dashed tan boxes are booth framing.</p>
+    <ol class="lgd">
+      <li><i>1</i><span><b>Dashed lines</b> are the 2x4 rails behind the ipe. The cleat rail is marked.</span></li>
+      <li><i>2</i><span><b>Dashed tan boxes</b> are booth framing.</span></li>
+    </ol>
     ${kv([['Wall length',fBoth(w.L)],['Measured from',w.from],['Ipe panels on this face',ps.length||'none']])}
-    ${dd('Panels on this wall',`tap for cut sheet`,list,true)}
+    ${dd('Panels on This Wall','tap for the cut sheet',list,true)}
     ${r.framing?dd('Framing','',r.framing):''}`;
   return {key:'w:'+v,title:`${w.name} wall`,sub:`Elevation ${String.fromCharCode(183)} ${fBoth(w.L)}`,html,txt:r.txt};
 }
@@ -1603,18 +1636,21 @@ function componentsDetail(){
   const bar=(n,t,lbl)=>`<div class="prog"><div class="progt"><span>${lbl}</span><b>${n} of ${t}</b></div><div class="progb"><i style="width:${t?(n/t*100).toFixed(1):0}%"></i></div></div>`;
   const html=`<p class="tnote">Every distinct piece in the build, grouped so you can cut a whole batch at once. Your ticks are saved in this browser.</p>
     ${bar(nCut,tot,'Cut')}${bar(nUp,tot,'Hung')}
-    ${dd('Standard panels',`${std.length} component${std.length===1?'':'s'}`,std.map(row).join('')||'<p class="tnote">None.</p>',true)}
-    ${dd('Bespoke ripped fillers',`${rip.reduce((a,g)=>a+g.n,0)} piece${rip.reduce((a,g)=>a+g.n,0)===1?'':'s'}`,
+    ${dd('Standard Panels',`${std.length} component${std.length===1?'':'s'}`,std.map(row).join('')||'<p class="tnote">None.</p>',true)}
+    ${dd('Bespoke Fillers',`${rip.reduce((a,g)=>a+g.n,0)} piece${rip.reduce((a,g)=>a+g.n,0)===1?'':'s'}`,
       (rip.length?`<p class="tnote">These close the end gaps so each run reads as one continuous surface. Measure the real gap on site before ripping.</p>`:'')+(rip.map(row).join('')||'<p class="tnote">None: every run lands on full boards.</p>'),true)}
-    ${dd('Edges and corners',`${(stats.edges||[]).length} edge${(stats.edges||[]).length===1?'':'s'}`,
+    ${dd('Edges and Corners',`${(stats.edges||[]).length} edge${(stats.edges||[]).length===1?'':'s'}`,
       (()=>{const es=(stats.edges||[]).slice().sort((a,b)=>(b.sliver-a.sliver)||(b.inset-a.inset));
         if(!es.length)return '<p class="tnote">Every run lands flush on its reference line.</p>';
         const bare=es.reduce((a,e)=>a+e.sliver,0);
         const WHY={corner:'panel returning into the corner',reveal:'reveal against a casing or obstacle',flush:'flush'};
         const rows=es.map(e=>`<tr><td>${e.name}<br><span style="font-size:11px;color:var(--mut)">${e.which} ${String.fromCharCode(183)} ${WHY[e.kind]}</span></td><td class="n">${fIn(e.inset)}</td><td class="n" style="color:${e.sliver>0.03?'var(--warn)':'var(--mut)'}">${e.sliver>0.03?fIn(e.sliver):'0'}</td></tr>`).join('');
-        return `<p class="tnote">Each run stops short where a panel on the next wall returns into the corner. That clearance is the panel depth ${fIn(STANDOFF)} plus one board gap, so a corner reads with the same reveal as every other joint. <b>Clearance</b> is that designed inset; <b>bare</b> is anything left uncovered beyond it.</p>`
+        const hl=(stats.holes||[]);
+        const holeBlock=hl.length?`<p class="tnote" style="color:var(--warn);margin-top:11px"><b>${hl.length===1?'One stretch of wall carries':hl.length+' stretches of wall carry'} no run at all:</b></p>`
+          +`<table class="mat"><tr><th>Wall</th><th>Width</th></tr>${hl.map(h=>`<tr><td>${h.wall}<br><span style="font-size:11px;color:var(--mut)">${fIn(h.from)} to ${fIn(h.to)} along the face</span></td><td class="n">${fIn(h.to-h.from)}</td></tr>`).join('')}</table>`:'';
+        return `<p class="tnote">Every edge carries the same ${fIn(state.gap)} reveal. At a corner that means the panel depth ${fIn(STANDOFF)} plus the gap; at a casing it means the casing plus the gap. <b>Clearance</b> is that inset, <b>bare</b> is anything uncovered beyond it.</p>`
          +`<table class="mat"><tr><th>Area</th><th>Clearance</th><th>Bare</th></tr>${rows}</table>`
-         +`<p class="tnote" style="margin-top:9px">${bare<=0.05?'<b>Nothing bare:</b> every run is closed to its bounds, the leftover absorbed into the board gaps.':`<b>${fIn(bare)}</b> still bare across ${es.filter(e=>e.sliver>0.03).length} edge(s).`}</p>`;})())}
+         +`<p class="tnote" style="margin-top:9px">${bare<=0.05?'<b>Nothing bare.</b> Every run closes to its bounds, the leftover absorbed into the board gaps.':`<b>${fIn(bare)}</b> still bare across ${es.filter(e=>e.sliver>0.03).length} edges.`}</p>`+holeBlock;})())}
     <p class="tnote"><button class="copy" id="ckReset" style="background:#f1eee9;color:var(--ink)">Clear all ticks</button></p>`;
   const txt='REPEATABLE COMPONENTS\n'+gs.map(g=>`${g.n} x ${g.p.rip?'ripped filler':g.p.k+'-slat panel'} ${fIn(g.p.w)} x ${fIn(g.p.H)} (${g.ids.join(', ')})`).join('\n');
   return {key:'components',title:'Components',sub:`${gs.length} repeatable pieces ${String.fromCharCode(183)} ${tot} total`,html,txt};
