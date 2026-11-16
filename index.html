@@ -211,6 +211,103 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 #ledBar .qtog.on{background:var(--ink);color:#ffd79a}
 #ledBar .dots{display:flex;gap:4px}#ledBar .dots i{width:16px;height:16px;border-radius:50%;cursor:pointer;display:block;box-shadow:inset 0 0 0 1px #0002}
 @media (max-width:899px){#ledBar{flex:1;min-width:0;gap:4px}#ledBar input[type=range]{width:auto;flex:1;min-width:30px}#ledBar output,#ledBar .lb,#ledBar .dots{display:none}}
+
+/* ---------- interaction states ----------
+   One rule for the whole app: rest is quiet, hover lifts, selected is unmistakable, and
+   the keyboard always shows where it is. Anything clickable answers all four. */
+:root{--hov:#f0ece5;--hov2:#e7e1d7;--selbg:#1d1d1f;--ring:var(--acc)}
+button,.chip,.tog,summary,input,select{outline:none}
+button:focus-visible,.chip:focus-visible,summary:focus-visible,input:focus-visible,
+.tog:focus-within,[data-pid]:focus-visible,[data-pt]:focus-visible{
+  outline:2px solid var(--ring);outline-offset:2px;border-radius:9px}
+@media (prefers-reduced-motion:no-preference){
+  #hdrNav button,.chip,.seg button,#botbar button,.tog,.dd>summary,#trayHead button,#closePanel,.pg>summary{
+    transition:background-color .13s ease,color .13s ease,box-shadow .13s ease}
+}
+/* header sheet tabs */
+#hdrNav button{color:#8a8782}
+#hdrNav button:hover{background:var(--hov);color:var(--ink)}
+#hdrNav button:active{background:var(--hov2)}
+#hdrNav button.on{background:var(--selbg);color:#fff}
+#hdrNav button.on:hover{background:#333338}
+#ctrlBtn:hover{background:#333338}
+#ctrlBtn.on{background:var(--acc)}
+/* side nav: the selected view carries an accent bar so it reads at a glance */
+.chip{position:relative;color:#55524e}
+.chip:hover{background:var(--hov);color:var(--ink)}
+.chip:active{background:var(--hov2)}
+.chip.on{background:var(--selbg);color:#fff;font-weight:700}
+.chip.on::before{content:'';position:absolute;left:3px;top:7px;bottom:7px;width:3px;border-radius:999px;background:var(--acc)}
+.chip.on:hover{background:#333338}
+@media (max-width:899px){.chip.on::before{left:6px;top:5px;bottom:5px}}
+/* segmented controls: hover was missing entirely, and the selected pill was a white card
+   on near-white, which is not a selected state */
+.seg button{color:#55524e}
+.seg button:hover{background:#e7e1d7;color:var(--ink)}
+.seg button.on{background:#fff;color:var(--ink);font-weight:700;box-shadow:0 1px 3px #0000002e,inset 0 0 0 1.5px var(--acc)}
+.seg button.on:hover{background:#fff}
+/* checkbox rows read as selected, not just as a ticked box */
+.tog{border-radius:9px;padding:5px 8px;margin:2px -8px}
+.tog:hover{background:var(--hov)}
+.tog:has(input:checked){background:#fdf0f4;color:var(--ink);font-weight:600}
+.tog:has(input:checked):hover{background:#fbe6ee}
+/* bottom bar */
+#botbar button:active{background:#ded8ce}
+#botbar button.on{background:var(--selbg);color:#fff}
+#qDots i{cursor:pointer}
+#qDots i:hover{box-shadow:0 0 0 2px #0000002e}
+#qDots i.on{box-shadow:0 0 0 2px var(--ink)}
+/* disclosure rows */
+.dd>summary:hover,.pg>summary:hover{background:var(--hov)}
+.dd>summary,.pg>summary{border-radius:9px;padding-left:8px;padding-right:8px;margin-left:-8px;margin-right:-8px}
+#trayHead button:hover,#closePanel:hover{background:#e7e1d7}
+/* ---------- controls: one group open at a time, the rest out of the way ---------- */
+.pg{border-bottom:1px solid var(--line)}
+.pg>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:9px;
+  padding:13px 14px;font-size:13.5px;font-weight:700;min-height:46px;color:var(--ink)}
+.pg>summary::-webkit-details-marker{display:none}
+.pg>summary b{flex:0 0 auto;font-weight:700}
+.pg>summary small{flex:1;min-width:0;font-weight:500;color:var(--mut);font-size:12px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg>summary::after{content:'+';font-size:17px;font-weight:600;color:var(--mut);width:14px;text-align:center;flex:0 0 auto}
+.pg[open]>summary::after{content:'\2013'}
+.pg[open]>summary{color:var(--ink);background:#faf8f5}
+.pgb .sec{border-bottom:0;padding-top:2px}
+.pgb .sec+.sec{padding-top:10px;border-top:1px solid #f0ece6;margin-top:4px}
+.pfoot{border-bottom:0;background:#faf8f5}
+/* side nav groups */
+.vg>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;
+  margin:10px 0 3px;padding:5px 8px;border-radius:8px;font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--mut);font-weight:800;min-height:28px}
+.vg>summary::-webkit-details-marker{display:none}
+.vg>summary span{flex:1;min-width:0}
+.vg>summary::after{content:'+';font-size:13px;font-weight:700;color:#a9a49c;width:11px;text-align:center}
+.vg[open]>summary::after{content:'\2013'}
+.vg:first-child>summary{margin-top:2px}
+@media (max-width:899px){
+  #views{align-items:stretch}
+  .vg{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+  .vg>summary{margin:0;white-space:nowrap}
+}
+/* ---------- narrow screens: let the two bars hold only what fits ----------
+   Measured at 375px: the light bar needed 158px in an 87px slot and the sheet tabs 393px
+   in 120px, so both were cutting off controls with no way to reach them. The colour
+   picker and the swatches move to Controls > Lighting, where they already live. */
+@media (max-width:640px){
+  #ledBar #qColor,#ledBar #qDots,#ledBar .lb,#ledBar #qDim,#ledBar #qBright,#ledBar #qOut{display:none}
+  #ledBar{gap:6px}
+  #qLevel{width:86px;min-width:0;flex:0 0 auto}
+  #botbar{gap:8px}
+  #botbar .sep{flex:0 0 8px}
+}
+/* nothing in a bar should ever be unreachable, whatever the width */
+#botbar{overflow-x:auto;scrollbar-width:none}
+#botbar::-webkit-scrollbar{display:none}
+@media (max-width:560px){
+  #hdr h1{display:none}
+  #hdrNav button{font-size:12px;padding:7px 7px}
+  #ctrlBtn{padding:8px 10px}
+}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
@@ -251,17 +348,19 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
 <div id="guide"><div id="guideHead"><b>Build guide</b><span><button id="guideCopy">Copy all</button> <button id="guideClose">Close</button></span></div><div id="guideToc"></div><div id="guideBody"></div></div>
 <div id="panel">
   <div id="grab"></div>
-  <div id="panelHead"><b>Controls &amp; build data</b><button id="closePanel">Close</button></div>
-  <div class="sec">
+  <div id="panelHead"><b>Controls</b><button id="closePanel">Close</button></div>
+    <details class="pg" id="pg_wall" open>
+    <summary><b>The Wall</b><small>board length, heights and gaps</small></summary>
+    <div class="pgb">
+      <div class="sec">
     <h3>Board length (cut from 97" boards)</h3>
     <div class="seg" id="presetSeg">
       <button data-v="72">72"</button><button data-v="84">84"</button><button data-v="90">90"</button><button data-v="96">96"</button><button data-v="48">48"</button>
     </div>
     <p class="hint" id="presetHint"></p>
     <label class="tog"><input type="checkbox" id="t_seamless">Close the end of every run with a ripped board</label>
-    <label class="tog"><input type="checkbox" id="t_gridAlign">One board grid per wall, so doors line up with the wall</label>
-  </div>
-  <div class="sec">
+    <label class="tog"><input type="checkbox" id="t_gridAlign">One board grid per wall, so doors line up with the wall</label></div>
+      <div class="sec">
     <h3>Dimensions</h3>
     <div class="row"><label for="bottom">Panel bottom above floor</label><output id="bottomOut"></output></div>
     <input type="range" id="bottom" min="0" max="52" step="0.5">
@@ -272,10 +371,13 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
     <div class="row"><label for="booth">Booth inner walls height (lid sits on top)</label><output id="boothOut"></output></div>
     <input type="range" id="booth" min="96" max="118" step="1">
     <div class="row"><label for="gap">Board gap</label><output id="gapOut"></output></div>
-    <input type="range" id="gap" min="0.5" max="1.5" step="0.125">
-  </div>
-  <div class="sec">
-    <h3>Amp wall face (hangs from the ceiling down)</h3>
+    <input type="range" id="gap" min="0.5" max="1.5" step="0.125"></div>
+    </div>
+  </details>
+  <details class="pg" id="pg_amp">
+    <summary><b>Amp Head Wall</b><small>the face under the overhang</small></summary>
+    <div class="pgb">
+      <div class="sec">
     <div class="row"><label for="ampH">Amp wall board length</label><output id="ampHOut"></output></div>
     <input type="range" id="ampH" min="36" max="96" step="0.5">
     <div class="row"><label for="ampGap">Gap at ceiling (lift room for the cleat)</label><output id="ampGapOut"></output></div>
@@ -284,10 +386,13 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
     <div class="row"><label for="ampSoffit">Overhang underside above floor (amp head wall fits under this)</label><output id="ampSoffitOut"></output></div>
     <input type="range" id="ampSoffit" min="40" max="144" step="1">
     <label class="tog"><input type="checkbox" id="t_ampCabsInBay">Stand the two 2x12 cabinets in this bay</label>
-    <p class="hint" id="ampHint"></p>
-  </div>
-  <div class="sec">
-    <h3>Room mood and lighting</h3>
+    <p class="hint" id="ampHint"></p></div>
+    </div>
+  </details>
+  <details class="pg" id="pg_light">
+    <summary><b>Lighting</b><small>mood, LEDs and string lights</small></summary>
+    <div class="pgb">
+      <div class="sec">
     <div class="seg" id="moodSeg"><button data-v="night">Black room</button><button data-v="day">Daylight</button></div>
     <div class="row"><label>LED strips</label></div>
     <div class="seg" id="ledSeg"><button data-v="back">Behind every board</button><button data-v="joints">Panel joints</button><button data-v="off">Off</button></div>
@@ -306,15 +411,21 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
     <div class="row"><label for="ambLevel">Room light</label><output id="ambLevelOut"></output></div>
     <input type="range" id="ambLevel" min="0" max="1" step="0.01">
     <div class="row"><label for="ledHex">Custom LED color</label><input type="color" id="ledHex" value="#ffb46a" style="width:56px;height:34px;border:0;background:none"></div>
-    <p class="hint" id="ledHint"></p>
-  </div>
-  <div class="sec">
-    <h3>Panel types (same size, swap 1 for 1)</h3>
+    <p class="hint" id="ledHint"></p></div>
+    </div>
+  </details>
+  <details class="pg" id="pg_ptype">
+    <summary><b>Panel Types</b><small>swap any panel for a diffuser or absorber</small></summary>
+    <div class="pgb">
+      <div class="sec">
     <div class="seg" id="typeSeg"><button data-v="ipe">All ipe</button><button data-v="alt">Alternate diffusers</button><button data-v="booth">Booth outside absorbers</button><button data-v="amp">Amp wall diffusers</button></div>
-    <p class="hint" id="typeHint">Tap any panel to swap it to ipe boards, a QRD diffuser or an absorber.</p>
-  </div>
-  <div class="sec">
-    <h3>Show</h3>
+    <p class="hint" id="typeHint">Tap any panel to swap it to ipe boards, a QRD diffuser or an absorber.</p></div>
+    </div>
+  </details>
+  <details class="pg" id="pg_show">
+    <summary><b>What to Show</b><small>overlays, dimensions, cutaway</small></summary>
+    <div class="pgb">
+      <div class="sec">
     <div class="seg" id="dimSeg"><button data-v="off">Dims off</button><button data-v="key">Key dims</button><button data-v="full">All dims</button></div>
     <label class="tog"><input type="checkbox" id="t_cutaway">Cutaway: hide the walls between you and the room (3D view)</label>
     <label class="tog"><input type="checkbox" id="t_walls">Walls</label>
@@ -324,19 +435,28 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
     <label class="tog"><input type="checkbox" id="t_xray">X-ray boards (see framing behind)</label>
     <label class="tog"><input type="checkbox" id="t_studs">Stud overlay + cleat stud hits</label>
     <label class="tog"><input type="checkbox" id="t_ear">Ear-height lines (42" seated, 60" standing)</label>
-    <label class="tog"><input type="checkbox" id="t_ledge">Offcut cap ledge</label>
-  </div>
-  <div class="sec">
-    <h3>Studs: first stud center, 16" on center</h3>
+    <label class="tog"><input type="checkbox" id="t_ledge">Offcut cap ledge</label></div>
+    </div>
+  </details>
+  <details class="pg" id="pg_studs">
+    <summary><b>Stud Positions</b><small>measured from each corner</small></summary>
+    <div class="pgb">
+      <div class="sec">
     <div class="studs" id="studInputs"></div>
-    <p class="hint">Measured along each wall from the corner named. Enter real stud positions before trusting the hit colors.</p>
-  </div>
-  <div class="sec"><h3>Warnings</h3><div id="warns"></div></div>
-  <div class="sec"><h3>Materials &amp; cut list (whole room)</h3><div id="cutlist"></div>
+    <p class="hint">Measured along each wall from the corner named. Enter real stud positions before trusting the hit colors.</p></div>
+    </div>
+  </details>
+  <details class="pg" id="pg_data">
+    <summary><b>Build Data</b><small>warnings, cut list and totals</small></summary>
+    <div class="pgb">
+      <div class="sec"><h3>Warnings</h3><div id="warns"></div></div>
+      <div class="sec"><h3>Materials &amp; cut list (whole room)</h3><div id="cutlist"></div>
     <p style="margin:10px 0 0"><button class="copy" id="copyCuts">Copy cut list as text</button> <span id="copyMsg" class="hint"></span></p>
     <h3 style="margin-top:14px">How to cut (miter saw + table saw)</h3><ol class="steps" id="cutSteps"></ol></div>
-  <div class="sec"><h3>Build data</h3><div id="stats"></div></div>
-  <div class="sec"><p class="hint">Wall lengths and obstacle positions were scaled from a hand-drawn plan. Field-measure before cutting. Tap a panel for its details; double-tap anything to zoom to it.</p></div>
+      <div class="sec"><h3>Build data</h3><div id="stats"></div></div>
+    </div>
+  </details>
+  <div class="sec pfoot"><p class="hint">Wall lengths and obstacle positions were scaled from a hand-drawn plan. Field-measure before cutting. Tap a panel for its details; double-tap anything to zoom to it.</p></div>
 </div>
 
 <script type="module">
@@ -346,6 +466,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 /* ---------- constants (inches, pounds) ----------
    Framing: vertical ipe boards on two 2x4 rails laid flat, long (3 1/2") face against the back of the ipe.
@@ -497,6 +618,10 @@ const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch?1.75:2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+/* Filmic response. Without it an LED at 3x white clips to flat paper and the black room
+   crushes to one dead value, which is why the old render read as cartoon lighting. */
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#ece8e1');
 const camera=new THREE.PerspectiveCamera(42,1,0.5,6000);
 const controls=new OrbitControls(camera,canvas);
@@ -506,6 +631,14 @@ const hemi=new THREE.HemisphereLight(0xffffff,0xb9b0a3,1.1);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffffff,1.6);sun.position.set(380,420,320);sun.target.position.set(132,0,97);
 sun.castShadow=true;const sm=isTouch?1024:2048;sun.shadow.mapSize.set(sm,sm);Object.assign(sun.shadow.camera,{left:-260,right:260,top:260,bottom:-260,near:10,far:1400});sun.shadow.bias=-0.0005;
 scene.add(sun,sun.target);
+/* Night fill: a wide, very low bounce off the ceiling. The room has no window, so without
+   it everything below the LED line goes to pure black and reads as missing geometry. */
+const fill=new THREE.DirectionalLight(0xffd3a8,.22);fill.position.set(120,300,97);scene.add(fill);
+/* An environment gives every surface something to reflect. Ipe is a dense oiled hardwood:
+   most of what you see on it in a dark room is a low specular sheen, not diffuse colour. */
+const pmrem=new THREE.PMREMGenerator(renderer);
+scene.environment=pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+let ENV_I=.14;
 const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
 const bloom=new UnrealBloomPass(new THREE.Vector2(512,512),.8,.5,1.0);composer.addPass(bloom);composer.addPass(new OutputPass());
 const LED_COLORS={warm:'#ffb46a',amber:'#ff8a1f',red:'#ff2a2a',blue:'#3d7bff',purple:'#b04dff'};
@@ -514,6 +647,7 @@ function applyMood(){const n=state.night;document.body.style.background=n?'#0606
   scene.background.set(n?'#060607':'#ece8e1');
   hemi.intensity=n?.55:1.1;hemi.color.set(n?'#ffcf9e':'#ffffff');hemi.groundColor.set(n?'#120d0a':'#b9b0a3');
   sun.intensity=n?0:1.6;sun.castShadow=!n;
+  fill.intensity=n?.22:0;
   M.wallP.color.set(n?'#0b0b0c':'#e4dfd6');M.floor.color.set(n?'#17130f':'#f5f2ed');M.ceilP.color.set(n?'#08080a':'#efebe5');
   M.obst.color.set(n?'#1d1d20':'#8e8a85');M.booth.color.set(n?'#121214':'#7b8794');M.booth.opacity=n?.96:.35;M.booth.transparent=!n;M.booth.depthWrite=n;M.booth.needsUpdate=true;
   M.gridLine.color.set(n?'#1a1714':'#d8d1c6');M.edge.color.set(n?'#1f1c1a':'#b5ab9c');
@@ -981,6 +1115,7 @@ function buildRoom(){
       const sm=new THREE.Mesh(slatGeoFor(p.H,p.sw),m);sm.position.set(p.s0+i*(p.sw+(p.g??state.gap))+p.sw/2,p.bot+p.H/2,p.run.door?Z_DOOR:Z_SLAT);
       sm.castShadow=!state.xray;sm.userData.pid=p.id;pg.add(sm);
     }
+    if(state.sel===p.id)pg.add(pickOutline(p,'#ff4d88',.30));
     const cx=(p.s0+p.s1)/2;
     if((state.hardware||state.xray)&&p.nr>0){
       p.rys.forEach(y=>{const isC=Math.abs(y-p.cleat)<1e-6;rail(p.Lr,isC,isC?M.crail:M.rail,cx,p.bot+y,0,pg);});
@@ -1159,8 +1294,18 @@ function applyLighting(){const n=state.night,L=state.ledLevel,Sg=state.stringLev
   const col=new THREE.Color(state.ledHex||LED_COLORS[state.ledColor]);
   if(LEDM)LEDM.color.copy(col).multiplyScalar((n?3.2:1.4)*L);if(WASHM)WASHM.color.copy(col).multiplyScalar((n?.6:.25)*L);if(WASHM_EVEN)WASHM_EVEN.color.copy(col).multiplyScalar((n?.42:.18)*L);
   M.bulb.color.copy(BULB_BASE).multiplyScalar(3.2*Sg);PLIGHTS.forEach(l=>l.intensity=(n?26000:9000)*Sg);
-  hemi.intensity=n?.08+.9*A:1.1;bloom.strength=.35+.6*Math.max(L,Sg);}
+  hemi.intensity=n?.05+.55*A:1.0;
+  /* Exposure, not light intensity, is what makes a dark room read as dark rather than as a
+     grey one. Hold the lights where they physically are and open the stop instead. */
+  renderer.toneMappingExposure=n?1.0+.35*(1-Math.min(1,L*.7+Sg*.5)):1.0;
+  /* A black room reflects almost nothing. A daylit one reflects a great deal. */
+  ENV_I=n?.10+.10*A:.55;
+  scene.traverse(o=>{const mm=o.material;if(!mm)return;(Array.isArray(mm)?mm:[mm]).forEach(x=>{if(x.isMeshStandardMaterial)x.envMapIntensity=ENV_I;});});
+  bloom.strength=n?.22+.5*Math.max(L,Sg):.12+.22*Math.max(L,Sg);
+  bloom.radius=n?.7:.45;}
 function rebuild(){
+  /* the hover cage lives inside a panel group, so it goes with the room */
+  if(typeof hovO!=='undefined'){hovO=null;hoverId=null;}
   disposeAll(roomG);disposeAll(explG);disposeAll(sectG);labels=[];
   applyMood();PLIGHTS=[];LEDM=WASHM=WASHM_EVEN=null;layout();buildRoom();applyLighting();buildExploded();buildSection();
   applyVisibility();renderUI();
@@ -1203,6 +1348,8 @@ function setView(v,instant){
   setOrbit(!FLAT.has(v));
   controls.maxPolarAngle=v==='section'||v==='detail'?Math.PI:Math.PI*.495;
   document.querySelectorAll('#views .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  {const act0=document.querySelector(`#views .chip[data-v="${v}"]`);
+   if(act0){const gp=act0.closest('.vg');if(gp&&!gp.open)gp.open=true;}}
   const act=document.querySelector(`#views .chip[data-v="${v}"]`);if(act)act.scrollIntoView({inline:'nearest',block:'nearest',behavior:'smooth'});
   updateLegend();
 }
@@ -1592,8 +1739,17 @@ function openGuide(){const g=buildGuide();$('guideToc').innerHTML=g.toc;$('guide
   $('guideToc').querySelectorAll('a').forEach(a=>a.onclick=e=>{e.preventDefault();const t=document.getElementById(a.getAttribute('href').slice(1));if(t)$('guideBody').scrollTo({top:t.offsetTop-8,behavior:'smooth'});});}
 /* ---------- UI ---------- */
 const $=id=>document.getElementById(id);
-VIEW_GROUPS.forEach(([label,items])=>{const h=document.createElement('h4');h.textContent=label;$('views').appendChild(h);
-  items.forEach(([v,t])=>{const b=document.createElement('button');b.className='chip';b.textContent=t;b.dataset.v=v;b.onclick=()=>setView(v);$('views').appendChild(b);});});
+/* The view list is a tree, not sixteen flat links. Room and the room walls stay open
+   because that is most of the work; the booth and the detail views fold away until wanted,
+   and a group opens itself if the current view lives inside it. */
+const VGK='ipe.vg.v1';let vgSaved={};try{vgSaved=JSON.parse(localStorage.getItem(VGK)||'{}');}catch(e){}
+VIEW_GROUPS.forEach(([label,items],gi)=>{
+  const wrap=document.createElement('details');wrap.className='vg';wrap.dataset.g=label;
+  wrap.open=vgSaved[label]!==undefined?!!vgSaved[label]:gi<2;
+  const sm=document.createElement('summary');sm.innerHTML=`<span>${label}</span>`;wrap.appendChild(sm);
+  items.forEach(([v,t])=>{const b=document.createElement('button');b.className='chip';b.textContent=t;b.dataset.v=v;b.onclick=()=>setView(v);wrap.appendChild(b);});
+  wrap.addEventListener('toggle',()=>{vgSaved[label]=wrap.open;try{localStorage.setItem(VGK,JSON.stringify(vgSaved));}catch(e){}});
+  $('views').appendChild(wrap);});
 STUD_WALLS.forEach(w=>{const l=document.createElement('label');l.textContent=`${w.name} (from ${w.from})`;l.htmlFor='st_'+w.id;const i=document.createElement('input');i.type='number';i.inputMode='decimal';i.step='0.25';i.min='0';i.max='16';i.id='st_'+w.id;i.value=state.studOff[w.id];
   i.oninput=()=>{const v=parseFloat(i.value);if(!isNaN(v)){state.studOff[w.id]=v;requestRebuild();}};$('studInputs').append(l,i);});
 function seg(id,key,cb){$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{state[key]=b.dataset.v;cb&&cb(b.dataset.v);rebuild();if(key==='preset')setView(state.view,true);});}
@@ -1603,12 +1759,15 @@ const SCENES={session:{ledLevel:.45,stringLevel:.7,ambLevel:.3,ledColor:'warm'},
 $('sceneSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{Object.assign(state,SCENES[b.dataset.v],{ledHex:null});applyLighting();renderLightUI();if(state.led==='off'){state.led='all';rebuild();}});
 ['ledLevel','stringLevel','ambLevel'].forEach(k=>$(k).oninput=e=>{state[k]=+e.target.value;applyLighting();renderLightUI();});
 $('ledHex').oninput=e=>{state.ledHex=e.target.value;applyLighting();renderLightUI();};
-Object.entries(LED_COLORS).forEach(([k,v])=>{const d=document.createElement('i');d.style.background=v;d.title=k;d.onclick=()=>{state.ledColor=k;state.ledHex=null;applyLighting();renderLightUI();};$('qDots').appendChild(d);});
+Object.entries(LED_COLORS).forEach(([k,v])=>{const d=document.createElement('i');d.style.background=v;d.title=k;d.dataset.k=k;
+  d.onclick=()=>{state.ledColor=k;state.ledHex=null;applyLighting();renderLightUI();};$('qDots').appendChild(d);});
 $('qColor').oninput=e=>{state.ledHex=e.target.value;applyLighting();renderLightUI();};
 $('qLevel').oninput=e=>{state.ledLevel=+e.target.value;applyLighting();renderLightUI();};
 const step=d=>{state.ledLevel=Math.max(0,Math.min(1,Math.round((state.ledLevel+d)*20)/20));applyLighting();renderLightUI();};
 $('qDim').onclick=()=>step(-.1);$('qBright').onclick=()=>step(.1);
-function renderLightUI(){$('qLevel').value=state.ledLevel;$('qOut').textContent=Math.round(state.ledLevel*100)+'%';$('qColor').value=state.ledHex||LED_COLORS[state.ledColor];$('ledHex').value=state.ledHex||LED_COLORS[state.ledColor];['ledLevel','stringLevel','ambLevel'].forEach(k=>{$(k).value=state[k];$(k+'Out').textContent=Math.round(state[k]*100)+'%';});
+function renderLightUI(){
+  $('qDots').querySelectorAll('i').forEach(d=>d.classList.toggle('on',!state.ledHex&&d.dataset.k===state.ledColor));
+  $('qLevel').value=state.ledLevel;$('qOut').textContent=Math.round(state.ledLevel*100)+'%';$('qColor').value=state.ledHex||LED_COLORS[state.ledColor];$('ledHex').value=state.ledHex||LED_COLORS[state.ledColor];['ledLevel','stringLevel','ambLevel'].forEach(k=>{$(k).value=state[k];$(k+'Out').textContent=Math.round(state[k]*100)+'%';});
   document.querySelectorAll('#ledColSeg button').forEach(b=>b.classList.toggle('on',!state.ledHex&&b.dataset.v===state.ledColor));}
 $('typeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{const v=b.dataset.v;state.ptypes={};
   RUNS.forEach((r,ri)=>{if(r.door||r.overDoor)return;r.panels.forEach((p,i)=>{const k=ri+'-'+i;
@@ -1619,8 +1778,20 @@ $('typeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{const v=b.data
 $('moodSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.night=b.dataset.v==='night';rebuild();});
 [['bottom','bottom'],['cleat','cleat'],['ceil','ceil'],['booth','booth'],['gap','gap'],['ampH','ampH'],['ampGap','ampGap'],['ampSoffit','ampSoffit']].forEach(([id,k])=>{$(id).oninput=e=>{state[k]=parseFloat(e.target.value);requestRebuild();};});
 ['walls','obstacles','hardware','xray','studs','ear','ledge','ampTrim','framing','curtains','rugs','cutaway','seamless','ampCabsInBay','gridAlign'].forEach(k=>{const el=$('t_'+k);el.checked=state[k];el.onchange=()=>{state[k]=el.checked;rebuild();};});
-$('ctrlBtn').onclick=()=>$('panel').classList.toggle('open');$('closePanel').onclick=()=>$('panel').classList.remove('open');
-$('warnPill').onclick=()=>$('panel').classList.add('open');
+/* The tray and the controls are both the right rail. Two surfaces in one place is how a
+   tool gets confusing, so opening either one closes the other. */
+function panelOpen(on){const el=$('panel');el.classList.toggle('open',on);
+  $('ctrlBtn').classList.toggle('on',on);if(on)trayClose();}
+$('ctrlBtn').onclick=()=>panelOpen(!$('panel').classList.contains('open'));
+$('closePanel').onclick=()=>panelOpen(false);
+/* The panel remembers which group you had open, so it reopens where you left it. */
+const PGK='ipe.pg.v1';
+try{const o=JSON.parse(localStorage.getItem(PGK)||'null');
+  if(o)document.querySelectorAll('.pg').forEach(d=>d.open=!!o[d.id]);}catch(e){}
+document.querySelectorAll('.pg').forEach(d=>d.addEventListener('toggle',()=>{
+  try{const o={};document.querySelectorAll('.pg').forEach(x=>o[x.id]=x.open);localStorage.setItem(PGK,JSON.stringify(o));}catch(e){}}));
+$('warnPill').onclick=()=>{$('panel').classList.add('open');const g=$('pg_data');if(g){g.open=true;
+  requestAnimationFrame(()=>$('warns').scrollIntoView({block:'center',behavior:'smooth'}));}};
 $('zIn').onclick=()=>zoomBy(.7);$('zOut').onclick=()=>zoomBy(1/.7);$('fitBtn').onclick=()=>{home=viewPose(state.view);goTo(home);};
 $('trayClose').onclick=trayClose;
 $('sheetBtn').onclick=()=>{if(state.sel){trayClose();}else{sheetOpen=!sheetOpen;updateTray();}};
@@ -2066,6 +2237,7 @@ function ampWallDetail(){
 const trayEl=()=>document.getElementById('tray');
 let trayKey='';
 function trayShow(d){
+  if($('panel').classList.contains('open')){$('panel').classList.remove('open');$('ctrlBtn').classList.remove('on');}
   const t=trayEl();if(!t)return;
   const body=document.getElementById('trayBody');
   const wasOpen=t.classList.contains('open');
@@ -2140,6 +2312,40 @@ canvas.addEventListener('pointerup',e=>{
   const id=h?h.object.userData.pid:null;
   if(id!==state.sel){state.sel=id;rebuild();}
 });
+/* ---------- what is under the pointer, and what is chosen ----------
+   A dim emissive on a dark panel in a dark room is not a selected state. Both selection
+   and hover draw an edge cage in the panel's own group, so it follows the wall's angle. */
+function pickOutline(p,color,fill){
+  /* A line cage alone disappears against lit wood, so the marker is a tinted face plus
+     its cage, drawn over everything. Line width is not settable in WebGL: the fill is
+     what makes it read. */
+  const w=p.s1-p.s0+1.1,h=p.H+1.1,d=SLAT_T+1.5,
+    z=(p.run.door?SLAT_T/2+.05:FLOAT+SLAT_T/2),g=new THREE.Group();
+  const face=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+    new THREE.MeshBasicMaterial({color,toneMapped:false,transparent:true,opacity:fill,
+      depthTest:false,depthWrite:false,side:THREE.DoubleSide}));
+  face.position.z=d/2;g.add(face);
+  const cage=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,h,d)),
+    new THREE.LineBasicMaterial({color,toneMapped:false,depthTest:false,transparent:true,opacity:.95}));
+  g.add(cage);
+  g.position.set((p.s0+p.s1)/2,p.bot+p.H/2,z);
+  g.renderOrder=999;g.traverse(o=>{o.renderOrder=999;o.raycast=()=>{};});
+  g.userData.pick=true;return g;}
+let hoverId=null,hovO=null,hovQueued=false,lastMove=null;
+function drawHover(){
+  if(hovO){hovO.parent&&hovO.parent.remove(hovO);
+    hovO.traverse(o=>{o.geometry&&o.geometry.dispose();o.material&&o.material.dispose();});hovO=null;}
+  const p=(hoverId&&hoverId!==state.sel)?panels.find(x=>x.id===hoverId):null;
+  if(p&&p.group){hovO=pickOutline(p,'#ffffff',.14);p.group.add(hovO);}
+  canvas.style.cursor=hoverId?'pointer':'';}
+function setHover(id){if(id===hoverId)return;hoverId=id;drawHover();}
+if(!isTouch)canvas.addEventListener('pointermove',e=>{
+  if(pointers||state.view==='detail'||state.view==='section'){setHover(null);return;}
+  lastMove=[e.clientX,e.clientY];
+  if(hovQueued)return;hovQueued=true;
+  requestAnimationFrame(()=>{hovQueued=false;if(!lastMove)return;
+    const h=hitAt(lastMove[0],lastMove[1],true);setHover(h?h.object.userData.pid:null);});});
+canvas.addEventListener('pointerleave',()=>setHover(null));
 canvas.addEventListener('dblclick',e=>e.preventDefault());
 document.addEventListener('gesturestart',e=>e.preventDefault());
 
