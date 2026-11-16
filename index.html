@@ -282,7 +282,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
     <label class="tog"><input type="checkbox" id="t_ampTrim">Ipe trim strip closing the ceiling gap</label>
     <div class="row"><label for="ampSoffit">Overhang underside above floor (amp head wall fits under this)</label><output id="ampSoffitOut"></output></div>
     <input type="range" id="ampSoffit" min="40" max="144" step="1">
-    <label class="tog"><input type="checkbox" id="t_ampCabsInBay">Put the two cabinets in this bay too</label>
+    <label class="tog"><input type="checkbox" id="t_ampCabsInBay">Stand the two 2x12 cabinets in this bay</label>
     <p class="hint" id="ampHint"></p>
   </div>
   <div class="sec">
@@ -367,11 +367,17 @@ const PRESETS={84:{bottom:1},90:{bottom:1},72:{bottom:1},96:{bottom:1},48:{botto
    clearances are what an enclosure needs to actually isolate: absorption behind, room
    for a mic in front, and a decoupled double wall. */
 const HEAD_W=30, HEAD_H=11, HEAD_D=9;
-const CAB_W=29.9, CAB_H=29.9, CAB_D=14.4;
+/* Avatar 2x12, measured: the cabinets that actually go in the bay. */
+const CAB_W=28.5, CAB_H=21.5, CAB_D=12;
+/* Swap clearance. 1 1/2" per gap is the most the bay takes across two cabinets;
+   2" at 1 1/2" more would be 1" too wide. */
+const CAB_GAP=1.5, CAB_LIFT=2, CAB_BACK=2;
 const ISO_SIDE=3, ISO_TOP=3, ISO_BASE=2, ISO_BACK=4, ISO_FRONT=6, ISO_WALL=1.5;
 const ISO_W=CAB_W+2*ISO_SIDE+2*ISO_WALL, ISO_H=CAB_H+ISO_TOP+ISO_BASE+2*ISO_WALL, ISO_D=CAB_D+ISO_BACK+ISO_FRONT+2*ISO_WALL;
 /* Measured on site 2026-11-15: the overhang is 65" wide, 16" deep, underside 5'0". */
-const OH_W=65, OH_D=16, AMP_CASE=1.5, SHELF_T=1, AMP_TIER_PITCH=HEAD_H+9.5;
+const OH_W=65, OH_D=16, AMP_CASE=1.5, SHELF_T=1;
+const AMP_TIER_PITCH=HEAD_H+SHELF_T+5;        /* head, its shelf, and 5" of air over a hot amp */
+const CAB_BAY_H=CAB_H+CAB_LIFT+SHELF_T;       /* the shelf the two cabinets stand on */
 /* How many heads fit is set by the underside of the overhang, not by choice. Four is the
    floor worth building; below that the wall is not an amp wall. */
 function ampFit(){
@@ -379,13 +385,13 @@ function ampFit(){
   const inW=OH_W-2*AMP_CASE;
   const perTier=Math.max(1,Math.floor((inW+2)/(HEAD_W+2)));
   const cabs=!!state.ampCabsInBay;
-  const shelfBot=cabs?ISO_H+4:4, shelfTop=soffit-4;
+  const shelfBot=cabs?CAB_BAY_H+2:4, shelfTop=soffit-4;
   const tiers=Math.max(0,Math.min(4,Math.floor((shelfTop-shelfBot)/AMP_TIER_PITCH)));
   return {soffit,inW,perTier,cabs,shelfBot,shelfTop,tiers,heads:tiers*perTier,pitch:AMP_TIER_PITCH};
 }
 const MIN_RIP=1;            /* narrower than this and a filler is not worth cutting */
 const isTouch=matchMedia('(pointer: coarse)').matches;
-const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:60,ampCabsInBay:false,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
+const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:60,ampCabsInBay:true,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
 
 /* Plan coords: origin NW interior floor corner, +X east, +Y south. Three: x=X, z=Y, y=up. Walls run clockwise. */
 const WALLS=[
@@ -398,11 +404,11 @@ const WALLS=[
 WALLS.forEach(w=>{const dx=w.p1[0]-w.p0[0],dy=w.p1[1]-w.p0[1];w.L=Math.hypot(dx,dy);w.u=[dx/w.L,dy/w.L];w.n=[-w.u[1],w.u[0]];});
 const WALL=Object.fromEntries(WALLS.map(w=>[w.id,w]));
 /* front face of the amp wall / screen box (88" wide, 20" proud of the north wall), facing south into the room */
-/* The overhang: a soffit, not a floor-to-ceiling box. Measured 2026-11-15 as 65" wide and
-   16" deep with its underside 5'0" above the floor. OH_X is where it starts from the NW
-   corner and is the one number still assumed: it keeps the old box's start so the north
-   wall runs move as little as possible. */
-const OH_X=85, OH_UNDER=60;
+/* The overhang: a soffit, not a floor-to-ceiling box. Measured on site 2026-11-15:
+   65" wide, 16" deep, underside 5'0", and its east edge 91" from the NE corner.
+   The north wall is 264", so it runs 108" to 173" from the NW corner. */
+const OH_FROM_NE=91;
+const OH_X=264-OH_FROM_NE-OH_W, OH_UNDER=60;
 const AMPW={id:'P',name:'Overhang face',p0:[OH_X,OH_D],p1:[OH_X+OH_W,OH_D],from:'west end'};
 {const dx=AMPW.p1[0]-AMPW.p0[0],dy=AMPW.p1[1]-AMPW.p0[1];AMPW.L=Math.hypot(dx,dy);AMPW.u=[dx/AMPW.L,dy/AMPW.L];AMPW.n=[-AMPW.u[1],AMPW.u[0]];}
 WALL.P=AMPW;
@@ -798,7 +804,7 @@ function layout(){
   if(state.bottom<4)warns.push(['warn',`Panel bottoms are ${fIn(state.bottom)} off the floor. Leave room for baseboards and cleaning.`]);
   if(state.ampGap<CLEAT_RISE+.25)warns.push(['bad',`Amp wall panels sit ${fIn(state.ampGap)} below the ceiling, but a 2x4 French cleat needs ${fIn(CLEAT_RISE+.25)} of lift to engage. Raise the ceiling gap to at least ${fIn(CLEAT_RISE+.25)}.`]);
   {const f=ampFit();if(f.heads<4)warns.push(['warn',`The amp head wall fits ${f.heads} head${f.heads===1?'':'s'} under a ${fFt(f.soffit)} underside${f.cabs?' with the cabinets in the bay':''}. Four is the fewest worth building: ${f.cabs?'take the cabinets out of this bay':'raise the underside'}.`]);}
-  if(ISO_D>OH_D)warns.push(['bad',`Isolation cabinets for a ${fIn(CAB_D)} deep 4x12 need ${fIn(ISO_D)} of depth. The amp wall overhang is ${fIn(OH_D)} and cannot move, so they stand ${fIn(ISO_D-OH_D)} proud of it. Open the Amp head wall sheet for the three ways to resolve it.`]);
+  if(ISO_D>OH_D)warns.push(['bad',`The two 2x12 cabinets fit the overhang bay, but an enclosure that isolates one needs ${fIn(ISO_D)} of depth against a ${fIn(OH_D)} bay. Open the Amp head wall sheet: in the bay open, in the control room, or enclosed and standing proud.`]);
   {const dp=panels.find(p=>p.run.door);if(dp)warns.push(['warn',`Ipe on the booth door adds about ${lb(dp.weight)} to the door. The door slats are resawn to 1/2" thick; hang the door on 4 heavy-duty ball-bearing hinges.`]);}
   {const tight=panels.filter(p=>p.type!=='ipe'&&((p.run.panels[0]===p&&p.s0-p.run.refA<DEPTH[p.type])||(p.run.panels.at(-1)===p&&p.run.refB-p.s1<DEPTH[p.type])));
     if(tight.length)warns.push(['warn',`${tight.map(p=>p.id).join(', ')}: ${tight[0].type==='diff'?'diffusers stick out '+fIn(DEPTH.diff):'absorbers stick out '+fIn(DEPTH.abs)} and sit at a corner or edge. Check they clear the neighboring wall or door trim.`]);}
@@ -858,8 +864,10 @@ function buildRoom(){
        const hg=(inW-F.perTier*HEAD_W)/(F.perTier+1);
        for(let i=0;i<F.perTier;i++){const hx=x0+hg+i*(HEAD_W+hg);
          tag(box(HEAD_W,HEAD_H,HEAD_D,M.amphead,hx+HEAD_W/2,sy+SHELF_T+HEAD_H/2,HEAD_D/2+2,og),['N','P']);}}
-     if(F.cabs){const gp=(inW-2*ISO_W)/3;for(let i=0;i<2;i++){const cx=x0+gp+i*(ISO_W+gp);
-       tag(box(ISO_W,ISO_H,Math.min(ISO_D,OH_D),M.isocab,cx+ISO_W/2,ISO_H/2,Math.min(ISO_D,OH_D)/2,og),['N','P']);}}
+     if(F.cabs){const gp=(inW-2*CAB_W)/3;
+       tag(box(inW,SHELF_T,OH_D-2,M.ply,x0+inW/2,CAB_BAY_H-SHELF_T/2,(OH_D-2)/2,og),['N','P']);
+       for(let i=0;i<2;i++){const cx=x0+gp+i*(CAB_W+gp);
+         tag(box(CAB_W,CAB_H,CAB_D,M.isocab,cx+CAB_W/2,CAB_H/2,CAB_D/2+CAB_BACK,og),['N','P']);}}
      if(key)tag(label(`${F.heads} amp heads`,V(OH_X+OH_W/2,F.shelfBot+F.tiers*F.pitch+6,OH_D+2),og,{k:.8,bg:'#57534e'}),['N','P']);}
     {const bm=state.framing?M.boothGhost:M.booth,Hc=C,Hb=state.booth,fr=framing;
       const solid=(x0,x1,y0,y1,h,views)=>{const b=box(x1-x0,h,y1-y0,bm,(x0+x1)/2,h/2,(y0+y1)/2,og);b.castShadow=!state.framing;b.receiveShadow=true;tag(b,views);return b;};
@@ -1871,11 +1879,12 @@ function ampElevation(){
   let o='';
   o+=`<rect x="${X(0)}" y="${mt}" width="${W}" height="${H}" fill="#fbfaf7" stroke="${IKL}" stroke-width="${(sw*1.4).toFixed(3)}"/>`;
   /* the two isolation cabinets, dashed because they do not fit this box in depth */
-  {const gap=(inW-2*ISO_W)/3;
-   for(let i=0;i<2;i++){const x=AMP_CASE+gap+i*(ISO_W+gap);
-     o+=`<rect x="${X(x).toFixed(2)}" y="${Y(isoTop).toFixed(2)}" width="${ISO_W.toFixed(2)}" height="${ISO_H.toFixed(2)}" fill="#fdeee9" stroke="${IKA}" stroke-width="${(sw*1.5).toFixed(3)}" stroke-dasharray="${(sw*6).toFixed(2)} ${(sw*4).toFixed(2)}"/>`;
-     o+=`<rect x="${X(x+ISO_WALL+ISO_SIDE).toFixed(2)}" y="${Y(isoTop-ISO_WALL-ISO_TOP).toFixed(2)}" width="${CAB_W.toFixed(2)}" height="${CAB_H.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${sw}"/>`;
-     o+=`<text x="${X(x+ISO_W/2).toFixed(2)}" y="${(Y(isoTop-ISO_H/2)+fs*.35).toFixed(2)}" text-anchor="middle" font-size="${(fs*.85).toFixed(2)}" font-weight="700" fill="${IKM}">4x12</text>`;}}
+  if(F.cabs){const gap=(inW-2*CAB_W)/3;
+   o+=`<rect x="${X(AMP_CASE).toFixed(2)}" y="${Y(CAB_BAY_H).toFixed(2)}" width="${inW.toFixed(2)}" height="${SHELF_T}" fill="#cfc8bd" stroke="${IKL}" stroke-width="${sw}"/>`;
+   for(let i=0;i<2;i++){const x=AMP_CASE+gap+i*(CAB_W+gap);
+     o+=`<rect x="${X(x).toFixed(2)}" y="${Y(CAB_H).toFixed(2)}" width="${CAB_W.toFixed(2)}" height="${CAB_H.toFixed(2)}" fill="${IKS}" stroke="${IKL}" stroke-width="${(sw*1.3).toFixed(3)}"/>`;
+     o+=`<text x="${X(x+CAB_W/2).toFixed(2)}" y="${(Y(CAB_H/2)+fs*.35).toFixed(2)}" text-anchor="middle" font-size="${(fs*.85).toFixed(2)}" font-weight="700" fill="${IKM}">2x12</text>`;
+     o+=dimH(X(x-gap),X(x),Y(CAB_H)+fs*1.2,fIn(gap),sw,fs*.8,IKA);}}
   /* shelves and heads */
   for(let t=0;t<F.tiers;t++){
     const sy=shelfBot+t*pitch;
@@ -1914,10 +1923,12 @@ function ampWallDetail(){
   const head=kv([
     ['Overhang, width x depth',`${fIn(OH_W)} x ${fIn(OH_D)}`,'box'],['Measured on site','existing, cannot move'],
     ['Room ceiling',fFt(state.ceil)],
-    ['Overhang underside',fFt(F.soffit),'box'],['Heads that fit',`${F.heads} on ${F.tiers} shelves`,'shelf'],
+    ['Overhang underside',fFt(F.soffit),'box'],['Heads that fit',`${F.heads} on ${F.tiers} ${F.tiers===1?'shelf':'shelves'}`,'shelf'],
     ['Head envelope',`${fIn(HEAD_W)} x ${fIn(HEAD_H)} x ${fIn(HEAD_D)} deep`,'shelf'],
-    ['Cabinet',`${fIn(CAB_W)} x ${fIn(CAB_H)} x ${fIn(CAB_D)} deep`,'iso'],
-    ['Iso enclosure, each',`${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep`,'iso'],
+    ['Cabinet, each',`${fIn(CAB_W)} x ${fIn(CAB_H)} x ${fIn(CAB_D)} deep`,'iso'],
+    ['Swap clearance',`${fIn((F.inW-2*CAB_W)/3)} each side, ${fIn(CAB_LIFT)} over, ${fIn(CAB_BACK)} behind`,'iso'],
+    ['Cabinet shelf, top of',fFt(CAB_BAY_H),'iso'],
+    ['Iso enclosure, if ever',`${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep`,'iso'],
   ]);
   const shelving=`<p class="tnote">Heads are the easy half. At ${fIn(HEAD_D)} deep they sit in a ${fIn(OH_D)} box with ${fIn(OH_D-HEAD_D)} to spare for cable and air.</p>`
     +matTable([
@@ -1938,7 +1949,7 @@ function ampWallDetail(){
       <li><b>Control.</b> Run the remote to the live room and a second to the booth, so the selection can change without walking to the wall.</li>
       <li><b>Label every line</b> at both ends. ${F.heads} heads, ${F.heads} loads and two cabinets is ${F.heads*2+2} cables behind a wall you cannot see into.</li>
     </ol>`;
-  const isoBuild=`<p class="tnote">Each enclosure is a box within a box, the same idea as the control room at a smaller scale.</p>`
+  const isoBuild=`<p class="tnote">Only needed if you go with the third option. A box within a box, the same idea as the control room at a smaller scale.</p>`
     +matTable([
       ['Inside clear',`${fIn(CAB_W+2*ISO_SIDE)} x ${fIn(CAB_H+ISO_TOP+ISO_BASE)} x ${fIn(CAB_D+ISO_BACK+ISO_FRONT)} deep`],
       ['Walls','2 layers 3/4" MDF, seams staggered, glued and screwed'],
@@ -1953,21 +1964,21 @@ function ampWallDetail(){
   const html=`<div class="ik">${ampElevation()}</div>
     <ol class="lgd">
       <li><i>1</i><span><b>${F.tiers} ${F.tiers===1?'shelf':'shelves'}</b>, ${F.perTier} heads each, under a ${fFt(F.soffit)} underside.</span></li>
-      <li><i class="k">!</i><span><b>Two iso cabinets</b>, dashed. Drawn at the size they need to be, which is not the size that fits.</span></li>
+      <li><i>2</i><span><b>Two 2x12 cabinets</b> on their shelf, with ${fIn((F.inW-2*CAB_W)/3)} of swap clearance each side.</span></li>
     </ol>
     ${head}
     <p class="tnote" style="margin-top:9px">Tap any measurement to light it up on the drawing.</p>
     ${F.cabs&&F.tiers===0?`<p class="tnote" style="color:var(--bad)"><b>Nothing fits with the cabinets in this bay.</b> An enclosure is ${fIn(ISO_H)} tall and the underside is ${fFt(F.soffit)}. After the clearance a cabinet and a shelf each need, that leaves ${fIn(Math.max(0,F.shelfTop-F.shelfBot))} of usable zone, and one shelf with a head on it needs ${fIn(AMP_TIER_PITCH)}. Untick the cabinets and the same bay gives ${fIn(F.soffit-8)} of shelf space, which is ${Math.floor((F.soffit-8)/AMP_TIER_PITCH)*F.perTier} heads.</p>`:''}
-    ${fits?'':`<p class="tnote" style="color:var(--bad)"><b>The cabinets do not fit this overhang.</b> A ${fIn(CAB_D)} deep 4x12 needs ${fIn(ISO_D)} of enclosure once you allow absorption behind it and room for a mic in front. The overhang is ${fIn(OH_D)} deep and ${fFt(F.soffit)} to its underside, so a cabinet is both ${fIn(over)} too deep and, at ${fIn(ISO_H)} tall, leaves no room for a shelf above it.</p>
+    ${fits?'':`<p class="tnote"><b>The cabinets fit the bay. Isolating them does not.</b> A bare ${fIn(CAB_W)} x ${fIn(CAB_H)} x ${fIn(CAB_D)} cabinet sits in the ${fIn(OH_D)} deep bay with ${fIn(OH_D-CAB_D-CAB_BACK)} to spare, and the two of them take ${fIn(2*CAB_W+3*(F.inW-2*CAB_W)/3)} of the ${fIn(F.inW)} width. Putting each one in an enclosure that actually isolates it needs ${fIn(ISO_D)} of depth, because the absorption behind and the mic space in front are what drive that number, not the cabinet. That is ${fIn(over)} past the face.</p>
     <div class="ik">${ampDepthPlan()}</div>
-    ${dd('Three Ways to Resolve It','pick one',`<p class="tnote">The ${fIn(OH_D)} overhang is existing structure and cannot move, so deepening the box is out. That leaves three.</p><ol class="stepn">
-      <li><b>Put the cabinets in the control room.</b> You already built an isolated room within a room, ${fIn(IN_E-IN_W)} x ${fIn(IN_S-IN_N)} inside. Two 4x12s against its west wall take ${fIn(2*CAB_W)} x ${fIn(CAB_D)} and leave ${fIn((IN_S-IN_N)-CAB_D)} of floor. Run speaker lines from the heads on the wall and mic them in there. Nothing to build, and better isolation than any box this size would give.</li>
-      <li><b>Let the cabinets stand proud of the overhang</b> as a ${fIn(ISO_D)} deep plinth under the shelving, projecting ${fIn(over)} past the face. The overhang itself does not move; the plinth sits in front of it. You get a step in the wall at ${fIn(ISO_H)}, and ${fIn(over)} less floor along ${fIn(OH_W)}.</li>
-      <li><b>Skip isolation.</b> Store the cabs in the box and mic them in the room. Fits as-is, but the room has to be quiet when you track.</li>
-    </ol><p class="tnote">Half stacks do not change this: a half stack is a head and the same 4x12, so the depth is identical. Nor do smaller cabinets by much, since almost every guitar cab is 11" to 15" deep and the absorption and mic space are what drive the number.</p>`,true)}`}
+    ${dd('Where the Cabinets Go','three options',`<p class="tnote">The ${fIn(OH_D)} overhang is existing structure and cannot move. The cabinets fit under it; the question is whether they are isolated.</p><ol class="stepn">
+      <li><b>In the bay, open.</b> What is drawn. They sit on a shelf at ${fFt(CAB_BAY_H)} with ${fIn((F.inW-2*CAB_W)/3)} of clearance each side to lift them out. Costs you shelves: ${F.heads} heads with them here against ${Math.floor(((F.soffit-4)-4)/AMP_TIER_PITCH)*F.perTier} without. Nothing is isolated, so the room has to be quiet when you track.</li>
+      <li><b>In the control room.</b> You already built an isolated room within a room, ${fIn(IN_E-IN_W)} x ${fIn(IN_S-IN_N)} inside. Two of these against its west wall take ${fIn(2*CAB_W)} x ${fIn(CAB_D)} and leave ${fIn((IN_S-IN_N)-CAB_D)} of floor. Run speaker lines from the heads and mic them in there. The wall gets all ${Math.floor(((F.soffit-4)-4)/AMP_TIER_PITCH)*F.perTier} head slots back and you get real isolation for nothing.</li>
+      <li><b>Enclosed, standing proud.</b> A real enclosure is ${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)}, so it projects ${fIn(over)} past the face as a plinth. The overhang does not move; the plinth sits in front of it.</li>
+    </ol>`,true)}`}
     ${dd('Shelving','fits as drawn',shelving)}
     ${dd('Amp Switcher',`${F.heads} heads`,switcher)}
-    ${dd('Iso Cabinet Build','per cabinet',isoBuild)}`;
+    ${dd('Iso Cabinet Build','only if enclosed',isoBuild)}`;
   const txt=`AMP HEAD WALL\nBox ${fIn(AMPW.L)} x ${fIn(OH_D)} x ${fFt(state.ceil)}\n${F.heads} heads on ${F.tiers} shelves\nIso enclosure needed: ${fIn(ISO_W)} x ${fIn(ISO_H)} x ${fIn(ISO_D)} deep, which is ${fIn(over)} deeper than the box.`;
   return {key:'ampwall',title:'Amp Head Wall',sub:`${F.heads} heads over 2 cabinets ${String.fromCharCode(183)} under a ${fFt(F.soffit)} overhang`,html,txt};
 }
