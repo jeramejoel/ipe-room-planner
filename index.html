@@ -393,13 +393,17 @@ const MIN_RIP=1;            /* narrower than this and a filler is not worth cutt
 const isTouch=matchMedia('(pointer: coarse)').matches;
 const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:60,ampCabsInBay:true,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
 
-/* Plan coords: origin NW interior floor corner, +X east, +Y south. Three: x=X, z=Y, y=up. Walls run clockwise. */
+/* Plan coords: origin NW interior floor corner, +X east, +Y south. Three: x=X, z=Y, y=up. Walls run clockwise.
+   ROOM_W is the north wall, measured on site 2026-11-15 at 239" and confirmed by the overhang:
+   83" from the NW corner plus 65" of overhang leaves 91" to the NE, which is what was measured.
+   The hand drawing said 264" and was 25" long. CH_X/CH_Y are the angled corner's chamfer. */
+const ROOM_W=239, ROOM_D=194, CH_X=60, CH_Y=32, S_LEN=ROOM_W-CH_X;
 const WALLS=[
-  {id:'N',name:'North',p0:[0,0],p1:[264,0],from:'NW corner'},
-  {id:'E',name:'East',p0:[264,0],p1:[264,162],from:'NE corner'},
-  {id:'A',name:'Angled',p0:[264,162],p1:[204,194],from:'east end'},
-  {id:'S',name:'South',p0:[204,194],p1:[0,194],from:'angled corner'},
-  {id:'W',name:'West',p0:[0,194],p1:[0,0],from:'SW corner'},
+  {id:'N',name:'North',p0:[0,0],p1:[ROOM_W,0],from:'NW corner'},
+  {id:'E',name:'East',p0:[ROOM_W,0],p1:[ROOM_W,162],from:'NE corner'},
+  {id:'A',name:'Angled',p0:[ROOM_W,162],p1:[S_LEN,ROOM_D],from:'east end'},
+  {id:'S',name:'South',p0:[S_LEN,ROOM_D],p1:[0,ROOM_D],from:'angled corner'},
+  {id:'W',name:'West',p0:[0,ROOM_D],p1:[0,0],from:'SW corner'},
 ];
 WALLS.forEach(w=>{const dx=w.p1[0]-w.p0[0],dy=w.p1[1]-w.p0[1];w.L=Math.hypot(dx,dy);w.u=[dx/w.L,dy/w.L];w.n=[-w.u[1],w.u[0]];});
 const WALL=Object.fromEntries(WALLS.map(w=>[w.id,w]));
@@ -450,10 +454,10 @@ const CL_EA=clearAt(cornerAngle(WALL.E,WALL.A)), CL_AS=clearAt(cornerAngle(WALL.
 const RUNS=[
   {wall:'N',name:'North, corner to room door',a:STANDOFF+REVEAL,b:10-CASING-REVEAL,refA:0,refB:10-CASING,comp:[],auto:true},
   {wall:'N',name:'North, door to overhang',a:46+CASING+REVEAL,b:OH_X-REVEAL,refA:46,refB:OH_X,comp:[],auto:true},
-  {wall:'N',name:'North, east of overhang',a:OH_X+OH_W+REVEAL,b:264,refA:OH_X+OH_W,refB:264,comp:[],auto:true},
+  {wall:'N',name:'North, east of overhang',a:OH_X+OH_W+REVEAL,b:ROOM_W,refA:OH_X+OH_W,refB:ROOM_W,comp:[],auto:true},
   {wall:'E',name:'East',a:STANDOFF+REVEAL,b:162-CL_EA-REVEAL,refA:0,refB:162,comp:[],auto:true},
   {wall:'A',name:'Angled',a:CL_EA+REVEAL,b:AL-CL_AS-REVEAL,refA:0,refB:AL,comp:[],auto:true},
-  {wall:'S',name:'South, angled corner to booth',a:CL_AS+REVEAL,b:204-BX-STANDOFF-REVEAL,refA:0,refB:204-BX,comp:[],auto:true},
+  {wall:'S',name:'South, angled corner to booth',a:CL_AS+REVEAL,b:S_LEN-BX-STANDOFF-REVEAL,refA:0,refB:S_LEN-BX,comp:[],auto:true},
   {wall:'W',name:'West, booth to north corner',a:194-BY+REVEAL,b:194,refA:194-BY,refB:194,comp:[],auto:true},
   {wall:'P',name:'Overhang face',a:REVEAL,b:OH_W-REVEAL,refA:0,refB:OH_W,comp:[],auto:true,amp:true},
   {wall:'PW',name:'Overhang, west side',a:STANDOFF+REVEAL,b:OH_D-REVEAL,refA:0,refB:OH_D,comp:[],auto:true,amp:true},
@@ -463,7 +467,8 @@ const RUNS=[
   {wall:'BN',name:'Booth outside, west of window',a:WIN_S_OUT+WIN_W/2+CASING+REVEAL,b:BX-STANDOFF-REVEAL,refA:WIN_S_OUT+WIN_W/2+CASING,refB:BX,comp:[],auto:true,booth:true},
   {wall:'BE',name:'Booth outside, south of door',a:STANDOFF+REVEAL,b:DOOR_S_OUT-DOOR_W/2-CASING-REVEAL,refA:0,refB:DOOR_S_OUT-DOOR_W/2-CASING,comp:[],auto:true,booth:true},
   {wall:'BE',name:'Booth outside, north of door',a:DOOR_S_OUT+DOOR_W/2+CASING+REVEAL,b:194-BY-REVEAL,refA:DOOR_S_OUT+DOOR_W/2+CASING,refB:194-BY,comp:[],auto:true,booth:true},
-  {wall:'BE',name:'Booth door (slats on the door)',a:DOOR_S_OUT-DOOR_W/2,b:DOOR_S_OUT+DOOR_W/2,refA:DOOR_S_OUT-DOOR_W/2,refB:DOOR_S_OUT+DOOR_W/2,comp:[5],door:true},
+  {wall:'BE',name:'Booth door (slats on the door)',a:DOOR_S_OUT-DOOR_W/2,b:DOOR_S_OUT+DOOR_W/2,refA:DOOR_S_OUT-DOOR_W/2,refB:DOOR_S_OUT+DOOR_W/2,comp:[5],door:true,lite:true},
+  {wall:'N',name:'Room door (slats on the door)',a:10,b:46,refA:10,refB:46,comp:[5],door:true},
   {wall:'BE',name:'Booth outside, above booth door',a:DOOR_S_OUT-DOOR_W/2-CASING,b:DOOR_S_OUT+DOOR_W/2+CASING,refA:DOOR_S_OUT-DOOR_W/2-CASING,refB:DOOR_S_OUT+DOOR_W/2+CASING,comp:[],auto:true,overDoor:'room'},
   {wall:'N',name:'North, above room door',a:10-CASING,b:46+CASING,refA:10-CASING,refB:46+CASING,comp:[],auto:true,overDoor:'room'},
 ];
@@ -703,20 +708,22 @@ function layout(){
     if(state.seamless&&!r.door&&parts.length&&!parts[0].solo){
       const width=()=>parts.reduce((a,q)=>a+q.w,0)+(parts.length-1)*g;
       const boards=()=>parts.reduce((a,q)=>a+q.k,0);
-      let wf=(r.avail-width()-2*g)/2;
-      if(wf<MIN_RIP&&boards()>1){
+      const rem=r.avail-width();
+      if(rem>=g+MIN_RIP){
+        /* One ripped board, at the far end. Every other board in the run is full width,
+           so the rhythm is identical run to run and there is one bespoke piece, not two. */
+        const w=rem-g;
+        parts.push({k:1,w,sw:w,rip:w});
+      }else if(boards()>1){
+        /* Too thin to rip on its own: give a full board back and split what that frees
+           across both ends, which lands each one between 2 1/4" and 3 1/4". */
         const big=parts.reduce((m,q)=>q.k>m.k?q:m,parts[0]);
         big.k--;big.w=big.k*SLAT_W+(big.k-1)*g;
         if(big.k<1)parts.splice(parts.indexOf(big),1);
-        wf=parts.length?(r.avail-width()-2*g)/2:-1;
-      }
-      if(!parts.length)parts=[{k:1,w:r.avail,sw:r.avail,rip:r.avail,solo:true}];
-      else if(wf>=MIN_RIP){
-        const base=width();
-        const w1=Math.round(wf*16)/16;          /* one end on the tape, to 1/16" */
-        const w2=r.avail-base-2*g-w1;           /* the other carries the remainder, cut to fit */
-        parts.unshift({k:1,w:w1,sw:w1,rip:w1});
-        parts.push({k:1,w:w2,sw:w2,rip:w2});
+        if(!parts.length)parts=[{k:1,w:r.avail,sw:r.avail,rip:r.avail,solo:true}];
+        else{const base=width(),wf=(r.avail-base-2*g)/2;
+          if(wf>=MIN_RIP){const w1=Math.round(wf*16)/16,w2=r.avail-base-2*g-w1;
+            parts.unshift({k:1,w:w1,sw:w1,rip:w1});parts.push({k:1,w:w2,sw:w2,rip:w2});}}
       }
     }
     const eg=g;
@@ -728,7 +735,7 @@ function layout(){
       const railIn3=r.door?0:Lr*(CLEAT_AREA+Math.max(0,rys.length-1)*RAIL_T*RAIL_H);
       const hits=2;
       const key=RUNS.indexOf(r)+'-'+i;const type=r.door||r.overDoor?'ipe':(state.ptypes[key]||'ipe');
-      const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,sw:q.sw,rip:q.rip,s0:s,s1:s+w,Lr,Lc,c0,c1,g:gg,solo:!!q.solo,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys:noR?[]:rys,slatLb:type==='ipe'?(r.door?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79)*slatLb:k*slatLb*(q.rip?q.rip/SLAT_W:1)):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:noR?0:railIn3/1728*BACK_PCF,hits:noR?0:hits,nr:noR?0:rys.length};
+      const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,sw:q.sw,rip:q.rip,s0:s,s1:s+w,Lr,Lc,c0,c1,g:gg,solo:!!q.solo,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys:noR?[]:rys,slatLb:type==='ipe'?(r.door?(r.lite?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79):.5*k)*slatLb:k*slatLb*(q.rip?q.rip/SLAT_W:1)):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:noR?0:railIn3/1728*BACK_PCF,hits:noR?0:hits,nr:noR?0:rys.length};
       p.weight=p.slatLb+p.backLb;
       r.panels.push(p);panels.push(p);s+=w+gg;});
     r.end=s-g;
@@ -763,7 +770,7 @@ function layout(){
   const holes=[];
   {const faces={};
    /* the amp wall box and the booth stand against these faces, so no run belongs there */
-   const BLOCKED={N:[[OH_X,OH_X+OH_W]],S:[[204-BX,204]],W:[[0,194-BY]]};
+   const BLOCKED={N:[[OH_X,OH_X+OH_W]],S:[[S_LEN-BX,S_LEN]],W:[[0,194-BY]]};
    RUNS.forEach(r=>{if(r.door)return;(faces[r.wall]=faces[r.wall]||[]).push([r.refA,r.refB]);});
    Object.keys(BLOCKED).forEach(id=>{if(faces[id])faces[id]=faces[id].concat(BLOCKED[id]);});
    Object.keys(faces).forEach(id=>{const w=WALL[id];if(!w||!w.L)return;
@@ -805,7 +812,7 @@ function layout(){
   if(state.bottom<4)warns.push(['warn',`Panel bottoms are ${fIn(state.bottom)} off the floor. Leave room for baseboards and cleaning.`]);
   if(state.ampGap<CLEAT_RISE+.25)warns.push(['bad',`Amp wall panels sit ${fIn(state.ampGap)} below the ceiling, but a 2x4 French cleat needs ${fIn(CLEAT_RISE+.25)} of lift to engage. Raise the ceiling gap to at least ${fIn(CLEAT_RISE+.25)}.`]);
   {const implied=OH_FROM_NW+OH_W+OH_FROM_NE,d=WALL.N.L-implied;
-   if(Math.abs(d)>0.5)warns.push(['bad',`The overhang measurements do not fit the north wall. ${fIn(OH_FROM_NW)} from the NW corner, plus ${fIn(OH_W)} of overhang, plus ${fIn(OH_FROM_NE)} to the NE corner, is ${fIn(implied)}. The wall is modelled at ${fIn(WALL.N.L)}, which is ${fIn(Math.abs(d))} ${d>0?'longer':'shorter'}. That length came from the hand drawing, so it is the likely culprit: measure the north wall corner to corner. The overhang is drawn from the NW measurement, so its east edge lands ${fIn(WALL.N.L-OH_X-OH_W)} from the NE corner rather than ${fIn(OH_FROM_NE)}.`]);}
+   if(Math.abs(d)>0.5)warns.push(['bad',`The overhang measurements no longer fit the north wall. ${fIn(OH_FROM_NW)} from the NW corner plus ${fIn(OH_W)} of overhang plus ${fIn(OH_FROM_NE)} to the NE corner is ${fIn(implied)}, against a ${fIn(WALL.N.L)} wall.`]);}
   {const f=ampFit();if(f.heads<4)warns.push(['warn',`The amp head wall fits ${f.heads} head${f.heads===1?'':'s'} under a ${fFt(f.soffit)} underside${f.cabs?' with the cabinets in the bay':''}. Four is the fewest worth building: ${f.cabs?'take the cabinets out of this bay':'raise the underside'}.`]);}
   if(ISO_D>OH_D)warns.push(['bad',`The two 2x12 cabinets fit the overhang bay, but an enclosure that isolates one needs ${fIn(ISO_D)} of depth against a ${fIn(OH_D)} bay. Open the Amp head wall sheet: in the bay open, in the control room, or enclosed and standing proud.`]);
   {const dp=panels.find(p=>p.run.door);if(dp)warns.push(['warn',`Ipe on the booth door adds about ${lb(dp.weight)} to the door. The door slats are resawn to 1/2" thick; hang the door on 4 heavy-duty ball-bearing hinges.`]);}
@@ -822,11 +829,11 @@ function layout(){
 /* ---------- build: room ---------- */
 function buildRoom(){
   const H=state.H,bot=state.bottom,top=bot+H,C=state.ceil,full=state.dims==='full',key=state.dims!=='off';
-  const sh=new THREE.Shape();sh.moveTo(0,0);[[264,0],[264,162],[204,194],[0,194]].forEach(p=>sh.lineTo(p[0],p[1]));sh.closePath();
+  const sh=new THREE.Shape();sh.moveTo(0,0);[[ROOM_W,0],[ROOM_W,162],[S_LEN,ROOM_D],[0,ROOM_D]].forEach(p=>sh.lineTo(p[0],p[1]));sh.closePath();
   const fl=new THREE.Mesh(new THREE.ShapeGeometry(sh),M.floor);fl.rotation.x=Math.PI/2;fl.receiveShadow=true;fl.userData.floor=true;roomG.add(fl);
   {const cl=new THREE.Mesh(new THREE.ShapeGeometry(sh),M.ceilP);cl.rotation.x=Math.PI/2;cl.position.y=C;cl.raycast=()=>{};cl.userData.floor=true;roomG.add(cl);}
-  const gp=[];for(let x=12;x<264;x+=12){const ym=x<=204?194:162+(264-x)*32/60;gp.push(x,.05,0,x,.05,ym);}
-  for(let y=12;y<194;y+=12){const xm=y<=162?264:264-(y-162)*60/32;gp.push(0,.05,y,xm,.05,y);}
+  const gp=[];for(let x=12;x<ROOM_W;x+=12){const ym=x<=S_LEN?ROOM_D:162+(ROOM_W-x)*CH_Y/CH_X;gp.push(x,.05,0,x,.05,ym);}
+  for(let y=12;y<ROOM_D;y+=12){const xm=y<=162?ROOM_W:ROOM_W-(y-162)*CH_X/CH_Y;gp.push(0,.05,y,xm,.05,y);}
   const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.Float32BufferAttribute(gp,3));
   const grid=new THREE.LineSegments(gg,M.gridLine);grid.raycast=()=>{};roomG.add(grid);
   const cg=new THREE.Group();cg.position.set(-30,0.2,-30);roomG.add(cg);
@@ -929,7 +936,7 @@ function buildRoom(){
         [[p.s0+.5,p.H],[p.s1-.5,p.H]].forEach(([x,h])=>box(.75,h,2.6,M.casing,x,p.bot+h/2,RAIL_T+1.3,pg));}
     }
     else for(let i=0;i<p.k;i++){
-      const sx=p.s0+i*(p.sw+(p.g??state.gap)),lite=p.run.door&&sx+p.sw>DOOR_S_OUT-LITE_W/2&&sx<DOOR_S_OUT+LITE_W/2;
+      const sx=p.s0+i*(p.sw+(p.g??state.gap)),lite=p.run.lite&&sx+p.sw>DOOR_S_OUT-LITE_W/2&&sx<DOOR_S_OUT+LITE_W/2;
       if(lite){[[p.bot,LITE_B-1],[LITE_T+1,p.bot+p.H]].forEach(([y0,y1])=>{const b=box(p.sw,y1-y0,SLAT_T,M.casing,sx+p.sw/2,(y0+y1)/2,Z_DOOR,pg);b.userData.pid=p.id;b.castShadow=true;});si++;continue;}
       const r=rng(1000+si++);const col=new THREE.Color('#7d4a2c');col.offsetHSL((r()-.5)*.02,(r()-.5)*.08,(r()-.5)*.09);
       const m=new THREE.MeshStandardMaterial({color:col,map:grain,roughness:.55,transparent:state.xray,opacity:state.xray?.28:1,depthWrite:!state.xray});
@@ -971,7 +978,7 @@ function buildRoom(){
   /* draped fabric ceiling: bands running east-west, pinned every 32" and sagging between pins, staying out of the booth */
   if(state.curtains){
     const bands=[];for(let y=0;y<194;y+=24)bands.push([y,Math.min(194,y+24)]);
-    bands.forEach(([y0,y1],bi)=>{const ym=(y0+y1)/2;const xmin=ym>BY-2?BX+1:0;const xmax=ym<=162?264:264-(ym-162)*60/32;if(xmax-xmin<10)return;
+    bands.forEach(([y0,y1],bi)=>{const ym=(y0+y1)/2;const xmin=ym>BY-2?BX+1:0;const xmax=ym<=162?ROOM_W:ROOM_W-(ym-162)*CH_X/CH_Y;if(xmax-xmin<10)return;
       const L=xmax-xmin,segX=Math.max(8,Math.round(L/3)),geo=new THREE.PlaneGeometry(L,y1-y0,segX,6);const pos=geo.attributes.position;
       for(let i=0;i<pos.count;i++){const x=pos.getX(i)+L/2,v=pos.getY(i)/(y1-y0)+.5;const pin=32,t=(x%pin)/pin;
         const sag=9*Math.sin(Math.PI*t)*(.55+.45*Math.sin(Math.PI*v))+(bi%2?1.5:0);pos.setXYZ(i,pos.getX(i),pos.getY(i),-sag);}
@@ -986,12 +993,12 @@ function buildRoom(){
       const pts=[[-w/2,-l/2],[w/2,-l/2],[w/2,l/2],[-w/2,l/2]].map(([u,v])=>[cx+u*c-v*sn,cy+u*sn+v*c]);
       if(pts.every(([x,y])=>ok(x,y))){list.push({cx,cy,w,l,a});return true;}w*=.85;l*=.85;}return false;};
     /* bottom layer: straight rugs tiled wall to wall with a few inches of overlap, trimmed to fit the angled corner and the booth */
-    const xmaxAt=y=>y<=162?264:264-(y-162)*60/32;
+    const xmaxAt=y=>y<=162?ROOM_W:ROOM_W-(y-162)*CH_X/CH_Y;
     for(let y0=.5;y0<193.5;y0+=42){const y1=Math.min(193.5,y0+46);const xr=Math.min(xmaxAt(y0),xmaxAt(y1))-.5;const xl=y1>BY?BX+.5:.5;
       for(let x0=xl;x0<xr-6;x0+=58){const x1=Math.min(xr,x0+62);if(x1-x0<12)continue;list.push({cx:(x0+x1)/2,cy:(y0+y1)/2,w:x1-x0,l:y1-y0,a:0});}}
     for(let y0=IN_N+.5;y0<IN_S-.5;y0+=26){const y1=Math.min(IN_S-.5,y0+28);for(let x0=IN_W+.5;x0<IN_E-6;x0+=46){const x1=Math.min(IN_E-.5,x0+48);list.push({cx:(x0+x1)/2,cy:(y0+y1)/2,w:x1-x0,l:y1-y0,a:0});}}
     /* top layer: scattered, slightly turned */
-    for(let y=14;y<194;y+=40)for(let x=18;x<264;x+=56){const cx=x+(rr()-.5)*14,cy=y+(rr()-.5)*10;if(!inRoom(cx,cy))continue;
+    for(let y=14;y<ROOM_D;y+=40)for(let x=18;x<ROOM_W;x+=56){const cx=x+(rr()-.5)*14,cy=y+(rr()-.5)*10;if(!inRoom(cx,cy))continue;
       const big=rr()>.55;place(cx,cy,big?84+rr()*24:58+rr()*16,big?60+rr()*20:42+rr()*12,inRoom);}
     [[30,150],[72,170],[52,158]].forEach(([cx,cy])=>place(cx,cy,56,40,inBooth));
     list.forEach((r,k)=>{const g=new THREE.Mesh(new THREE.BoxGeometry(r.w,.35,r.l),new THREE.MeshStandardMaterial({map:rugTex(1+k%6),roughness:1}));
@@ -1001,7 +1008,7 @@ function buildRoom(){
   /* KEXP-style warm string lights: swags across the ceiling plus a draped run along the walls */
   if(state.strings){
     const pts=[],wire=[];const sag=(t,d)=>d*4*t*(1-t);
-    const ymax=x=>x<BX+4?BY-4:x<=204?194:162+(264-x)*32/60;
+    const ymax=x=>x<BX+4?BY-4:x<=S_LEN?ROOM_D:162+(ROOM_W-x)*CH_Y/CH_X;
     [26,70,114,158,202,240].forEach((x,k)=>{const y0=6,y1=ymax(x)-6,n=Math.floor((y1-y0)/7);const line=[];
       for(let i=0;i<=n;i++){const t=i/n,y=y0+(y1-y0)*t,xx=x+(k%2?1:-1)*sag(t,10),h=C-3-sag(t,16);line.push(V(xx,h,y));if(i%1===0)pts.push(V(xx,h-1.2,y));}wire.push(line);
       const l=new THREE.PointLight('#ffb168',state.night?26000:9000,0,2);l.position.set(x,C-14,(y0+y1)/2);l.userData.keepElev=true;roomG.add(l);PLIGHTS.push(l);});
@@ -1178,7 +1185,7 @@ let sheetOpen=true;
 function wallObstacles(v,Ht){
   switch(v){
     case 'N':return [{s0:10,s1:46,y0:0,y1:80,t:'Room door',f:'#3a332c'},{s0:OH_X,s1:OH_X+OH_W,y0:OH_UNDER,y1:Ht,t:'Overhang',f:'#8e8a85',o:.25},{s0:OH_X,s1:OH_X+OH_W,y0:0,y1:OH_UNDER,t:'Amp head wall',f:'#6b645c',o:.18}];
-    case 'S':return [{s0:204-BX,s1:204,y0:0,y1:state.ceil,t:'Booth outer wall',f:'#7b8794',o:.3}];
+    case 'S':return [{s0:S_LEN-BX,s1:S_LEN,y0:0,y1:state.ceil,t:'Booth outer wall',f:'#7b8794',o:.3}];
     case 'W':return [{s0:0,s1:194-BY,y0:0,y1:state.ceil,t:'Booth outer wall',f:'#7b8794',o:.3}];
     case 'BN':return [{s0:BAR_S0,s1:BAR_S1,y0:0,y1:BAR_H,t:'Bar',f:'#8e8a85',o:.45},{s0:WIN_S_OUT-WIN_W/2,s1:WIN_S_OUT+WIN_W/2,y0:WIN_SILL,y1:WIN_SILL+WIN_H,t:'Long window (outer pane)',f:'#6f8aa3',o:.6}];
     case 'BE':return [{s0:DOOR_S_OUT-DOOR_W/2,s1:DOOR_S_OUT+DOOR_W/2,y0:0,y1:80,t:'',f:'#3a332c'},{s0:DOOR_S_OUT-LITE_W/2,s1:DOOR_S_OUT+LITE_W/2,y0:LITE_B,y1:LITE_T,t:'',f:'#6f8aa3',o:.8}];
@@ -1413,7 +1420,7 @@ function buildCutList(){
   row('Framing screws 3"',`about ${framing.F.filter(m=>m.kind!=='plate').length*4+framing.joists.length*6}`);
   row('Ipe end-grain sealer + penetrating oil','1 qt each');
   sec('Ceiling fabric and rugs');
-  if(state.curtains){const area=(264*194-60*32/2-BX*(194-BY))/144;row('Draped ceiling fabric (flame-retardant velvet or muslin, dyed)',`about ${Math.ceil(area*1.6/13.5)} linear yd of 54" fabric`,`${area.toFixed(0)} sq ft of ceiling at about 1.6× for the sag; pin every 32", keep 18" clear of light fixtures and use FR-rated fabric only`);}
+  if(state.curtains){const area=(ROOM_W*ROOM_D-CH_X*CH_Y/2-BX*(ROOM_D-BY))/144;row('Draped ceiling fabric (flame-retardant velvet or muslin, dyed)',`about ${Math.ceil(area*1.6/13.5)} linear yd of 54" fabric`,`${area.toFixed(0)} sq ft of ceiling at about 1.6× for the sag; pin every 32", keep 18" clear of light fixtures and use FR-rated fabric only`);}
   if(state.rugs)row('Persian-style rugs, layered wall to wall',`about ${stats.rugs||0} rugs, mostly 4×6 and 6×8 ft`,'overlapping so no floor shows; non-slip pads under the bottom layer, tape the top edges near doors');
   sec('Lighting and dimming');
   row('LED strip, 24 V COB, about 1.5 W/ft (4.8 W/m), tunable white or RGBW',`${s.led.ft.toFixed(0)} ft`,`${s.led.count} strips, ${state.led==='back'?'one down the back of every board, facing the wall':'one per panel joint'}; low-profile, high-density (no visible dots) 24 V strip`);
