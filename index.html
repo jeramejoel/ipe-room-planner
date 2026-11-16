@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Ipe Slat Wall 3D Planner</title>
+<style>
+:root{--ink:#1d1d1f;--mut:#6b6b70;--line:#e3ded6;--acc:#d6336c;--ok:#2f9e44;--warn:#e8890c;--bad:#e03131;--card:#ffffffee;
+  --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;height:100dvh;overflow:hidden;background:#ece8e1;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#top{position:fixed;left:0;right:0;top:0;padding:calc(10px + var(--st)) calc(12px + var(--sr)) 0 calc(12px + var(--sl));pointer-events:none;z-index:5}
+#titleRow{display:flex;align-items:center;gap:8px;pointer-events:auto}
+#titleRow h1{font-size:15px;margin:0;font-weight:700;background:var(--card);padding:6px 10px;border-radius:10px;box-shadow:0 1px 6px #0002;white-space:nowrap}
+#warnPill{display:none;background:var(--bad);color:#fff;border:0;border-radius:999px;padding:6px 10px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap}
+#views{display:flex;gap:6px;overflow-x:auto;padding:8px 0 6px;pointer-events:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#views::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 13px;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink);min-height:36px}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#legend{margin-top:2px;display:inline-block;background:var(--card);border-radius:10px;padding:6px 10px;font-size:12px;color:var(--mut);box-shadow:0 1px 6px #0002;transition:opacity .4s;max-width:min(560px,100%)}
+#legend b{color:var(--ink)}
+#legend.fade{opacity:0}
+#nav{position:fixed;left:calc(12px + var(--sl));bottom:calc(16px + var(--sb));z-index:6;display:flex;flex-direction:column;gap:8px}
+#nav button{width:46px;height:46px;border-radius:14px;border:0;background:#fff;box-shadow:0 2px 10px #0003;font-size:20px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center}
+#nav button.on{background:var(--ink);color:#fff}
+#nav .mode{font-size:10.5px;font-weight:700;letter-spacing:.02em}
+#ctrlBtn{position:fixed;right:calc(14px + var(--sr));bottom:calc(16px + var(--sb));z-index:6;border:0;background:var(--ink);color:#fff;border-radius:999px;padding:13px 18px;font-weight:700;box-shadow:0 4px 14px #0003;cursor:pointer;min-height:46px}
+#panel{position:fixed;z-index:7;background:#fff;box-shadow:0 0 24px #0003;overflow-y:auto;transition:transform .25s ease;-webkit-user-select:text;user-select:text;overscroll-behavior:contain}
+@media (min-width:760px){#panel{top:0;right:0;width:370px;height:100%;transform:translateX(105%)}#panel.open{transform:none}}
+@media (max-width:759px){#panel{left:0;right:0;bottom:0;max-height:62dvh;border-radius:18px 18px 0 0;transform:translateY(105%);padding-bottom:var(--sb)}#panel.open{transform:none}
+  #titleRow h1{font-size:14px}#legend{font-size:11.5px}}
+#grab{display:none}
+@media (max-width:759px){#grab{display:block;width:44px;height:5px;border-radius:3px;background:#d4cec5;margin:8px auto 0}}
+#panelHead{position:sticky;top:0;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:10px 14px 12px;border-bottom:1px solid var(--line);z-index:1}
+#panelHead b{font-size:15px}
+#closePanel{border:0;background:#f1eee9;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer;min-height:36px}
+.sec{padding:12px 14px;border-bottom:1px solid var(--line)}
+.sec h3{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.seg{display:flex;background:#f1eee9;border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;padding:9px 4px;border-radius:8px;font-weight:600;font-size:12.5px;cursor:pointer;color:var(--ink);min-height:36px}
+.seg button.on{background:#fff;box-shadow:0 1px 3px #0002}
+.hint{color:var(--mut);font-size:12.5px;margin:8px 0 0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px}
+.row label{flex:1}
+.row output{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+input[type=range]{width:100%;accent-color:var(--acc);height:28px}
+.tog{display:flex;align-items:center;gap:10px;margin:4px 0;cursor:pointer;min-height:34px}
+.tog input{width:20px;height:20px;accent-color:var(--acc);flex:0 0 auto}
+.studs{display:grid;grid-template-columns:1fr 76px;gap:6px 10px;align-items:center}
+.studs input{width:76px;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:16px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td{padding:5px 0;border-bottom:1px solid #f0ece6;vertical-align:top}
+td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;padding-left:8px}
+.sub{font-weight:700;padding-top:10px;color:var(--mut);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+#warns div{padding:8px 10px;border-radius:8px;margin:5px 0;font-size:12.5px}
+.w-bad{background:#ffe3e3;color:#a61e1e}.w-warn{background:#fff1db;color:#8a4b00}.w-ok{background:#e6f6ea;color:#1f6b31}
+#info{position:fixed;left:calc(70px + var(--sl));bottom:calc(16px + var(--sb));z-index:6;background:#fff;border-radius:14px;box-shadow:0 4px 18px #0003;padding:12px 14px;width:min(330px,calc(100vw - 200px));display:none;font-size:12.5px}
+@media (max-width:759px){#info{left:calc(12px + var(--sl));right:calc(12px + var(--sr));width:auto;bottom:auto;top:calc(142px + var(--st));z-index:6}}
+#sheet{position:fixed;z-index:8;background:#fff;box-shadow:0 -4px 24px #0003;display:none;flex-direction:column;-webkit-user-select:text;user-select:text}
+#sheet.open{display:flex}
+@media (min-width:760px){#sheet{left:calc(70px + var(--sl));bottom:calc(16px + var(--sb));width:min(620px,calc(100vw - 480px));max-height:58vh;border-radius:16px}}
+@media (max-width:759px){#sheet{left:0;right:0;bottom:0;max-height:52dvh;border-radius:18px 18px 0 0;padding-bottom:var(--sb)}}
+#sheetHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+#sheetHead b{font-size:14.5px}
+#sheetHead button{border:0;background:#f1eee9;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer;min-height:36px}
+#sheetBody{overflow:auto;padding:10px 14px 14px;overscroll-behavior:contain}
+.diag{overflow-x:auto;margin:0 -4px 8px;border:1px solid var(--line);border-radius:10px;background:#fbfaf7}
+.diag svg{display:block}
+.cut{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+.cut th{text-align:left;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;padding:5px 6px 5px 0;border-bottom:1px solid var(--line)}
+.cut td{padding:6px 6px 6px 0;border-bottom:1px solid #f0ece6;text-align:left;font-weight:500}
+.cut td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.copy{border:0;background:var(--ink);color:#fff;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;min-height:38px}
+.steps{margin:6px 0 0;padding-left:18px;font-size:12.5px}.steps li{margin:6px 0}
+#nav #sheetBtn{display:none;font-size:11px}
+#guide{position:fixed;inset:0;z-index:9;background:#fff;display:none;flex-direction:column;-webkit-user-select:text;user-select:text}
+#guide.open{display:flex}
+#guideHead{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:calc(10px + var(--st)) 16px 10px;border-bottom:1px solid var(--line)}
+#guideHead b{font-size:16px}
+#guideHead button{border:0;background:#f1eee9;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer;min-height:38px}
+#guideToc{flex:0 0 auto;display:flex;gap:6px;overflow-x:auto;padding:8px 16px;border-bottom:1px solid var(--line);scrollbar-width:none}
+#guideToc a{flex:0 0 auto;font-size:12.5px;font-weight:600;color:var(--ink);text-decoration:none;background:#f1eee9;border-radius:999px;padding:6px 11px}
+#guideBody{flex:1 1 auto;min-height:0;overflow:auto;padding:4px 16px calc(24px + var(--sb));max-width:860px;width:100%;margin:0 auto}
+#guideBody table{display:block;overflow-x:auto;white-space:normal}
+#guideBody h2{font-size:17px;margin:22px 0 6px;padding-top:6px;border-top:1px solid var(--line)}
+#guideBody h3{font-size:13px;margin:14px 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+#guideBody p,#guideBody li{font-size:13.5px;line-height:1.5}
+#guideBody ol,#guideBody ul{padding-left:20px;margin:6px 0}
+#guideBtn{border:0;background:var(--ink);color:#fff;border-radius:999px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer;pointer-events:auto;white-space:nowrap}
+#ledBar{position:fixed;z-index:6;right:calc(140px + var(--sr));bottom:calc(16px + var(--sb));display:flex;align-items:center;gap:6px;background:#fff;border-radius:999px;padding:6px 10px;box-shadow:0 2px 12px #0004}
+#ledBar input[type=color]{width:34px;height:34px;border:0;padding:0;background:none;border-radius:50%;cursor:pointer}
+#ledBar button{width:34px;height:34px;border:0;border-radius:50%;background:#f1eee9;font-size:20px;font-weight:700;cursor:pointer;color:var(--ink);line-height:1}
+#ledBar input[type=range]{width:110px;height:28px}
+#ledBar output{font-size:12px;font-weight:700;min-width:36px;text-align:right;font-variant-numeric:tabular-nums}
+#ledBar .lb{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--mut)}
+#ledBar .dots{display:flex;gap:4px}#ledBar .dots i{width:16px;height:16px;border-radius:50%;cursor:pointer;display:block;box-shadow:inset 0 0 0 1px #0002}
+@media (max-width:759px){#ledBar{left:calc(70px + var(--sl));right:calc(118px + var(--sr));transform:none;justify-content:space-between;padding:5px 8px;gap:4px}#ledBar input[type=range]{width:auto;flex:1;min-width:40px}#ledBar output,#ledBar .lb,#ledBar .dots{display:none}}
+#info h4{margin:0 0 6px;font-size:15px;padding-right:24px}
+#info .x{position:absolute;right:6px;top:4px;border:0;background:none;font-size:22px;cursor:pointer;color:var(--mut);width:36px;height:36px}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="top">
+  <div id="titleRow"><h1>Ipe Slat Wall</h1><button id="guideBtn">Build guide</button><button id="warnPill"></button></div>
+  <div id="views"></div>
+  <div id="legend"></div>
+</div>
+<div id="nav">
+  <button id="zIn" aria-label="Zoom in">+</button>
+  <button id="zOut" aria-label="Zoom out">−</button>
+  <button id="fitBtn" aria-label="Reset view">⌂</button>
+  <button id="modeBtn" class="mode" aria-label="Toggle orbit or pan">ORBIT</button>
+  <button id="sheetBtn" class="mode" aria-label="Show cut sheet">CUTS</button>
+</div>
+<div id="ledBar"><span class="lb">LED</span><input type="color" id="qColor" value="#ffb46a" aria-label="LED color"><span class="dots" id="qDots"></span><button id="qDim" aria-label="Dim">−</button><input type="range" id="qLevel" min="0" max="1" step="0.01" aria-label="LED brightness"><button id="qBright" aria-label="Brighten">+</button><output id="qOut"></output></div>
+<button id="ctrlBtn">Controls</button>
+<div id="sheet"><div id="sheetHead"><b id="sheetTitle"></b><span><button id="sheetCopy">Copy</button> <button id="sheetClose">Hide</button></span></div><div id="sheetBody"></div></div>
+<div id="guide"><div id="guideHead"><b>Build guide</b><span><button id="guideCopy">Copy all</button> <button id="guideClose">Close</button></span></div><div id="guideToc"></div><div id="guideBody"></div></div>
+<div id="info"><button class="x" id="infoX" aria-label="Close">×</button><div id="infoBody"></div></div>
+<div id="panel">
+  <div id="grab"></div>
+  <div id="panelHead"><b>Controls &amp; build data</b><button id="closePanel">Close</button></div>
+  <div class="sec">
+    <h3>Slat length (cut from 97" boards)</h3>
+    <div class="seg" id="presetSeg">
+      <button data-v="72">72"</button><button data-v="84">84"</button><button data-v="90">90"</button><button data-v="96">96"</button><button data-v="48">48"</button>
+    </div>
+    <p class="hint" id="presetHint"></p>
+  </div>
+  <div class="sec">
+    <h3>Dimensions</h3>
+    <div class="row"><label for="bottom">Panel bottom above floor</label><output id="bottomOut"></output></div>
+    <input type="range" id="bottom" min="0" max="52" step="0.5">
+    <div class="row"><label for="cleat">Notched 2x4 cleat rail (center) above panel bottom</label><output id="cleatOut"></output></div>
+    <input type="range" id="cleat" min="2" max="82" step="0.25">
+    <div class="row"><label for="ceil">Ceiling height</label><output id="ceilOut"></output></div>
+    <input type="range" id="ceil" min="96" max="144" step="1">
+    <div class="row"><label for="booth">Booth inner walls height (lid sits on top)</label><output id="boothOut"></output></div>
+    <input type="range" id="booth" min="96" max="118" step="1">
+    <div class="row"><label for="gap">Slat gap</label><output id="gapOut"></output></div>
+    <input type="range" id="gap" min="0.5" max="1.5" step="0.125">
+  </div>
+  <div class="sec">
+    <h3>Amp wall face (hangs from the ceiling down)</h3>
+    <div class="row"><label for="ampH">Amp wall slat length</label><output id="ampHOut"></output></div>
+    <input type="range" id="ampH" min="36" max="96" step="0.5">
+    <div class="row"><label for="ampGap">Gap at ceiling (lift room for the cleat)</label><output id="ampGapOut"></output></div>
+    <input type="range" id="ampGap" min="0" max="4" step="0.125">
+    <label class="tog"><input type="checkbox" id="t_ampTrim">Ipe trim strip closing the ceiling gap</label>
+    <p class="hint" id="ampHint"></p>
+  </div>
+  <div class="sec">
+    <h3>Room mood and lighting</h3>
+    <div class="seg" id="moodSeg"><button data-v="night">Black room</button><button data-v="day">Daylight</button></div>
+    <div class="row"><label>LED strips</label></div>
+    <div class="seg" id="ledSeg"><button data-v="back">Behind every board</button><button data-v="joints">Panel joints</button><button data-v="off">Off</button></div>
+    <div class="row"><label>LED color</label></div>
+    <div class="seg" id="ledColSeg"><button data-v="warm">Warm</button><button data-v="amber">Amber</button><button data-v="red">Red</button><button data-v="blue">Blue</button><button data-v="purple">Purple</button></div>
+    <label class="tog"><input type="checkbox" id="t_curtains">Draped fabric ceiling</label>
+    <label class="tog"><input type="checkbox" id="t_rugs">Persian-style rugs</label>
+    <label class="tog"><input type="checkbox" id="t_strings">Warm string lights (ceiling swags)</label>
+    <div class="row"><label>Scene</label></div>
+    <div class="seg" id="sceneSeg"><button data-v="session">Session</button><button data-v="show">Show</button><button data-v="work">Work</button><button data-v="late">Late night</button></div>
+    <div class="row"><label for="ledLevel">LED dimmer</label><output id="ledLevelOut"></output></div>
+    <input type="range" id="ledLevel" min="0" max="1" step="0.01">
+    <div class="row"><label for="stringLevel">String lights dimmer</label><output id="stringLevelOut"></output></div>
+    <input type="range" id="stringLevel" min="0" max="1" step="0.01">
+    <div class="row"><label for="ambLevel">Room light</label><output id="ambLevelOut"></output></div>
+    <input type="range" id="ambLevel" min="0" max="1" step="0.01">
+    <div class="row"><label for="ledHex">Custom LED color</label><input type="color" id="ledHex" value="#ffb46a" style="width:56px;height:34px;border:0;background:none"></div>
+    <p class="hint" id="ledHint"></p>
+  </div>
+  <div class="sec">
+    <h3>Panel types (same size, swap 1 for 1)</h3>
+    <div class="seg" id="typeSeg"><button data-v="ipe">All ipe</button><button data-v="alt">Alternate diffusers</button><button data-v="booth">Booth outside absorbers</button><button data-v="amp">Amp wall diffusers</button></div>
+    <p class="hint" id="typeHint">Tap any panel to swap it to ipe slats, a QRD diffuser or an absorber.</p>
+  </div>
+  <div class="sec">
+    <h3>Show</h3>
+    <div class="seg" id="dimSeg"><button data-v="off">Dims off</button><button data-v="key">Key dims</button><button data-v="full">All dims</button></div>
+    <label class="tog"><input type="checkbox" id="t_cutaway">Cutaway: hide the walls between you and the room (3D view)</label>
+    <label class="tog"><input type="checkbox" id="t_walls">Walls</label>
+    <label class="tog"><input type="checkbox" id="t_obstacles">Obstacles (window, amp wall, bar, booth)</label>
+    <label class="tog"><input type="checkbox" id="t_framing">Booth framing (studs, door opening, 2x6 lid)</label>
+    <label class="tog"><input type="checkbox" id="t_hardware">Framing (2x4 rails, wall cleats)</label>
+    <label class="tog"><input type="checkbox" id="t_xray">X-ray slats (see framing behind)</label>
+    <label class="tog"><input type="checkbox" id="t_studs">Stud overlay + cleat stud hits</label>
+    <label class="tog"><input type="checkbox" id="t_ear">Ear-height lines (42" seated, 60" standing)</label>
+    <label class="tog"><input type="checkbox" id="t_ledge">Offcut cap ledge</label>
+  </div>
+  <div class="sec">
+    <h3>Studs: first stud center, 16" on center</h3>
+    <div class="studs" id="studInputs"></div>
+    <p class="hint">Measured along each wall from the corner named. Enter real stud positions before trusting the hit colors.</p>
+  </div>
+  <div class="sec"><h3>Warnings</h3><div id="warns"></div></div>
+  <div class="sec"><h3>Materials &amp; cut list (whole room)</h3><div id="cutlist"></div>
+    <p style="margin:10px 0 0"><button class="copy" id="copyCuts">Copy cut list as text</button> <span id="copyMsg" class="hint"></span></p>
+    <h3 style="margin-top:14px">How to cut (miter saw + table saw)</h3><ol class="steps" id="cutSteps"></ol></div>
+  <div class="sec"><h3>Build data</h3><div id="stats"></div></div>
+  <div class="sec"><p class="hint">Wall lengths and obstacle positions were scaled from a hand-drawn plan. Field-measure before cutting. Tap a panel for its details; double-tap anything to zoom to it.</p></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ---------- constants (inches, pounds) ----------
+   Framing: 2x4 rails laid flat, long (3 1/2") face screwed to the back of the ipe, back face tight to the wall.
+   The cleat rail has a 45° notch, 3/4" deep, along its lower back edge. A matching 3/4" x 2 1/2" wall cleat
+   (45° top bevel) is screwed to the studs and sits fully inside that notch, so every rail bears on the wall.
+   A 1/2" spacer strip on the face of each rail sets the ipe 2" off the wall, so the boards look like they float.
+   Stand-off = 1 1/2" 2x4 + 1/2" spacer + 1" ipe = 3". */
+const SLAT_W=5.5, SLAT_T=1, RAIL_T=1.5, RAIL_H=3.5, SPACER_T=.5, FLOAT=RAIL_T+.5, NOTCH_D=0.75, WC_H=2.5, STANDOFF=RAIL_T+.5+SLAT_T,
+  STOCK=97, KERF=0.125, IPE_PCF=66, BACK_PCF=34, HEAVY=75, RAIL_MAX_SPAN=84, REVEAL=1, STUD_STOCK=96, RAIL_INSET=0.5625;
+const WC_AREA=NOTCH_D*(WC_H+(WC_H-NOTCH_D))/2; /* trapezoid profile, in² */
+const PRESETS={84:{bottom:12},90:{bottom:12},72:{bottom:12},96:{bottom:14},48:{bottom:12}};
+const isTouch=matchMedia('(pointer: coarse)').matches;
+const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,dims:isTouch?'off':'key',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'90',H:90,bottom:12,cleat:78,ampH:62.75,ampGap:1.25,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
+
+/* Plan coords: origin NW interior floor corner, +X east, +Y south. Three: x=X, z=Y, y=up. Walls run clockwise. */
+const WALLS=[
+  {id:'N',name:'North',p0:[0,0],p1:[264,0],from:'NW corner'},
+  {id:'E',name:'East',p0:[264,0],p1:[264,162],from:'NE corner'},
+  {id:'A',name:'Angled',p0:[264,162],p1:[204,194],from:'east end'},
+  {id:'S',name:'South',p0:[204,194],p1:[0,194],from:'angled corner'},
+  {id:'W',name:'West',p0:[0,194],p1:[0,0],from:'SW corner'},
+];
+WALLS.forEach(w=>{const dx=w.p1[0]-w.p0[0],dy=w.p1[1]-w.p0[1];w.L=Math.hypot(dx,dy);w.u=[dx/w.L,dy/w.L];w.n=[-w.u[1],w.u[0]];});
+const WALL=Object.fromEntries(WALLS.map(w=>[w.id,w]));
+/* front face of the amp wall / screen box (88" wide, 20" proud of the north wall), facing south into the room */
+const AMPW={id:'P',name:'Amp wall face',p0:[85,20],p1:[173,20],from:'west end'};
+{const dx=AMPW.p1[0]-AMPW.p0[0],dy=AMPW.p1[1]-AMPW.p0[1];AMPW.L=Math.hypot(dx,dy);AMPW.u=[dx/AMPW.L,dy/AMPW.L];AMPW.n=[-AMPW.u[1],AMPW.u[0]];}
+WALL.P=AMPW;
+/* the amp wall box's two 20" sides, facing west and east */
+const AMPSIDES=[{id:'PW',name:'Amp wall, west side',p0:[85,0],p1:[85,20],from:'north wall'},{id:'PE',name:'Amp wall, east side',p0:[173,20],p1:[173,0],from:'front corner'}];
+AMPSIDES.forEach(w=>{const dx=w.p1[0]-w.p0[0],dy=w.p1[1]-w.p0[1];w.L=Math.hypot(dx,dy);w.u=[dx/w.L,dy/w.L];w.n=[-w.u[1],w.u[0]];WALL[w.id]=w;});
+/* ---------- control / vocal booth: rectangle, double wall (room within a room) ----------
+   Outer leaf: new 2x4 walls on the north and east sides, full height to the room ceiling, 2 layers 5/8" drywall on the room side.
+   Inner leaf: its own 4 walls and lid, 1" air gap from the outer leaf and from the room's west and south walls, 2 layers
+   5/8" drywall on the booth side. The two leaves never touch, so ipe screwed to one leaf does not bridge to the other. */
+const WIN_W=72, WIN_H=24, WIN_SILL=48, LITE_W=20, LITE_B=40, LITE_T=70;
+const BX=108, BY=126, DWL=1.25, ST=3.5, AG=1, DOOR_W=32, RO_W=34, RO_H=82.5, CASING=2.5, BAR_L=72, BAR_D=20, BAR_H=42;
+const OUT_T=DWL+ST;                       /* outer leaf: drywall + studs = 4 3/4" */
+const IN_N=BY+OUT_T+AG+ST+DWL, IN_E=BX-OUT_T-AG-ST-DWL, IN_W=AG+ST+DWL, IN_S=194-AG-ST-DWL;   /* inner faces */
+const DOOR_Y=(IN_N+IN_S)/2;               /* doors centered in the short east side */
+const WIN_X=(IN_W+IN_E)/2, BAR_X0=WIN_X-BAR_L/2;  /* long window centered on the long north side, bar under it */
+const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+const BOOTHW=[
+  {id:'BN',name:'Booth outside, north face',short:'Booth N out',p0:[BX,BY],p1:[0,BY],from:'booth NE corner',leaf:'outer'},
+  {id:'BE',name:'Booth outside, east face',short:'Booth E out',p0:[BX,194],p1:[BX,BY],from:'south wall',leaf:'outer'},
+  {id:'BIN',name:'Booth inside, north wall',short:'Booth N in',p0:[IN_W,IN_N],p1:[IN_E,IN_N],from:'west corner',leaf:'inner'},
+  {id:'BIE',name:'Booth inside, east wall',short:'Booth E in',p0:[IN_E,IN_N],p1:[IN_E,IN_S],from:'north corner',leaf:'inner'},
+  {id:'BIS',name:'Booth inside, south wall',short:'Booth S in',p0:[IN_E,IN_S],p1:[IN_W,IN_S],from:'east corner',leaf:'inner'},
+  {id:'BIW',name:'Booth inside, west wall',short:'Booth W in',p0:[IN_W,IN_S],p1:[IN_W,IN_N],from:'south corner',leaf:'inner'},
+];
+BOOTHW.forEach(w=>{const dx=w.p1[0]-w.p0[0],dy=w.p1[1]-w.p0[1];w.L=Math.hypot(dx,dy);w.u=[dx/w.L,dy/w.L];w.n=[-w.u[1],w.u[0]];w.booth=true;WALL[w.id]=w;});
+const DOOR_S_OUT=194-DOOR_Y, DOOR_S_IN=DOOR_Y-IN_N, BAR_S0=BX-BAR_X0-BAR_L, BAR_S1=BX-BAR_X0;
+const WIN_S_OUT=BX-WIN_X, WIN_S_IN=WIN_X-IN_W;
+function splitSlats(n,max=4){if(n<2)return [];const P=Math.ceil(n/max),base=Math.floor(n/P);let rem=n%P;const arr=Array(P).fill(base);
+  const order=[...arr.keys()].sort((a,b)=>Math.abs(a-(P-1)/2)-Math.abs(b-(P-1)/2));for(const i of order){if(!rem)break;arr[i]++;rem--;}return arr;}
+const EXTRA=[AMPW,...AMPSIDES,...BOOTHW];
+const BVIEWS=['S','W','BN','BE','BIN','BIE','BIS','BIW'];
+const STUD_WALLS=[...WALLS,...EXTRA];
+const AL=WALL.A.L;
+function cornerAngle(wi,wj){const a=[-wi.u[0],-wi.u[1]],b=wj.u;return Math.acos(Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1])));}
+const clearAt=ang=>STANDOFF/Math.tan(ang/2);
+const CL_EA=clearAt(cornerAngle(WALL.E,WALL.A)), CL_AS=clearAt(cornerAngle(WALL.A,WALL.S));
+const RUNS=[
+  {wall:'N',name:'North, door to screen',a:46+CASING+.5,b:85,refA:46,refB:85,comp:[],auto:true},
+  {wall:'N',name:'North, right of screen',a:173,b:264,refA:173,refB:264,comp:[],auto:true},
+  {wall:'E',name:'East',a:STANDOFF+REVEAL,b:162-CL_EA,refA:0,refB:162,comp:[],auto:true},
+  {wall:'A',name:'Angled',a:CL_EA,b:AL-CL_AS,refA:0,refB:AL,comp:[],auto:true},
+  {wall:'S',name:'South, angled corner to booth',a:CL_AS,b:204-BX-STANDOFF-REVEAL,refA:0,refB:204-BX,comp:[],auto:true},
+  {wall:'W',name:'West, booth to north corner',a:194-BY+REVEAL,b:194,refA:194-BY,refB:194,comp:[],auto:true},
+  {wall:'P',name:'Amp wall face',a:0,b:88,refA:0,refB:88,comp:[],auto:true,amp:true},
+  {wall:'PW',name:'Amp wall, west side',a:STANDOFF+REVEAL,b:20,refA:0,refB:20,comp:[],auto:true,amp:true},
+  {wall:'PE',name:'Amp wall, east side',a:0,b:20-STANDOFF-REVEAL,refA:0,refB:20,comp:[],auto:true,amp:true},
+  {wall:'BN',name:'Booth outside, east of window',a:.5,b:WIN_S_OUT-WIN_W/2-CASING-.5,refA:0,refB:WIN_S_OUT-WIN_W/2-CASING,comp:[],auto:true,booth:true},
+  {wall:'BN',name:'Booth outside, above the window',a:WIN_S_OUT-WIN_W/2-CASING,b:WIN_S_OUT+WIN_W/2+CASING,refA:WIN_S_OUT-WIN_W/2-CASING,refB:WIN_S_OUT+WIN_W/2+CASING,comp:[],auto:true,overDoor:'win'},
+  {wall:'BN',name:'Booth outside, west of window',a:WIN_S_OUT+WIN_W/2+CASING+.5,b:BX-STANDOFF-REVEAL,refA:WIN_S_OUT+WIN_W/2+CASING,refB:BX,comp:[],auto:true,booth:true},
+  {wall:'BE',name:'Booth outside, south of door',a:STANDOFF+REVEAL,b:DOOR_S_OUT-DOOR_W/2-CASING-.5,refA:0,refB:DOOR_S_OUT-DOOR_W/2-CASING,comp:[],auto:true,booth:true},
+  {wall:'BE',name:'Booth outside, north of door',a:DOOR_S_OUT+DOOR_W/2+CASING+.5,b:194-BY-.5,refA:DOOR_S_OUT+DOOR_W/2+CASING,refB:194-BY,comp:[],auto:true,booth:true},
+  {wall:'BE',name:'Booth door (slats on the door)',a:DOOR_S_OUT-DOOR_W/2,b:DOOR_S_OUT+DOOR_W/2,refA:DOOR_S_OUT-DOOR_W/2,refB:DOOR_S_OUT+DOOR_W/2,comp:[5],door:true},
+  {wall:'BE',name:'Booth outside, above booth door',a:DOOR_S_OUT-DOOR_W/2-CASING,b:DOOR_S_OUT+DOOR_W/2+CASING,refA:DOOR_S_OUT-DOOR_W/2-CASING,refB:DOOR_S_OUT+DOOR_W/2+CASING,comp:[],auto:true,overDoor:'room'},
+  {wall:'N',name:'North, above room door',a:10-CASING,b:46+CASING,refA:10-CASING,refB:46+CASING,comp:[],auto:true,overDoor:'room'},
+];
+const PERIM=WALLS.reduce((s,w)=>s+w.L,0);
+/* each run's slat length, bottom above floor and cleat-rail center (from panel bottom) */
+const OVER_BOT=80+CASING+1;
+const cleatFor=H=>H<30?H/2+1.75:H-12;
+function runSpec(r){if(r.door)return {H:79,bot:.5,cleat:null};if(r.overBar){const H=state.bottom+state.H-(BAR_H+2);return {H,bot:BAR_H+2,cleat:cleatFor(H)};}if(r.overDoor){const top=state.bottom+state.H;const bot=r.overDoor==='win'?WIN_SILL+WIN_H+CASING+1:OVER_BOT;const H=Math.max(4,top-bot);return {H,bot,cleat:cleatFor(H)};}if(r.amp){const H=state.ampH;return {H,bot:state.ceil-state.ampGap-H,cleat:H-12};}return {H:state.H,bot:state.bottom,cleat:state.cleat};}
+
+/* ---------- formatting ---------- */
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+function fIn(v){const r=Math.round(v*8)/8;const neg=r<0;const a=Math.abs(r);const wh=Math.floor(a+1e-9);let fr=Math.round((a-wh)*8);let s=wh?String(wh):'';if(fr){const g=gcd(fr,8);s+=(s?' ':'')+(fr/g)+'/'+(8/g);}if(!s)s='0';return (neg?'-':'')+s+'"';}
+function fFt(v){if(Math.abs(v)<24)return fIn(v);const ft=Math.floor((v+1e-6)/12);return ft+"' "+fIn(v-ft*12);}
+const fBoth=v=>Math.abs(v)<24?fIn(v):fFt(v)+' ('+fIn(v)+')';
+const lb=v=>Math.round(v)+' lb';
+
+/* ---------- three setup ---------- */
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch?1.75:2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#ece8e1');
+const camera=new THREE.PerspectiveCamera(42,1,0.5,6000);
+const controls=new OrbitControls(camera,canvas);
+Object.assign(controls,{enableDamping:true,dampingFactor:.09,rotateSpeed:isTouch?.55:.8,zoomSpeed:isTouch?1.1:1,panSpeed:isTouch?1:1,minDistance:6,maxDistance:5000,maxPolarAngle:Math.PI*.495,screenSpacePanning:true,zoomToCursor:true});
+controls.addEventListener('start',()=>{tween=null;});
+const hemi=new THREE.HemisphereLight(0xffffff,0xb9b0a3,1.1);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffffff,1.6);sun.position.set(380,420,320);sun.target.position.set(132,0,97);
+sun.castShadow=true;const sm=isTouch?1024:2048;sun.shadow.mapSize.set(sm,sm);Object.assign(sun.shadow.camera,{left:-260,right:260,top:260,bottom:-260,near:10,far:1400});sun.shadow.bias=-0.0005;
+scene.add(sun,sun.target);
+const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(512,512),.8,.5,1.0);composer.addPass(bloom);composer.addPass(new OutputPass());
+const LED_COLORS={warm:'#ffb46a',amber:'#ff8a1f',red:'#ff2a2a',blue:'#3d7bff',purple:'#b04dff'};
+/* day / black-room mood */
+function applyMood(){const n=state.night;document.body.style.background=n?'#060607':'#ece8e1';
+  scene.background.set(n?'#060607':'#ece8e1');
+  hemi.intensity=n?.55:1.1;hemi.color.set(n?'#ffcf9e':'#ffffff');hemi.groundColor.set(n?'#120d0a':'#b9b0a3');
+  sun.intensity=n?0:1.6;sun.castShadow=!n;
+  M.wallP.color.set(n?'#0b0b0c':'#e4dfd6');M.floor.color.set(n?'#17130f':'#f5f2ed');M.ceilP.color.set(n?'#08080a':'#efebe5');
+  M.obst.color.set(n?'#1d1d20':'#8e8a85');M.booth.color.set(n?'#121214':'#7b8794');M.booth.opacity=n?.96:.35;M.booth.transparent=!n;M.booth.depthWrite=n;M.booth.needsUpdate=true;
+  M.gridLine.color.set(n?'#1a1714':'#d8d1c6');M.edge.color.set(n?'#1f1c1a':'#b5ab9c');
+  /* black room: every surface that is not ipe, glass or a rug goes black */
+  M.floor.color.set(n?'#0c0b0a':'#f5f2ed');M.obst.color.set(n?'#0f0f11':'#8e8a85');M.booth.color.set(n?'#0d0d0f':'#7b8794');
+  M.dwIn.color.set(n?'#0e0e10':'#bdb7ae');M.curtain.color.set(n?'#0d0c0e':'#4a1820');M.door.color.set(n?'#0f0e0d':'#2a2622');M.bar.color.set(n?'#0e0d0c':'#2b2420');M.jamb.color.set(n?'#0a0a0b':'#1a1a1c');}
+const roomG=new THREE.Group(), explG=new THREE.Group(), sectG=new THREE.Group();scene.add(roomG,explG,sectG);
+explG.position.set(420,0,0);sectG.position.set(520,0,0);
+let labels=[];
+
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const grain=(()=>{const c=document.createElement('canvas');c.width=64;c.height=512;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,64,512);const r=rng(7);for(let i=0;i<70;i++){x.strokeStyle=`rgba(0,0,0,${0.04+r()*0.09})`;x.lineWidth=0.5+r()*1.6;x.beginPath();let px=r()*64;x.moveTo(px,0);for(let y=0;y<=512;y+=32){px+=(r()-.5)*3;x.lineTo(px,y);}x.stroke();}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.userData.keep=true;return t;})();
+
+const M={
+  rail:new THREE.MeshStandardMaterial({color:'#dcc9a2',roughness:.8}),
+  crail:new THREE.MeshStandardMaterial({color:'#e3b979',roughness:.75}),
+  wcleat:new THREE.MeshStandardMaterial({color:'#8f6f3c',roughness:.8}),
+  wall:new THREE.MeshStandardMaterial({color:'#d9d3c9',transparent:true,opacity:.22,depthWrite:false,side:THREE.DoubleSide}),
+  wallP:new THREE.MeshStandardMaterial({color:'#0b0b0c',roughness:.95}),
+  ceilP:new THREE.MeshStandardMaterial({color:'#08080a',roughness:1}),
+  gridLine:new THREE.LineBasicMaterial({color:'#221d18'}),edge:new THREE.LineBasicMaterial({color:'#2a2622'}),
+  bulb:new THREE.MeshBasicMaterial({color:new THREE.Color('#ffc477').multiplyScalar(3.2),toneMapped:false}),
+  wire:new THREE.LineBasicMaterial({color:'#2b2520'}),
+  floor:new THREE.MeshStandardMaterial({color:'#f5f2ed',roughness:1,side:THREE.DoubleSide}),
+  obst:new THREE.MeshStandardMaterial({color:'#8e8a85',transparent:true,opacity:.55,depthWrite:false}),
+  booth:new THREE.MeshStandardMaterial({color:'#7b8794',transparent:true,opacity:.35,depthWrite:false}),
+  glass:new THREE.MeshStandardMaterial({color:'#9fd0ff',transparent:true,opacity:.45,depthWrite:false,side:THREE.DoubleSide}),
+  stud:new THREE.MeshBasicMaterial({color:'#4c8dff',transparent:true,opacity:.35,depthWrite:false}),
+  ledgeA:new THREE.MeshStandardMaterial({color:'#6a3d24',map:grain,roughness:.5}),
+  ledgeB:new THREE.MeshStandardMaterial({color:'#5d3520',map:grain,roughness:.5}),
+  bg:new THREE.MeshStandardMaterial({color:'#cfc8bc'}),
+  bar:new THREE.MeshStandardMaterial({color:'#2b2420',roughness:.7}),
+  curtain:new THREE.MeshStandardMaterial({color:'#4a1820',roughness:1,side:THREE.DoubleSide}),
+  ply:new THREE.MeshStandardMaterial({color:'#141416',roughness:.9}),
+  fin:new THREE.MeshStandardMaterial({color:'#7d4a2c',map:grain,roughness:.55}),finSel:new THREE.MeshStandardMaterial({color:'#7d4a2c',map:grain,emissive:'#6a4500'}),
+  fabric:new THREE.MeshStandardMaterial({color:'#1b1b1e',roughness:1}),fabricSel:new THREE.MeshStandardMaterial({color:'#1b1b1e',emissive:'#4a3000'}),
+  drywall:new THREE.MeshStandardMaterial({color:'#e9e4dc'}),
+  dwIn:new THREE.MeshStandardMaterial({color:'#bdb7ae',roughness:.95}),
+  glassDark:new THREE.MeshStandardMaterial({color:'#6f8aa3',transparent:true,opacity:.45,roughness:.1}),
+  jamb:new THREE.MeshStandardMaterial({color:'#1a1a1c',roughness:.9}),
+  door:new THREE.MeshStandardMaterial({color:'#2a2622',roughness:.6}),
+  casing:new THREE.MeshStandardMaterial({color:'#6e3f25',map:grain,roughness:.5}),
+  boothGhost:new THREE.MeshStandardMaterial({color:'#7b8794',transparent:true,opacity:.12,depthWrite:false}),
+  plate:new THREE.MeshStandardMaterial({color:'#d8b57a',roughness:.85}),
+  header:new THREE.MeshStandardMaterial({color:'#c99a57',roughness:.85}),
+  jack:new THREE.MeshStandardMaterial({color:'#e2c08a',roughness:.85}),
+  studWood:new THREE.MeshStandardMaterial({color:'#c9a971',roughness:.9}),
+};
+Object.values(M).forEach(m=>m.userData.keep=true);
+const hitColor=h=>h>=2?'#2f9e44':h===1?'#e8890c':'#e03131';
+const DIM='#d6336c';
+
+function box(w,h,d,mat,x,y,z,parent){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);if(parent)parent.add(m);return m;}
+/* 2D profile (x = depth from wall, y = height, centered on rail) extruded along the wall (local x). */
+function prism(shape,L){const g=new THREE.ExtrudeGeometry(shape,{depth:L,bevelEnabled:false});g.rotateY(-Math.PI/2);g.translate(L/2,0,0);return g;}
+function railShape(notched){const h=RAIL_H/2,s=new THREE.Shape();
+  if(!notched){s.moveTo(0,-h);s.lineTo(RAIL_T,-h);s.lineTo(RAIL_T,h);s.lineTo(0,h);}
+  else{s.moveTo(0,-h+WC_H-NOTCH_D);s.lineTo(0,h);s.lineTo(RAIL_T,h);s.lineTo(RAIL_T,-h);s.lineTo(NOTCH_D,-h);s.lineTo(NOTCH_D,-h+WC_H);}
+  s.closePath();return s;}
+function wallCleatShape(){const h=RAIL_H/2,s=new THREE.Shape();s.moveTo(0,-h);s.lineTo(NOTCH_D,-h);s.lineTo(NOTCH_D,-h+WC_H);s.lineTo(0,-h+WC_H-NOTCH_D);s.closePath();return s;}
+function rail(L,notched,mat,x,y,z,parent){const m=new THREE.Mesh(prism(railShape(notched),L),mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;}
+function wallCleat(L,mat,x,y,z,parent){const m=new THREE.Mesh(prism(wallCleatShape(),L),mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;}
+
+function label(text,pos,parent,o={}){
+  const fs=38,pad=12,c=document.createElement('canvas'),x=c.getContext('2d');x.font=`600 ${fs}px system-ui,sans-serif`;
+  const tw=x.measureText(text).width;c.width=Math.ceil(tw+pad*2);c.height=fs+pad*1.4;
+  x.font=`600 ${fs}px system-ui,sans-serif`;x.fillStyle=o.bg||'rgba(29,29,31,.88)';
+  const r=12,W=c.width,H=c.height;x.beginPath();x.moveTo(r,0);x.arcTo(W,0,W,H,r);x.arcTo(W,H,0,H,r);x.arcTo(0,H,0,0,r);x.arcTo(0,0,W,0,r);x.fill();
+  x.fillStyle=o.color||'#fff';x.textBaseline='middle';x.fillText(text,pad,H/2+1);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,color:new THREE.Color(.9,.9,.9),depthTest:false,depthWrite:false,sizeAttenuation:false,transparent:true}));
+  s.renderOrder=1000;s.position.copy(pos);s.userData.aspect=W/H;s.userData.k=o.k||1;s.raycast=()=>{};parent.add(s);labels.push(s);scaleLabel(s);return s;
+}
+function scaleLabel(s){const h=canvas.clientHeight||700;const px=(h<720||isTouch?16.5:20)*s.userData.k;const v=THREE.MathUtils.degToRad(camera.fov);const sc=px/h*2*Math.tan(v/2);s.scale.set(sc*s.userData.aspect,sc,1);}
+const coneGeo=new THREE.ConeGeometry(.75,2.4,10);coneGeo.userData.keep=true;
+const coneGeoS=new THREE.ConeGeometry(.12,.4,10);coneGeoS.userData.keep=true;
+function dim(parent,a,b,text,o={}){
+  const col=o.color||DIM;const g=new THREE.BufferGeometry().setFromPoints([a,b]);
+  const ln=new THREE.Line(g,new THREE.LineBasicMaterial({color:col,depthTest:false,transparent:true}));ln.renderOrder=999;ln.raycast=()=>{};parent.add(ln);
+  const d=b.clone().sub(a);const L=d.length();d.normalize();
+  const cg=o.small?coneGeoS:coneGeo,ah=o.small?.2:1.2;
+  if(L>(o.small?.6:7)){const cm=new THREE.MeshBasicMaterial({color:col,depthTest:false,transparent:true});
+    for(const [p,dir] of [[b,d],[a,d.clone().negate()]]){const cn=new THREE.Mesh(cg,cm);cn.position.copy(p).addScaledVector(dir,-ah);cn.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);cn.renderOrder=999;cn.raycast=()=>{};parent.add(cn);}}
+  if(text)label(text,a.clone().add(b).multiplyScalar(.5).add(o.off||new THREE.Vector3()),parent,{bg:o.bg||col,k:o.k});
+}
+const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+function wallGroup(w){const g=new THREE.Group();const u=V(w.u[0],0,w.u[1]),n=V(w.n[0],0,w.n[1]);g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(u,V(0,1,0),n));g.position.set(w.p0[0],0,w.p0[1]);return g;}
+function disposeAll(g){g.traverse(o=>{if(o.geometry&&!o.geometry.userData.keep)o.geometry.dispose();const ms=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];ms.forEach(m=>{if(m.userData&&m.userData.keep)return;if(m.map&&!m.map.userData.keep)m.map.dispose();m.dispose();});});g.clear();}
+
+/* ---------- layout + numbers ---------- */
+let panels=[],stats={},warns=[];
+/* rail centers from panel bottom. The cleat rail is the notched one. */
+function railYs(H,yc=state.cleat){let ys=[6,yc];
+  if(H-6-yc>9)ys.push(H-6);
+  if(yc-6<9)ys=ys.filter(y=>y!==6);
+  ys.sort((a,b)=>a-b);
+  const out=[ys[0]];
+  for(let i=1;i<ys.length;i++){const span=ys[i]-ys[i-1];const n=Math.ceil(span/RAIL_MAX_SPAN);for(let j=1;j<n;j++)out.push(ys[i-1]+span*j/n);out.push(ys[i]);}
+  return out;
+}
+function studs(w){const a=[];const off=state.studOff[w.id];for(let s=off;s<=w.L+1e-6;s+=16)a.push(s);return a;}
+/* ---------- booth framing: double wall, room within a room ----------
+   Each wall is framed along its face's axis (s). s0..s1 is the stud-wall length, H the wall height, door = RO center or null. */
+function frameWall(id,s0,s1,H,door,label,win,winHdr='2x6'){
+  const F=[],cuts=[];const studL=H-4.5;const stud=(c,y0,y1,kind)=>F.push({id,kind,s0:c-.75,s1:c+.75,y0,y1});
+  let ro=null;if(door!=null)ro=[door-RO_W/2,door+RO_W/2];
+  let wo=null;if(win!=null)wo=[win-(WIN_W+1)/2,win+(WIN_W+1)/2];
+  const xs=[s0+.75,s1-.75];for(let x=s0+16;x<s1-3;x+=16){if(ro&&x>ro[0]-4&&x<ro[1]+4)continue;if(wo&&x>wo[0]-4&&x<wo[1]+4)continue;xs.push(x);}
+  if(wo){const sill=WIN_SILL-.5,head=WIN_SILL+WIN_H+.5;xs.push(wo[0]-2.25,wo[1]+2.25);
+    stud(wo[0]-.75,1.5,head,'jack');stud(wo[1]+.75,1.5,head,'jack');
+    const hh=winHdr==='2x10'?9.25:5.5;F.push({id,kind:'header',s0:wo[0]-1.5,s1:wo[1]+1.5,y0:head,y1:head+hh});F.push({id,kind:'plate',s0:wo[0],s1:wo[1],y0:sill-3,y1:sill});
+    const cb=sill-3-1.5,ca=(H-3)-(head+hh);const cx=[];for(let x=wo[0]+8;x<wo[1]-4;x+=16)cx.push(x);cx.forEach(x=>{stud(x,1.5,sill-3,'cripple');if(ca>.5)stud(x,head+hh,H-3,'cripple');});
+    cuts.push({len:head-1.5,label:`${label}: window jacks`,n:2,lum:'2x4'},{len:WIN_W+1,label:`${label}: window rough sill (doubled)`,n:2,lum:'2x4'},
+      {len:cb,label:`${label}: cripples under the window`,n:cx.length,lum:'2x4'},{len:WIN_W+4,label:`${label}: window header, 2 pieces + 1/2" spacer`,n:2,lum:winHdr});
+    if(ca>.5)cuts.push({len:ca,label:`${label}: cripples over the window header`,n:cx.length,lum:'2x4'});}
+  if(ro){xs.push(ro[0]-2.25,ro[1]+2.25);stud(ro[0]-.75,1.5,RO_H,'jack');stud(ro[1]+.75,1.5,RO_H,'jack');
+    F.push({id,kind:'header',s0:ro[0]-1.5,s1:ro[1]+1.5,y0:RO_H,y1:RO_H+5.5});const crH=(H-3)-(RO_H+5.5);
+    [door-12,door,door+12].forEach(x=>stud(x,RO_H+5.5,H-3,'cripple'));
+    cuts.push({len:RO_H-1.5,label:`${label}: door jacks`,n:2,lum:'2x4'});if(crH>.5)cuts.push({len:crH,label:`${label}: cripples over the header`,n:3,lum:'2x4'});
+    cuts.push({len:RO_W+3,label:`${label}: door header, 2 pieces + 1/2" spacer`,n:2,lum:'2x6'});}
+  xs.forEach(x=>stud(x,1.5,H-3,'stud'));
+  [[0,1.5],[H-3,H-1.5],[H-1.5,H]].forEach(([y0,y1])=>F.push({id,kind:'plate',s0,s1,y0,y1}));
+  const len=s1-s0;
+  if(len<=95)cuts.push({len,label:`${label}: plates (bottom + double top)`,n:3,lum:'2x4'});
+  else{const mid=xs.filter(x=>x>s0+len-95&&x<s0+95).sort((a,b)=>Math.abs(a-(s0+s1)/2)-Math.abs(b-(s0+s1)/2));const sp=mid[0]??(s0+len/2);
+    cuts.push({len:sp-s0,label:`${label}: plates, piece 1 (spliced over a stud)`,n:3,lum:'2x4'},{len:s1-sp,label:`${label}: plates, piece 2`,n:3,lum:'2x4'});}
+  cuts.push({len:studL,label:`${label}: studs`,n:xs.length,lum:'2x4'});
+  return {F,cuts,len,H,studs:xs.length,door:ro,win:wo};
+}
+function boothFraming(){
+  const Hc=state.ceil,Hb=state.booth,walls={},F=[],cuts=[];
+  const add=(k,fw)=>{walls[k]=fw;F.push(...fw.F);cuts.push(...fw.cuts);};
+  /* outer leaf (to the ceiling): north wall runs from the room's west wall to the outer east wall; east wall runs full depth */
+  add('BN',frameWall('BN',OUT_T,BX,Hc,null,'Outer north wall',WIN_S_OUT,'2x6'));
+  add('BE',frameWall('BE',0,194-BY-DWL,Hc,DOOR_S_OUT,'Outer east wall'));
+  /* inner leaf (booth height): north and south walls full length, east and west walls between them */
+  const xW=AG,xE=IN_E+DWL+ST,yN=IN_N-DWL-ST,yS=IN_S+DWL+ST;
+  add('BIN',frameWall('BIN',xW-IN_W,xE-IN_W,Hb,null,'Inner north wall',WIN_S_IN,'2x10'));
+  add('BIS',frameWall('BIS',IN_E-xE,IN_E-xW,Hb,null,'Inner south wall'));
+  add('BIE',frameWall('BIE',yN+ST-IN_N,yS-ST-IN_N,Hb,DOOR_S_IN,'Inner east wall'));
+  add('BIW',frameWall('BIW',IN_S-(yS-ST),IN_S-(yN+ST),Hb,null,'Inner west wall'));
+  /* lid: 2x6 joists 16" on center north-south, bearing on the inner north and south top plates */
+  const jx=[xW+.75];for(let x=16;x<xE-.75-4;x+=16)jx.push(x);jx.push(xE-.75);const joists=jx.map(x=>({x,y0:yN,y1:yS,len:yS-yN}));
+  joists.forEach(j=>cuts.push({len:j.len,label:'Lid joists (bear on the inner north and south top plates)',n:1,lum:'2x6'}));
+  /* drywall (2 layers 5/8") and insulation areas */
+  const outerArea=(BX+194-BY)*Hc-RO_W*RO_H, innerArea=2*((IN_E-IN_W)+(IN_S-IN_N))*Hb-RO_W*RO_H, lid=(IN_E-IN_W)*(IN_S-IN_N);
+  return {walls,F,cuts,joists,xW,xE,yN,yS,dwSqft:2*(outerArea+innerArea+lid)/144,insSqft:(outerArea+innerArea+lid)/144,interior:[IN_E-IN_W,IN_S-IN_N,Hb-DWL]};
+}
+/* LED strip positions along a run: every panel joint, plus both run ends when there is at least 3/4" to the next stop */
+function ledXs(r){if(state.led==='off'||r.door)return [];const g=state.gap,xs=[];
+  if(r.start-r.refA>=.75)xs.push(r.start-Math.min(g/2,(r.start-r.refA)/2));
+  if(state.led==='back'){r.panels.forEach(p=>{if(p.type==='ipe')for(let k=0;k<p.k;k++)xs.push(p.s0+k*(SLAT_W+g)+SLAT_W/2);});return xs;}
+  r.panels.forEach((p,i)=>{if(i<r.panels.length-1)xs.push(p.s1+g/2);});
+  if(r.refB-r.end>=.75)xs.push(r.end+Math.min(g/2,(r.refB-r.end)/2));
+  return xs;}
+/* first-fit decreasing; each cut goes to the shortest stock that holds it (8, 10, 12 ft) */
+function packByStock(cuts){const out={};cuts.forEach(c=>{const st=[96,120,144].find(L=>c.len<=L-.5)||144;(out[st]=out[st]||[]).push(c);});return Object.entries(out).map(([st,list])=>({ft:st/12,boards:packBoards(list,+st).length}));}
+/* first-fit decreasing onto 96" boards */
+function packBoards(cuts,stock=96){const bins=[];const list=[];cuts.forEach(c=>{if(c.len>stock-.5){const n=Math.ceil(c.len/(stock-1));for(let i=0;i<n;i++)list.push({...c,len:c.len/n});}else list.push(c);});[...list].sort((a,b)=>b.len-a.len).forEach(c=>{let b=bins.find(b=>b.left>=c.len+KERF);if(!b){b={left:stock,items:[]};bins.push(b);}b.items.push(c);b.left-=c.len+KERF;});return bins;}
+let framing=null;
+/* ---------- diffuser / absorber panels: same footprint as the ipe panel they replace ----------
+   Diffuser: 1D quadratic-residue diffuser, N=7, well depths 0,1,4,2,2,4,1 inches (n² mod 7), 1/2" plywood back, fins and
+   well floors, ipe-faced fins. Absorber: 2" mineral wool board in a 1x3 frame, wrapped in black acoustic fabric. */
+const QRD=[0,1,4,2,2,4,1],DIFF_D=4,FIN_T=.5,PLY_PCF=40;
+const wellW=w=>(w-.25-(QRD.length+1)*FIN_T)/QRD.length;
+function diffLb(w,H){const back=(w-.25)*H*.5,fins=(QRD.length+1)*FIN_T*DIFF_D*H,floors=QRD.filter(d=>d>0).length*wellW(w)*H*.5;return (back+fins+floors)/1728*PLY_PCF;}
+function absLb(w,H){return ((w-.25)*H*2)/1728*8+(2*(w+H)*.75*2.5)/1728*34;}
+const DEPTH={ipe:STANDOFF,diff:RAIL_T+.5+DIFF_D,abs:RAIL_T+2.75};
+function layout(){
+  framing=boothFraming();
+  const g=state.gap;let id=1;panels=[];
+  RUNS.forEach(r=>{
+    const sp=runSpec(r);r.sp=sp;const rys=r.door?[]:railYs(sp.H,sp.cleat);const slatLb=SLAT_W*SLAT_T*sp.H/1728*IPE_PCF;
+    if(r.auto)r.comp=splitSlats(Math.floor((r.b-r.a+g)/(SLAT_W+g)),sp.H>=60?3:4);
+    const ws=r.comp.map(k=>k*SLAT_W+(k-1)*g);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*g;r.avail=r.b-r.a;r.over=r.used-r.avail;
+    let s=r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];
+    ws.forEach((w,i)=>{const k=r.comp[i],Lr=w-2*RAIL_INSET,Lc=Lr,c0=s+(w-Lc)/2,c1=s+(w+Lc)/2;
+      const railIn3=r.door?0:(rys.length-1)*Lr*RAIL_H*RAIL_T+Lr*(RAIL_H*RAIL_T-WC_AREA)+rys.length*Lr*RAIL_H*SPACER_T;
+      const hits=2;
+      const key=RUNS.indexOf(r)+'-'+i;const type=r.door||r.overDoor?'ipe':(state.ptypes[key]||'ipe');
+      const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,s0:s,s1:s+w,Lr,Lc,c0,c1,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys,slatLb:type==='ipe'?(r.door?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79)*slatLb:k*slatLb):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:railIn3/1728*BACK_PCF,hits,nr:rys.length};
+      p.weight=p.slatLb+p.backLb;
+      r.panels.push(p);panels.push(p);s+=w+g;});
+    r.end=s-g;
+  });
+  const grp=(H,runs)=>{const ps=panels.filter(p=>runs.includes(p.run)&&p.type==='ipe');const n=ps.reduce((a,p)=>a+p.k,0);const cuts=Math.max(1,Math.floor((STOCK+KERF)/(H+KERF)));const boards=Math.ceil(n/cuts);
+    return {H,slats:n,cuts,boards,offEach:STOCK-cuts*(H+KERF),offTotal:boards*STOCK-n*(H+KERF),slatLb:SLAT_W*SLAT_T*H/1728*IPE_PCF,ps};};
+  const main=grp(state.H,RUNS.filter(r=>!r.amp&&!r.overDoor&&!r.overBar&&!r.door)),amp=grp(state.ampH,RUNS.filter(r=>r.amp)),booth=grp(state.H,[]),barG=grp(state.bottom+state.H-BAR_H-2,RUNS.filter(r=>r.overBar)),doorG=grp(79,RUNS.filter(r=>r.door));
+  const overPs=panels.filter(p=>p.run.overDoor);const over={slats:overPs.reduce((a,p)=>a+p.k,0),lb:overPs.reduce((a,p)=>a+p.slatLb,0),pieces:RUNS.filter(r=>r.overDoor).map(r=>({name:r.name,n:r.panels.reduce((a,p)=>a+p.k,0),H:r.sp.H}))};
+  const slats=main.slats+amp.slats+booth.slats+over.slats+barG.slats+doorG.slats,boards=main.boards+amp.boards+booth.boards+barG.boards+doorG.boards;
+  const bandLen=RUNS.filter(r=>!r.amp&&!r.booth&&!r.overDoor&&!r.overBar&&!r.door).reduce((a,r)=>a+r.used,0);
+  const railCuts={};panels.filter(p=>p.nr>0).forEach(p=>{const L=+p.Lr.toFixed(4);railCuts[L]=(railCuts[L]||0)+p.nr;});
+  let twoByBoards=0;Object.entries(railCuts).forEach(([L,n])=>{const per=Math.floor((STUD_STOCK+KERF)/(+L+KERF));twoByBoards+=Math.ceil(n/per);});
+  const hung=panels.filter(p=>p.nr>0);const wallCleatLb=hung.reduce((a,p)=>a+p.Lc*WC_AREA,0)/1728*BACK_PCF;
+  const byK=(ps,k)=>(ps.find(p=>p.k===k)||{}).weight;
+  stats={main,amp,booth,over,barG,doorG,hung,slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
+    n:{3:panels.filter(p=>p.k===3).length,4:panels.filter(p=>p.k===4).length,5:panels.filter(p=>p.k===5).length},
+    w4:byK(main.ps,4),w3:byK(main.ps,3),aw4:byK(amp.ps,4),aw5:byK(amp.ps,5),bw4:byK(booth.ps,4),bw3:byK(booth.ps,3),
+    ipeTotal:main.slats*main.slatLb+amp.slats*amp.slatLb+booth.slats*booth.slatLb+over.lb+barG.slats*barG.slatLb+doorG.slats*doorG.slatLb,total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
+    cleatFt:hung.reduce((a,p)=>a+p.Lc,0)/12,railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
+    usedMain:main.slats*main.H/(main.boards*STOCK),used:(main.slats*main.H+amp.slats*amp.H+booth.slats*booth.H)/(boards*STOCK),
+    bandArea:RUNS.reduce((a,r)=>a+r.used*r.sp.H,0),wallArea:PERIM*state.ceil,slatArea:panels.reduce((a,p)=>a+p.k*SLAT_W*p.H,0),
+    ledgeOk:main.offEach>=6,ledgeUsed:bandLen,ledgeAvail:main.offEach>=6?main.boards*main.offEach:0};
+  {const D=panels.filter(p=>p.type==='diff'),A=panels.filter(p=>p.type==='abs');const rows=[];
+    if(D.length){const ply=D.reduce((a,p)=>a+((p.w-.25)*p.H+(QRD.length+1)*DIFF_D*p.H+QRD.filter(d=>d>0).length*wellW(p.w)*p.H),0)/144;
+      rows.push([`QRD diffusers (N=7, wells 0-1-4-2-2-4-1" deep)`,`${D.length} panels`,D.map(p=>`${p.id} ${fIn(p.w)}×${fIn(p.H)}`).join(', ')]);
+      rows.push(['1/2" Baltic birch 4×8 sheets (backs, fins, well floors), finish black',`${Math.ceil(ply*1.15/32)}`,`${ply.toFixed(0)} sq ft`]);
+      rows.push(['Fins per diffuser',`${QRD.length+1} × 1/2" × ${DIFF_D}" × panel height`,`front edge faced with a 1/2" ipe strip ripped from offcuts`]);
+      rows.push(['Well width',D.map(p=>fIn(wellW(p.w))).filter((v,i,a)=>a.indexOf(v)===i).join(' / '),'well floors set back 0, 1, 4, 2, 2, 4, 1" from the front']);}
+    if(A.length){const area=A.reduce((a,p)=>a+(p.w-.25)*p.H,0)/144;
+      rows.push(['Absorbers (2" mineral wool board, black fabric)',`${A.length} panels`,A.map(p=>p.id).join(', ')]);
+      rows.push(['2" acoustic mineral wool board',`${area.toFixed(0)} sq ft`]);
+      rows.push(['Black acoustic fabric, 60" wide',`${A.reduce((a,p)=>a+Math.ceil((p.H+6)/36*4)/4,0)} yd`]);
+      rows.push(['1x3 frame stock',`${(A.reduce((a,p)=>a+2*(p.w+p.H),0)/12).toFixed(0)} ft`]);}
+    stats.types={diff:D.length,abs:A.length,rows};}
+  {let count=0,len=0;RUNS.forEach(r=>{const n=ledXs(r).length;count+=n;len+=n*(r.sp.H-1);});stats.led={count,ft:len/12};}
+  warns=[];
+  if(state.cleat<RAIL_H/2||state.cleat>state.H-RAIL_H/2)warns.push(['bad','The notched cleat rail runs past the end of the slats. Move it inside the panel.']);
+  if(state.bottom+state.H+1>state.booth-DWL)warns.push(['bad',`Inside the booth the panels top out at ${fFt(state.bottom+state.H)} but the booth ceiling is ${fFt(state.booth-DWL)}. Raise the inner booth walls to at least ${fIn(state.bottom+state.H+1+DWL)} so panels can lift onto their cleats.`]);
+  if(state.booth+5.5+1>state.ceil)warns.push(['bad','The booth lid would hit the room ceiling. Lower the inner booth walls.']);
+  RUNS.forEach(r=>{if(r.over>1e-6)warns.push(['bad',`${r.name} run is ${fIn(r.over)} too long for its wall space. Drop a slat or reduce the gap.`]);});
+  const top=state.bottom+state.H;
+  if(top>state.ceil)warns.push(['bad',`Panel top (${fFt(top)}) is above the ceiling (${fFt(state.ceil)}).`]);
+  else if(state.ceil-top<NOTCH_D+2)warns.push(['warn',`Only ${fIn(state.ceil-top)} between panel tops and ceiling. Each panel must lift about ${fIn(NOTCH_D+.25)} to drop onto its cleat.`]);
+  if(state.bottom<4)warns.push(['warn',`Panel bottoms are ${fIn(state.bottom)} off the floor. Leave room for baseboards and cleaning.`]);
+  if(state.ampGap<NOTCH_D+.25)warns.push(['bad',`Amp wall panels sit ${fIn(state.ampGap)} below the ceiling. They need at least ${fIn(NOTCH_D+.25)} to lift onto the cleat, so they cannot be hung.`]);
+  {const dp=panels.find(p=>p.run.door);if(dp)warns.push(['warn',`Ipe on the booth door adds about ${lb(dp.weight)} to the door. The door slats are resawn to 1/2" thick; hang the door on 4 heavy-duty ball-bearing hinges.`]);}
+  {const tight=panels.filter(p=>p.type!=='ipe'&&((p.run.panels[0]===p&&p.s0-p.run.refA<DEPTH[p.type])||(p.run.panels.at(-1)===p&&p.run.refB-p.s1<DEPTH[p.type])));
+    if(tight.length)warns.push(['warn',`${tight.map(p=>p.id).join(', ')}: ${tight[0].type==='diff'?'diffusers stick out '+fIn(DEPTH.diff):'absorbers stick out '+fIn(DEPTH.abs)} and sit at a corner or edge. Check they clear the neighboring wall or door trim.`]);}
+  const heavy=panels.filter(p=>p.weight>HEAVY&&!p.run.door);
+  if(heavy.length)warns.push(['warn',`${heavy.length} panels weigh over ${HEAVY} lb (${heavy.map(p=>p.id).join(', ')}). Two people to hang; wall cleat must hit 2+ studs.`]);
+  RUNS.forEach(r=>{if(!r.panels.length||r.door)return;const st=studs(WALL[r.wall]).filter(x=>x>=r.start&&x<=r.end).length;r.cleatStuds=st;
+    if(state.studs&&st<2)warns.push(['warn',`${r.name}: its wall cleat crosses ${st} stud${st===1?'':'s'} (set the stud positions to check). Add toggle bolts between studs if that is right.`]);});
+  if(state.ledge&&!stats.ledgeOk)warns.push(['warn',`Offcuts are only ${fIn(Math.max(0,main.offEach))} long at this slat length, too short for a cap ledge.`]);
+  if(state.ledge&&stats.ledgeOk&&stats.ledgeUsed>stats.ledgeAvail)warns.push(['bad','Not enough offcut length for the cap ledge.']);
+}
+
+/* ---------- build: room ---------- */
+function buildRoom(){
+  const H=state.H,bot=state.bottom,top=bot+H,C=state.ceil,full=state.dims==='full',key=state.dims!=='off';
+  const sh=new THREE.Shape();sh.moveTo(0,0);[[264,0],[264,162],[204,194],[0,194]].forEach(p=>sh.lineTo(p[0],p[1]));sh.closePath();
+  const fl=new THREE.Mesh(new THREE.ShapeGeometry(sh),M.floor);fl.rotation.x=Math.PI/2;fl.receiveShadow=true;fl.userData.floor=true;roomG.add(fl);
+  {const cl=new THREE.Mesh(new THREE.ShapeGeometry(sh),M.ceilP);cl.rotation.x=Math.PI/2;cl.position.y=C;cl.raycast=()=>{};cl.userData.floor=true;roomG.add(cl);}
+  const gp=[];for(let x=12;x<264;x+=12){const ym=x<=204?194:162+(264-x)*32/60;gp.push(x,.05,0,x,.05,ym);}
+  for(let y=12;y<194;y+=12){const xm=y<=162?264:264-(y-162)*60/32;gp.push(0,.05,y,xm,.05,y);}
+  const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.Float32BufferAttribute(gp,3));
+  const grid=new THREE.LineSegments(gg,M.gridLine);grid.raycast=()=>{};roomG.add(grid);
+  const cg=new THREE.Group();cg.position.set(-30,0.2,-30);roomG.add(cg);
+  const ar=new THREE.Mesh(new THREE.ConeGeometry(4,12,3),new THREE.MeshBasicMaterial({color:'#1d1d1f'}));ar.rotation.x=-Math.PI/2;ar.position.z=-4;cg.add(ar);
+  label('N',V(0,2,-16),cg,{k:1.1});
+  if(full){const ax=new THREE.Group();ax.position.set(0,.3,0);roomG.add(ax);
+    [[V(24,0,0),'#e03131','+X east'],[V(0,24,0),'#2f9e44','+Z up'],[V(0,0,24),'#1c7ed6','+Y south']].forEach(([d,c,t])=>{
+      const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0,0,0),d]),new THREE.LineBasicMaterial({color:c,depthTest:false}));l.raycast=()=>{};ax.add(l);
+      label(t,d.clone().multiplyScalar(1.15),ax,{bg:c,k:.8});});
+    label('Origin (0,0,0) NW corner',V(-6,-2,-8),ax,{k:.8});}
+
+  WALLS.forEach(w=>{
+    const g=wallGroup(w);g.userData.isWall=true;roomG.add(g);w.g=g;
+    if(state.walls){const wm=new THREE.Mesh(new THREE.PlaneGeometry(w.L,C),M.wallP);wm.position.set(w.L/2,C/2,-.02);wm.receiveShadow=true;wm.raycast=()=>{};g.add(wm);
+      const e=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(w.L,C)),M.edge);e.position.copy(wm.position);e.raycast=()=>{};g.add(e);}
+    if(key)dim(g,V(0,.6,16),V(w.L,.6,16),`${w.name} wall ${fBoth(w.L)}`,{color:'#1d1d1f',bg:'#1d1d1f'});
+    if(state.studs)studs(w).forEach(s=>{const b=box(1.5,C,.3,M.stud,s,C/2,.15,g);b.raycast=()=>{};});
+    if(state.ear)[[42,'42" seated ear'],[60,'60" standing ear']].forEach(([y,t])=>{
+      const lg=new THREE.BufferGeometry().setFromPoints([V(0,y,.4),V(w.L,y,.4)]);const l=new THREE.Line(lg,new THREE.LineDashedMaterial({color:'#1c7ed6',dashSize:4,gapSize:3}));l.computeLineDistances();l.raycast=()=>{};g.add(l);
+      if(w.id==='E')label(t,V(w.L/2,y+3,1),g,{bg:'#1c7ed6',k:.85});});
+  });
+
+  EXTRA.forEach(w=>{const g=wallGroup(w);g.userData.isWall=true;roomG.add(g);w.g=g;
+    if(state.studs)studs(w).forEach(s=>{const hh=w.leaf==='inner'?state.booth:C;const b=box(1.5,hh,.3,M.stud,s,hh/2,.15,g);b.raycast=()=>{};});});
+  if(state.obstacles){
+    const N=WALL.N.g;const og=new THREE.Group();og.userData.obs=true;roomG.add(og);
+    const tag=(o,w)=>{o.userData.walls=w;return o;};
+    box(36,80,.4,M.door,28,40,.2,N);
+    [[10-CASING/2,41.25,CASING,82.5],[46+CASING/2,41.25,CASING,82.5],[28,80+CASING/2,36+2*CASING,CASING]].forEach(([x,y,w,h])=>box(w,h,.75,M.casing,x,y,.375,N));
+    label('Room door',V(28,90,2),N,{k:.85,bg:'#5c7c99'});
+    tag(box(88,C,20,M.obst,129,C/2,10,og),['N','P']);tag(label('Amp wall / screen',V(129,Math.max(20,(C-state.ampGap-state.ampH)/2),24),og,{k:.85,bg:'#57534e'}),['N','P']);
+    {const bm=state.framing?M.boothGhost:M.booth,Hc=C,Hb=state.booth,fr=framing;
+      const solid=(x0,x1,y0,y1,h,views)=>{const b=box(x1-x0,h,y1-y0,bm,(x0+x1)/2,h/2,(y0+y1)/2,og);b.castShadow=!state.framing;b.receiveShadow=true;tag(b,views);return b;};
+      /* outer leaf */
+      solid(0,BX-OUT_T,BY,BY+OUT_T,Hc,['BN','W']);solid(BX-OUT_T,BX,BY,194,Hc,['BE','S']);
+      /* inner leaf + lid */
+      const dws=(x0,x1,y0,y1,h,v)=>{const b=box(x1-x0,h,y1-y0,state.framing?M.boothGhost:M.dwIn,(x0+x1)/2,h/2,(y0+y1)/2,og);b.receiveShadow=true;tag(b,v);};
+      dws(fr.xW,fr.xE,fr.yN,IN_N,Hb,['BIN']);dws(fr.xW,fr.xE,IN_S,fr.yS,Hb,['BIS']);
+      dws(fr.xW,IN_W,IN_N,IN_S,Hb,['BIW']);dws(IN_E,fr.xE,IN_N,IN_S,Hb,['BIE']);
+      if(!state.framing)solid(fr.xW,fr.xE,fr.yN,fr.yS,7,[]).position.y=Hb+3.5;
+      /* doors: one per leaf (sound lock), casings on the room side and the booth side */
+      const doorAt=(g,c,thick,outside)=>{box(DOOR_W,80,thick+.2,M.door,c,40,-thick/2,g);
+        const zc=outside?.375:.375;[[c-DOOR_W/2-CASING/2],[c+DOOR_W/2+CASING/2]].forEach(([x])=>box(CASING,82.5,.75,M.casing,x,41.25,zc,g));
+        box(DOOR_W+2*CASING,CASING,.75,M.casing,c,80+CASING/2,zc,g);};
+      doorAt(WALL.BE.g,DOOR_S_OUT,OUT_T,true);doorAt(WALL.BIE.g,DOOR_S_IN,DWL+ST,false);
+      /* vision lites in both doors */
+      [[WALL.BE.g,DOOR_S_OUT,OUT_T],[WALL.BIE.g,DOOR_S_IN,DWL+ST]].forEach(([g,c,t])=>{box(LITE_W,LITE_T-LITE_B,t+.4,M.glassDark,c,(LITE_B+LITE_T)/2,-t/2,g);});
+      /* studio window above the bar: one pane per leaf, inner pane tilted 5° to stop flutter between the panes */
+      {const gO=WALL.BN.g,gI=WALL.BIN.g,yc=WIN_SILL+WIN_H/2;
+        box(WIN_W,WIN_H,OUT_T+AG+ST+DWL,M.jamb,WIN_S_OUT,yc,-(OUT_T+AG+ST+DWL)/2,gO).raycast=()=>{};
+        box(WIN_W-.5,WIN_H-.5,.25,M.glass,WIN_S_OUT,yc,-1.5,gO);
+        const pi=box(WIN_W-.5,WIN_H-.5,.25,M.glass,WIN_S_IN,yc,-1.5,gI);pi.rotation.x=5*Math.PI/180;
+        [[WIN_S_OUT-WIN_W/2-CASING/2,CASING,WIN_H+2*CASING,yc],[WIN_S_OUT+WIN_W/2+CASING/2,CASING,WIN_H+2*CASING,yc]].forEach(([x,w,h,y])=>box(w,h,.75,M.casing,x,y,.375,gO));
+        box(WIN_W,CASING,.75,M.casing,WIN_S_OUT,WIN_SILL-CASING/2,.375,gO);box(WIN_W,CASING,.75,M.casing,WIN_S_OUT,WIN_SILL+WIN_H+CASING/2,.375,gO);
+        label('Window, 2 panes',V(WIN_S_OUT,WIN_SILL+WIN_H+8,3),gO,{k:.8,bg:'#5c7c99'});}
+      label('Booth doors: outer swings out, inner swings in',V(DOOR_S_OUT,92,3),WALL.BE.g,{k:.85,bg:'#5c7c99'});
+      /* door swing arcs on the floor (hinges on the north jamb) */
+      {const yh=DOOR_Y-DOOR_W/2,arc=(x0,dir)=>{const pts=[];for(let a=0;a<=90;a+=5){const t=a*Math.PI/180;pts.push(V(x0+dir*DOOR_W*Math.sin(t),2.2,yh+DOOR_W*Math.cos(t)));}
+        const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:'#9ec3e6',dashSize:2,gapSize:1.5}));l.computeLineDistances();l.raycast=()=>{};og.add(l);
+        const leaf=new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(x0,2.2,yh),V(x0+dir*DOOR_W,2.2,yh)]),new THREE.LineBasicMaterial({color:'#9ec3e6'}));leaf.raycast=()=>{};og.add(leaf);};
+        arc(BX,1);arc(IN_E,-1);}
+      /* bar against the outer north face */
+      const g=WALL.BN.g;const bar=box(BAR_L,BAR_H,BAR_D,M.bar,(BAR_S0+BAR_S1)/2,BAR_H/2,BAR_D/2,g);bar.castShadow=true;
+      box(BAR_L+2,1.5,BAR_D+2,M.casing,(BAR_S0+BAR_S1)/2,BAR_H+.75,BAR_D/2+1,g);label('Bar',V((BAR_S0+BAR_S1)/2,BAR_H+6,BAR_D),g,{k:.85,bg:'#57534e'});}
+    if(state.framing){
+      framing.F.forEach(m=>{const g=WALL[m.id].g;const mat=m.kind==='plate'?M.plate:m.kind==='header'?M.header:m.kind==='jack'?M.jack:M.studWood;
+        const b=box(m.s1-m.s0,m.y1-m.y0,ST,mat,(m.s0+m.s1)/2,(m.y0+m.y1)/2,-DWL-ST/2,g);b.castShadow=true;});
+      framing.joists.forEach(j=>{const b=box(1.5,5.5,j.len,M.header,j.x,state.booth+2.75,(j.y0+j.y1)/2,og);tag(b,[]);});
+      tag(label(`Double wall: outer leaf to the ceiling, 1" gap, inner leaf + ${framing.joists.length} 2x6 lid joists`,V(54,state.booth+16,160),og,{k:.85,bg:'#8a5a14'}),[]);
+    }
+    tag(box(46,30,30,M.obst,(IN_W+IN_E)/2,15,IN_S-15,og),['BIS']);
+    tag(label('Control / vocal booth',V(54,state.booth+9,160),og,{k:.85,bg:'#4a5560'}),[]);
+    if(full)tag(label('Desk',V((IN_W+IN_E)/2,36,IN_S-15),og,{k:.8,bg:'#57534e'}),['BIS']);
+  }
+
+  const geoCache={};const slatGeoFor=h=>geoCache[h]||(geoCache[h]=new THREE.BoxGeometry(SLAT_W,h,SLAT_T));let si=0;
+  const Z_SLAT=FLOAT+SLAT_T/2,Z_DOOR=SLAT_T/2+.05;
+  panels.forEach(p=>{
+    const g=p.wall.g;const pg=new THREE.Group();g.add(pg);p.group=pg;
+    if(p.type!=='ipe'){const sel=state.sel===p.id;
+      if(p.type==='diff'){const W=p.w-.25,x0=p.s0+.125,ww=wellW(p.w),zb=RAIL_T,zf=RAIL_T+.5+DIFF_D,yc=p.bot+p.H/2;
+        const back=box(W,p.H,.5,M.ply,x0+W/2,yc,zb+.25,pg);back.userData.pid=p.id;
+        for(let f=0;f<=QRD.length;f++){const fx=x0+f*(ww+FIN_T)+FIN_T/2;const b=box(FIN_T,p.H,DIFF_D,sel?M.finSel:M.fin,fx,yc,zb+.5+DIFF_D/2,pg);b.userData.pid=p.id;b.castShadow=true;}
+        QRD.forEach((d,j)=>{const fx=x0+FIN_T+j*(ww+FIN_T)+ww/2;const b=box(ww,p.H,.5,M.ply,fx,yc,zf-d-.25,pg);b.userData.pid=p.id;});}
+      else{const b=box(p.w-.25,p.H,2.5,sel?M.fabricSel:M.fabric,(p.s0+p.s1)/2,p.bot+p.H/2,RAIL_T+1.25,pg);b.userData.pid=p.id;b.castShadow=true;
+        [[p.s0+.5,p.H],[p.s1-.5,p.H]].forEach(([x,h])=>box(.75,h,2.6,M.casing,x,p.bot+h/2,RAIL_T+1.3,pg));}
+    }
+    else for(let i=0;i<p.k;i++){
+      const sx=p.s0+i*(SLAT_W+state.gap),lite=p.run.door&&sx+SLAT_W>DOOR_S_OUT-LITE_W/2&&sx<DOOR_S_OUT+LITE_W/2;
+      if(lite){[[p.bot,LITE_B-1],[LITE_T+1,p.bot+p.H]].forEach(([y0,y1])=>{const b=box(SLAT_W,y1-y0,SLAT_T,M.casing,sx+SLAT_W/2,(y0+y1)/2,Z_DOOR,pg);b.userData.pid=p.id;b.castShadow=true;});si++;continue;}
+      const r=rng(1000+si++);const col=new THREE.Color('#7d4a2c');col.offsetHSL((r()-.5)*.02,(r()-.5)*.08,(r()-.5)*.09);
+      const m=new THREE.MeshStandardMaterial({color:col,map:grain,roughness:.55,transparent:state.xray,opacity:state.xray?.28:1,depthWrite:!state.xray});
+      if(p.run.over>1e-6)m.emissive.set('#7a0000');
+      if(state.sel===p.id)m.emissive.set('#6a4500');
+      const sm=new THREE.Mesh(slatGeoFor(p.H),m);sm.position.set(p.s0+i*(SLAT_W+state.gap)+SLAT_W/2,p.bot+p.H/2,p.run.door?Z_DOOR:Z_SLAT);
+      sm.castShadow=!state.xray;sm.userData.pid=p.id;pg.add(sm);
+    }
+    const cx=(p.s0+p.s1)/2;
+    if((state.hardware||state.xray)&&p.nr>0){
+      p.rys.forEach(y=>{const notched=Math.abs(y-p.cleat)<1e-6;rail(p.Lr,notched,notched?M.crail:M.rail,cx,p.bot+y,0,pg);if(p.type==='ipe')box(p.Lr,RAIL_H,SPACER_T,M.jack,cx,p.bot+y,RAIL_T+SPACER_T/2,pg);});
+    }
+    if(false){const b=box(p.Lc,1.2,.6,new THREE.MeshBasicMaterial({color:hitColor(p.hits)}),cx,p.run.amp?p.bot-1.6:p.bot+p.H+1.6,STANDOFF-.3,pg);b.raycast=()=>{};}
+  });
+  /* continuous wall cleat along every run, at the run's cleat height */
+  if(state.hardware||state.xray)RUNS.forEach(r=>{if(!r.panels.length||r.door)return;const g=WALL[r.wall].g,p=r.panels[0];
+    const cm=state.studs?new THREE.MeshStandardMaterial({color:hitColor(r.cleatStuds??2)}):M.wcleat;wallCleat(r.end-r.start-1,cm,(r.start+r.end)/2,p.bot+p.cleat,0,g);});
+  /* ipe trim strip closing the lift gap above the amp wall panels (fixed to the box, fitted after the panels hang) */
+  if(state.ampTrim&&state.ampGap>0.05)RUNS.filter(r=>r.amp).forEach(r=>{const g=WALL[r.wall].g;const b=box(r.end-r.start,state.ampGap-.0625,SLAT_T,new THREE.MeshStandardMaterial({color:'#6e3f25',map:grain,roughness:.5}),(r.start+r.end)/2,C-(state.ampGap-.0625)/2,FLOAT+SLAT_T/2,g);b.raycast=()=>{};});
+
+  /* LED strips in the gaps: on the wall, centered behind each gap, full panel height */
+  if(state.led!=='off'){
+    const col=new THREE.Color(state.ledHex||LED_COLORS[state.ledColor]);
+    const strip=new THREE.MeshBasicMaterial({color:col.clone(),toneMapped:false});LEDM=strip;
+    const wash=new THREE.MeshBasicMaterial({color:col.clone(),transparent:true,opacity:.75,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false});WASHM=wash;
+    WASHM_EVEN=new THREE.MeshBasicMaterial({color:col.clone(),transparent:true,opacity:.9,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false,map:edgeFade});
+    RUNS.forEach(r=>{const g=WALL[r.wall].g,sp=r.sp;const xs=ledXs(r);
+      const back=state.led==='back';
+      if(back&&xs.length){/* strips face the wall 2" away; with a 120° beam each one lights about 7" of wall, so neighbors overlap into one even field */
+        xs.forEach(x=>{const a=box(.45,sp.H-1,.2,strip,x,sp.bot+sp.H/2,FLOAT-.15,g);a.raycast=()=>{};});
+        const x0=Math.min(...xs)-SLAT_W/2-1.5,x1=Math.max(...xs)+SLAT_W/2+1.5;
+        const wp=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0,sp.H+2),WASHM_EVEN);wp.position.set((x0+x1)/2,sp.bot+sp.H/2,.03);wp.raycast=()=>{};g.add(wp);return;}
+      xs.forEach(x=>{const a=box(.45,sp.H-1,.2,strip,x,sp.bot+sp.H/2,.12,g);a.raycast=()=>{};
+        const wp=new THREE.Mesh(new THREE.PlaneGeometry(5,sp.H+6),wash);wp.position.set(x,sp.bot+sp.H/2,.03);wp.raycast=()=>{};g.add(wp);});});
+  }
+  /* draped fabric ceiling: bands running east-west, pinned every 32" and sagging between pins, staying out of the booth */
+  if(state.curtains){
+    const bands=[];for(let y=0;y<194;y+=24)bands.push([y,Math.min(194,y+24)]);
+    bands.forEach(([y0,y1],bi)=>{const ym=(y0+y1)/2;const xmin=ym>BY-2?BX+1:0;const xmax=ym<=162?264:264-(ym-162)*60/32;if(xmax-xmin<10)return;
+      const L=xmax-xmin,segX=Math.max(8,Math.round(L/3)),geo=new THREE.PlaneGeometry(L,y1-y0,segX,6);const pos=geo.attributes.position;
+      for(let i=0;i<pos.count;i++){const x=pos.getX(i)+L/2,v=pos.getY(i)/(y1-y0)+.5;const pin=32,t=(x%pin)/pin;
+        const sag=9*Math.sin(Math.PI*t)*(.55+.45*Math.sin(Math.PI*v))+(bi%2?1.5:0);pos.setXYZ(i,pos.getX(i),pos.getY(i),-sag);}
+      geo.computeVertexNormals();const m=new THREE.Mesh(geo,M.curtain);m.userData.curtain=true;m.rotation.x=Math.PI/2;m.position.set(xmin+L/2,C-.5,ym);m.receiveShadow=true;m.raycast=()=>{};roomG.add(m);});
+  }
+  /* rugs: layered and scattered so the whole floor is covered (booth floor included) */
+  if(state.rugs){
+    const inRoom=(x,y)=>x>1&&y>1&&y<193&&x<(y<=162?263:263-(y-162)*60/32)&&!(x<BX+1&&y>BY-1);
+    const inBooth=(x,y)=>x>IN_W+.5&&x<IN_E-.5&&y>IN_N+.5&&y<IN_S-.5;
+    const rr=rng(4242),list=[];
+    const place=(cx,cy,w,l,ok)=>{for(let t=0;t<4;t++){const a=(rr()-.5)*.28,c=Math.cos(a),sn=Math.sin(a);
+      const pts=[[-w/2,-l/2],[w/2,-l/2],[w/2,l/2],[-w/2,l/2]].map(([u,v])=>[cx+u*c-v*sn,cy+u*sn+v*c]);
+      if(pts.every(([x,y])=>ok(x,y))){list.push({cx,cy,w,l,a});return true;}w*=.85;l*=.85;}return false;};
+    /* bottom layer: straight rugs tiled wall to wall with a few inches of overlap, trimmed to fit the angled corner and the booth */
+    const xmaxAt=y=>y<=162?264:264-(y-162)*60/32;
+    for(let y0=.5;y0<193.5;y0+=42){const y1=Math.min(193.5,y0+46);const xr=Math.min(xmaxAt(y0),xmaxAt(y1))-.5;const xl=y1>BY?BX+.5:.5;
+      for(let x0=xl;x0<xr-6;x0+=58){const x1=Math.min(xr,x0+62);if(x1-x0<12)continue;list.push({cx:(x0+x1)/2,cy:(y0+y1)/2,w:x1-x0,l:y1-y0,a:0});}}
+    for(let y0=IN_N+.5;y0<IN_S-.5;y0+=26){const y1=Math.min(IN_S-.5,y0+28);for(let x0=IN_W+.5;x0<IN_E-6;x0+=46){const x1=Math.min(IN_E-.5,x0+48);list.push({cx:(x0+x1)/2,cy:(y0+y1)/2,w:x1-x0,l:y1-y0,a:0});}}
+    /* top layer: scattered, slightly turned */
+    for(let y=14;y<194;y+=40)for(let x=18;x<264;x+=56){const cx=x+(rr()-.5)*14,cy=y+(rr()-.5)*10;if(!inRoom(cx,cy))continue;
+      const big=rr()>.55;place(cx,cy,big?84+rr()*24:58+rr()*16,big?60+rr()*20:42+rr()*12,inRoom);}
+    [[30,150],[72,170],[52,158]].forEach(([cx,cy])=>place(cx,cy,56,40,inBooth));
+    list.forEach((r,k)=>{const g=new THREE.Mesh(new THREE.BoxGeometry(r.w,.35,r.l),new THREE.MeshStandardMaterial({map:rugTex(1+k%6),roughness:1}));
+      g.rotation.y=-r.a;g.position.set(r.cx,.18+k*.03,r.cy);g.receiveShadow=true;g.raycast=()=>{};g.userData.walls=[];roomG.add(g);});
+    stats.rugs=list.length;
+  }
+  /* KEXP-style warm string lights: swags across the ceiling plus a draped run along the walls */
+  if(state.strings){
+    const pts=[],wire=[];const sag=(t,d)=>d*4*t*(1-t);
+    const ymax=x=>x<BX+4?BY-4:x<=204?194:162+(264-x)*32/60;
+    [26,70,114,158,202,240].forEach((x,k)=>{const y0=6,y1=ymax(x)-6,n=Math.floor((y1-y0)/7);const line=[];
+      for(let i=0;i<=n;i++){const t=i/n,y=y0+(y1-y0)*t,xx=x+(k%2?1:-1)*sag(t,10),h=C-3-sag(t,16);line.push(V(xx,h,y));if(i%1===0)pts.push(V(xx,h-1.2,y));}wire.push(line);
+      const l=new THREE.PointLight('#ffb168',state.night?26000:9000,0,2);l.position.set(x,C-14,(y0+y1)/2);l.userData.keepElev=true;roomG.add(l);PLIGHTS.push(l);});
+    WALLS.forEach(w=>{const hooks=Math.max(2,Math.round(w.L/40));for(let hseg=0;hseg<hooks;hseg++){const s0=w.L*hseg/hooks,s1=w.L*(hseg+1)/hooks,n=6;const line=[];
+      {const sm=(s0+s1)/2,mx=w.p0[0]+w.u[0]*sm,my=w.p0[1]+w.u[1]*sm;if(mx<BX+2&&my>BY-2)continue;}
+      for(let i=0;i<=n;i++){const t=i/n,s=s0+(s1-s0)*t,h=C-8-sag(t,7);const P=V(w.p0[0]+w.u[0]*s+w.n[0]*4,h,w.p0[1]+w.u[1]*s+w.n[1]*4);line.push(P);if(i<n)pts.push(P.clone().add(V(0,-1.2,0)));}wire.push(line);}});
+    stats.stringFt=wire.reduce((a,line)=>a+line.reduce((b,P,i)=>i?b+P.distanceTo(line[i-1]):b,0),0)/12;stats.bulbs=pts.length;
+    wire.forEach(line=>{const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(line),M.wire);l.raycast=()=>{};roomG.add(l);});
+    const bg=new THREE.SphereGeometry(.75,8,6);const im=new THREE.InstancedMesh(bg,M.bulb,pts.length);const mm=new THREE.Matrix4();
+    pts.forEach((P,i)=>{mm.makeTranslation(P.x,P.y,P.z);im.setMatrixAt(i,mm);});im.raycast=()=>{};roomG.add(im);
+  }
+  if(state.ledge&&stats.ledgeOk){
+    RUNS.filter(r=>!r.amp).forEach(r=>{const g=WALL[r.wall].g;let s=r.start,i=0;while(s<r.end-1e-6){const len=Math.min(stats.offEach,r.end-s);box(len-.12,1,5.5,i%2?M.ledgeB:M.ledgeA,s+len/2,top+.5,2.75,g).castShadow=true;s+=len;i++;}});
+  }
+
+  if(key){
+    const ledgeH=state.ledge&&stats.ledgeOk?1:0;
+    RUNS.forEach(r=>{
+      const g=WALL[r.wall].g,sp=r.sp,rb=sp.bot,rt=sp.bot+sp.H,amp=!!r.amp;
+      const yRun=amp?rb-5:(rb>=10?rb-5:rt+(state.ledge?2:0)+6);
+      dim(g,V(r.start,yRun,5),V(r.end,yRun,5),`Run ${fIn(r.used)}`);
+      if(!full&&r.wall!=='E'&&!amp)return;
+      const p=r.panels[0];const xs=p.s0+2;
+      dim(g,V(xs,0,7),V(xs,rb,7),`${fFt(rb)} to bottom`);
+      dim(g,V(xs,rb,7),V(xs,rt,7),`Panel ${fBoth(sp.H)}`);
+      const lh=amp?0:ledgeH;
+      dim(g,V(xs,rt+lh,7),V(xs,C,7),amp?`${fIn(C-rt)} lift gap`:`${fFt(C-rt-lh)} bare above`,amp?{k:.85}:{});
+      if(amp)dim(g,V(r.end-2,rb,7),V(r.end-2,C,7),`Covers ${fIn(C-rb)} from ceiling down`,{bg:'#1d1d1f',color:'#1d1d1f',k:.9});
+      const xc=p.s1-2;
+      dim(g,V(xc,0,7),V(xc,rb+sp.cleat,7),`Cleat rail ${fFt(rb+sp.cleat)} above floor`,{bg:'#8a5a14',color:'#8a5a14',k:.9});
+      if(full){
+        const yw=amp?rb-10:rt+(state.ledge?2:0)+3;
+        r.panels.forEach(q=>{dim(g,V(q.s0,yw,4),V(q.s1,yw,4),fIn(q.w));label(q.id,V((q.s0+q.s1)/2,yw+(amp?-7:7),4),g,{k:.85,bg:'#6b3f26'});});
+        const lc=r.start-r.refA,rc=r.refB-r.end,ym=rb+sp.H*.45;
+        if(lc>0.05)dim(g,V(r.refA,ym,3),V(r.start,ym,3),fIn(lc),{k:.85});
+        if(rc>0.05)dim(g,V(r.end,ym,3),V(r.refB,ym,3),fIn(rc),{k:.85});
+        label(`${fIn(state.gap)} gaps`,V(r.panels[0].s0+SLAT_W+state.gap/2,rb+sp.H*.75,3),g,{k:.8,bg:'#495057'});
+      }
+    });
+  }
+}
+
+/* ---------- build: exploded panel + cleat section ---------- */
+function slatMat(i){return new THREE.MeshStandardMaterial({color:new THREE.Color('#7d4a2c').offsetHSL(0,0,(i%2?.03:-.02)),map:grain,roughness:.55});}
+function buildExploded(){
+  const H=state.H,k=4,g1=state.gap,w=k*SLAT_W+(k-1)*g1,Lr=w-2*RAIL_INSET,Lc=Lr,rys=railYs(H),cl=state.cleat;
+  const EX={wc:0,rl:16,sl:30};
+  const sg=new THREE.BoxGeometry(SLAT_W,H,SLAT_T);
+  for(let i=0;i<k;i++){const s=new THREE.Mesh(sg,slatMat(i));s.position.set(i*(SLAT_W+g1)+SLAT_W/2,H/2,FLOAT+SLAT_T/2+EX.sl);s.castShadow=true;explG.add(s);}
+  rys.forEach(y=>{const n=Math.abs(y-cl)<1e-6;rail(Lr,n,n?M.crail:M.rail,w/2,y,EX.rl,explG);});
+  wallCleat(Lc,M.wcleat,w/2,cl,EX.wc,explG);
+  box(w+46,H+24,.5,M.bg,w/2,H/2,-.25,explG).receiveShadow=true;
+  box(w+46,.5,70,M.floor,w/2,-.25,34,explG).receiveShadow=true;
+  label('Exploded 4-slat panel (panel bottom = 0)',V(w/2,H+14,EX.sl/2),explG,{k:1.05});
+  const lx=w+4;
+  label(`Ipe slats ${fIn(SLAT_W)} × 1" × ${fIn(H)}`,V(lx,H*.88,RAIL_T+EX.sl),explG,{bg:'#6b3f26'});
+  const plain=rys.filter(y=>Math.abs(y-cl)>1e-6);
+  if(plain.length)label(`${plain.length} plain 2x4 rail${plain.length>1?'s':''}, long face on ipe`,V(lx,plain[0]+5,RAIL_T/2+EX.rl),explG,{bg:'#8a7650'});
+  label('Notched 2x4 cleat rail (45° notch)',V(lx,cl+6,RAIL_T/2+EX.rl),explG,{bg:'#8a5a14'});
+  label(`Wall cleat ${fIn(Lc)}, 45° bevel, into studs`,V(lx,cl-6,NOTCH_D/2+EX.wc),explG,{bg:'#5f4a28'});
+  if(state.dims!=='off'){
+    dim(explG,V(0,H+5,STANDOFF+EX.sl-RAIL_T),V(w,H+5,STANDOFF+EX.sl-RAIL_T),`Panel width ${fIn(w)}`);
+    dim(explG,V(-4,0,RAIL_T+SLAT_T+EX.sl),V(-4,H,RAIL_T+SLAT_T+EX.sl),`Slat ${fBoth(H)}`);
+    dim(explG,V(-4,0,EX.rl),V(-4,cl,EX.rl),`Cleat rail ${fBoth(cl)} up`,{bg:'#8a5a14',color:'#8a5a14'});
+    dim(explG,V(SLAT_W,H*.3,RAIL_T+SLAT_T+.1+EX.sl),V(SLAT_W+g1,H*.3,RAIL_T+SLAT_T+.1+EX.sl),`${fIn(g1)} gap`,{off:V(0,4,0)});
+    rys.forEach((y,i)=>{if(i<rys.length-1)dim(explG,V(w+1,y,EX.rl+RAIL_T),V(w+1,rys[i+1],EX.rl+RAIL_T),`${fIn(rys[i+1]-y)} o.c.`,{k:.8});});
+  }
+}
+function buildSection(){
+  /* assembled, as hung, cut across the cleat. Local x = along wall, viewed from +x. */
+  const H=state.H,cl=state.cleat,L=10;
+  const sg=new THREE.BoxGeometry(L,H,SLAT_T);const s=new THREE.Mesh(sg,slatMat(0));s.position.set(0,H/2,FLOAT+SLAT_T/2);sectG.add(s);
+  railYs(H).forEach(y=>box(L,RAIL_H,SPACER_T,M.jack,0,y,RAIL_T+SPACER_T/2,sectG));
+  box(L,H-1,.12,new THREE.MeshBasicMaterial({color:new THREE.Color('#ffb46a').multiplyScalar(2.5),toneMapped:false}),0,H/2,FLOAT-.06,sectG);
+  railYs(H).forEach(y=>{const n=Math.abs(y-cl)<1e-6;rail(L,n,n?M.crail:M.rail,0,y,0,sectG);});
+  wallCleat(L,M.wcleat,0,cl,0,sectG);
+  box(L,H+16,.5,M.drywall,0,H/2,-.25,sectG);
+  box(1.5,H+16,3.5,M.studWood,0,H/2,-.5-1.75,sectG);
+  const xe=L/2+.05,h=RAIL_H/2;
+  label('Drywall + stud',V(xe,cl+5.5,-1.6),sectG,{bg:'#6b5a3a',k:.95});
+  label('Wall cleat 3/4" × 2 1/2"',V(xe,cl-h-1.1,NOTCH_D/2),sectG,{bg:'#5f4a28',k:.95});
+  label('Notched 2x4 cleat rail',V(xe,cl+h+1.0,RAIL_T/2),sectG,{bg:'#8a5a14',k:.95});
+  label('1" ipe slat, LED strip in a groove on its back',V(xe,cl+h+5,FLOAT+SLAT_T/2+.6),sectG,{bg:'#6b3f26',k:.95});
+  label('1/2" spacer: ipe floats 2" off the wall',V(xe,cl+h+7.4,RAIL_T),sectG,{bg:'#8a7650',k:.9});
+  label('45° bearing face',V(xe,cl-h+WC_H-NOTCH_D/2+.2,NOTCH_D/2+.9),sectG,{bg:DIM,k:.9});
+  label(`Lift ${fIn(NOTCH_D+0.25)} to hang or remove`,V(xe,cl-h-5,1.2),sectG,{bg:'#495057',k:.9});
+  if(state.dims!=='off'){
+    dim(sectG,V(xe,cl+h+2.6,0),V(xe,cl+h+2.6,STANDOFF),`${fIn(STANDOFF)} stand-off`,{small:true,off:V(0,.8,0),k:.9});
+    dim(sectG,V(xe,cl-h-2.6,0),V(xe,cl-h-2.6,NOTCH_D),'3/4" notch',{small:true,off:V(0,-.8,0),k:.85});
+    dim(sectG,V(xe,cl-h,RAIL_T+.4),V(xe,cl+h,RAIL_T+.4),'3 1/2"',{small:true,off:V(0,0,1.1),k:.85});
+    dim(sectG,V(xe,cl-h,-.9),V(xe,cl-h+WC_H,-.9),'2 1/2"',{small:true,off:V(0,0,-1),k:.85});
+  }
+}
+
+let rebuildQueued=false;
+function requestRebuild(){if(rebuildQueued)return;rebuildQueued=true;requestAnimationFrame(()=>{rebuildQueued=false;rebuild();});}
+let LEDM=null,WASHM=null,WASHM_EVEN=null,PLIGHTS=[];
+/* soft-edged texture so the even wash fades out at the ends of each run */
+const edgeFade=(()=>{const c=document.createElement('canvas');c.width=256;c.height=8;const x=c.getContext('2d');const gr=x.createLinearGradient(0,0,256,0);
+  gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(.04,'#fff');gr.addColorStop(.96,'#fff');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,256,8);
+  const t=new THREE.CanvasTexture(c);t.userData.keep=true;return t;})();
+/* procedural Persian-style rug: an original pattern (border bands, field with lattice and a central medallion) */
+const RUG_CACHE={};
+function rugTex(seed){if(RUG_CACHE[seed])return RUG_CACHE[seed];const c=document.createElement('canvas');c.width=384;c.height=512;const x=c.getContext('2d');const r=rng(seed*77);
+  const pal=[['#7b1d22','#1d2b48','#d9c7a1','#b8862e'],['#1f3150','#7b1d22','#e2d3b0','#a6782a'],['#5a2a1f','#20343a','#dcc9a0','#9c3a2c'],['#8a2b18','#2b2238','#e6d2a6','#c08a2a'],['#283d34','#6e1f24','#ddd0b2','#b07a30'],['#5e1a33','#1c2c3c','#e0caa4','#a8762c']][seed%6];
+  const [field,border,ivory,gold]=pal;x.fillStyle=border;x.fillRect(0,0,384,512);x.fillStyle=ivory;x.fillRect(14,14,356,484);x.fillStyle=border;x.fillRect(22,22,340,468);
+  x.fillStyle=gold;for(let i=30;i<354;i+=16){x.beginPath();x.arc(i,30,4,0,7);x.fill();x.beginPath();x.arc(i,482,4,0,7);x.fill();}for(let j=46;j<470;j+=16){x.beginPath();x.arc(30,j,4,0,7);x.fill();x.beginPath();x.arc(354,j,4,0,7);x.fill();}
+  x.fillStyle=ivory;x.fillRect(40,40,304,432);x.fillStyle=field;x.fillRect(46,46,292,420);
+  x.strokeStyle=gold;x.globalAlpha=.35;x.lineWidth=2;for(let i=-512;i<512;i+=28){x.beginPath();x.moveTo(46+i,46);x.lineTo(46+i+420,466);x.stroke();x.beginPath();x.moveTo(338-i,46);x.lineTo(338-i-420,466);x.stroke();}x.globalAlpha=1;
+  const cx=192,cy=256;[[110,150,border],[92,128,ivory],[80,112,gold],[62,88,field],[40,58,border],[22,32,ivory]].forEach(([a,b,col])=>{x.fillStyle=col;x.beginPath();x.moveTo(cx,cy-b);x.lineTo(cx+a,cy);x.lineTo(cx,cy+b);x.lineTo(cx-a,cy);x.closePath();x.fill();});
+  [[46,46],[338,46],[46,466],[338,466]].forEach(([px,py])=>{x.fillStyle=border;x.beginPath();x.arc(px,py,52,0,7);x.fill();x.fillStyle=gold;x.beginPath();x.arc(px,py,30,0,7);x.fill();});
+  x.fillStyle=field;x.fillRect(0,0,384,4);
+  const id=x.getImageData(0,0,384,512);for(let i=0;i<id.data.length;i+=4){const n=(r()-.5)*22;id.data[i]+=n;id.data[i+1]+=n;id.data[i+2]+=n;}x.putImageData(id,0,0);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.userData.keep=true;RUG_CACHE[seed]=t;return t;}
+const BULB_BASE=new THREE.Color('#ffc477');
+function applyLighting(){const n=state.night,L=state.ledLevel,Sg=state.stringLevel,A=state.ambLevel;
+  const col=new THREE.Color(state.ledHex||LED_COLORS[state.ledColor]);
+  if(LEDM)LEDM.color.copy(col).multiplyScalar((n?3.2:1.4)*L);if(WASHM)WASHM.color.copy(col).multiplyScalar((n?.6:.25)*L);if(WASHM_EVEN)WASHM_EVEN.color.copy(col).multiplyScalar((n?.42:.18)*L);
+  M.bulb.color.copy(BULB_BASE).multiplyScalar(3.2*Sg);PLIGHTS.forEach(l=>l.intensity=(n?26000:9000)*Sg);
+  hemi.intensity=n?.08+.9*A:1.1;bloom.strength=.35+.6*Math.max(L,Sg);}
+function rebuild(){
+  disposeAll(roomG);disposeAll(explG);disposeAll(sectG);labels=[];
+  applyMood();PLIGHTS=[];LEDM=WASHM=WASHM_EVEN=null;layout();buildRoom();applyLighting();buildExploded();buildSection();
+  applyVisibility();renderUI();
+}
+function applyVisibility(){const v=state.view;roomG.visible=v!=='detail'&&v!=='section';explG.visible=v==='detail';sectG.visible=v==='section';
+  const elev=!!WALL[v];
+  [...WALLS,...EXTRA].forEach(w=>{if(w.g)w.g.visible=!elev||w.id===v||(v==='N'&&/^P/.test(w.id))||(v==='P'&&/^P[WE]$/.test(w.id));});
+  roomG.children.forEach(o=>{if(o.userData.obs)o.children.forEach(c=>{c.visible=!elev||(c.userData.walls||[]).includes(v);});
+    else if(!o.userData.isWall&&!o.userData.floor&&!o.userData.keepElev)o.visible=!elev||(o.userData.walls||[]).includes(v);});
+  updateSheet();}
+
+/* ---------- camera views + touch ---------- */
+const VIEWS=[['iso','3D'],['plan','Plan'],['N','North'],['E','East'],['A','Angled'],['S','South'],['W','West'],['P','Amp wall'],...BOOTHW.map(w=>[w.id,w.short]),['detail','Panel'],['section','Cleat section']];
+let tween=null,home=null;
+function fit(w,h,fov){const t=Math.tan(THREE.MathUtils.degToRad(fov)/2);return Math.max(h/2/t,w/2/(t*camera.aspect));}
+function viewPose(v){
+  const C=state.ceil;let fov=42,target,pos;
+  if(v==='iso'){target=V(132,C*.35,97);const d=fit(camera.aspect<1?430:370,300,fov);pos=target.clone().add(V(.55,.62,.75).normalize().multiplyScalar(d));}
+  else if(v==='plan'){fov=16;target=V(132,0,97);pos=V(132,fit(330,250,fov)+C,97.01);}
+  else if(v==='detail'){const w=4*SLAT_W+3*state.gap;target=V(420+w/2+6,state.H/2,20);fov=40;const d=fit(70,state.H+36,fov);pos=target.clone().add(V(.9,.22,.55).normalize().multiplyScalar(d*1.05));}
+  else if(v==='section'){fov=30;target=V(520,state.cleat,1.4);const d=fit(13,17,fov);pos=target.clone().add(V(1,.02,0).normalize().multiplyScalar(d));}
+  else{const w=WALL[v];fov=14;const hh=w.booth?state.booth:C;target=V(w.p0[0]+w.u[0]*w.L/2,hh/2,w.p0[1]+w.u[1]*w.L/2);const d=fit(w.L+30,hh+20,fov);pos=target.clone().add(V(w.n[0],0,w.n[1]).multiplyScalar(d));}
+  return {p:pos,t:target,f:fov};
+}
+const FLAT=new Set(['plan','N','E','A','S','W','P','BN','BE','BIN','BIE','BIS','BIW','section']);
+function setOrbit(on){state.orbit=on;controls.enableRotate=on;
+  controls.touches.ONE=on?THREE.TOUCH.ROTATE:THREE.TOUCH.PAN;controls.touches.TWO=THREE.TOUCH.DOLLY_PAN;
+  controls.mouseButtons.LEFT=on?THREE.MOUSE.ROTATE:THREE.MOUSE.PAN;controls.mouseButtons.RIGHT=on?THREE.MOUSE.PAN:THREE.MOUSE.ROTATE;
+  const b=document.getElementById('modeBtn');b.textContent=on?'ORBIT':'PAN';b.classList.toggle('on',!on);}
+function goTo(pose,dur=650){tween={from:{p:camera.position.clone(),t:controls.target.clone(),f:camera.fov},to:pose,t0:performance.now(),dur};}
+function setView(v,instant){
+  state.view=v;if(WALL[v])sheetOpen=true;applyVisibility();home=viewPose(v);goTo(home,instant?0:650);
+  setOrbit(!FLAT.has(v));
+  controls.maxPolarAngle=v==='section'||v==='detail'?Math.PI:Math.PI*.495;
+  document.querySelectorAll('#views .chip').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  const act=document.querySelector(`#views .chip[data-v="${v}"]`);if(act)act.scrollIntoView({inline:'nearest',block:'nearest',behavior:'smooth'});
+  updateLegend();
+}
+let legendTimer;
+function updateLegend(){
+  const lg=document.getElementById('legend');const v=state.view;
+  const g=isTouch?(state.orbit?'1 finger orbits, 2 fingers pinch to zoom and drag to pan. Double-tap to zoom in.':'1 finger pans, pinch to zoom. Double-tap to zoom in. Tap ORBIT to rotate.'):(state.orbit?'Drag to orbit, right-drag to pan, scroll to zoom. Double-click to zoom in.':'Drag to pan, scroll to zoom. Double-click to zoom in.');
+  const map={iso:'',plan:'<b>Plan</b>: north is up, origin at the NW corner. ',detail:'<b>Panel</b>: exploded away from the wall. ',section:'<b>Cleat section</b>: assembled panel cut across the notched 2x4 and wall cleat. '};
+  lg.innerHTML=(v in map?map[v]:`<b>${WALL[v].name}${EXTRA.includes(WALL[v])?'':' wall'}</b>, ${fBoth(WALL[v].L)}, measured from the ${WALL[v].from}. `)+g;
+  lg.classList.remove('fade');clearTimeout(legendTimer);legendTimer=setTimeout(()=>lg.classList.add('fade'),isTouch?6000:9000);
+}
+function zoomBy(f){const off=camera.position.clone().sub(controls.target);const d=THREE.MathUtils.clamp(off.length()*f,controls.minDistance,controls.maxDistance);goTo({p:controls.target.clone().add(off.setLength(d)),t:controls.target.clone(),f:camera.fov},220);}
+
+/* ---------- per-wall cut sheet (diagram + table) ---------- */
+let sheetOpen=true;
+function wallObstacles(v,Ht){
+  switch(v){
+    case 'N':return [{s0:10,s1:46,y0:0,y1:80,t:'Room door',f:'#3a332c'},{s0:85,s1:173,y0:0,y1:Ht,t:'Amp wall box',f:'#8e8a85',o:.25}];
+    case 'S':return [{s0:204-BX,s1:204,y0:0,y1:state.ceil,t:'Booth outer wall',f:'#7b8794',o:.3}];
+    case 'W':return [{s0:0,s1:194-BY,y0:0,y1:state.ceil,t:'Booth outer wall',f:'#7b8794',o:.3}];
+    case 'BN':return [{s0:BAR_S0,s1:BAR_S1,y0:0,y1:BAR_H,t:'Bar',f:'#8e8a85',o:.45},{s0:WIN_S_OUT-WIN_W/2,s1:WIN_S_OUT+WIN_W/2,y0:WIN_SILL,y1:WIN_SILL+WIN_H,t:'Long window (outer pane)',f:'#6f8aa3',o:.6}];
+    case 'BE':return [{s0:DOOR_S_OUT-DOOR_W/2,s1:DOOR_S_OUT+DOOR_W/2,y0:0,y1:80,t:'',f:'#3a332c'},{s0:DOOR_S_OUT-LITE_W/2,s1:DOOR_S_OUT+LITE_W/2,y0:LITE_B,y1:LITE_T,t:'',f:'#6f8aa3',o:.8}];
+    case 'BIN':return [{s0:WIN_S_IN-WIN_W/2,s1:WIN_S_IN+WIN_W/2,y0:WIN_SILL,y1:WIN_SILL+WIN_H,t:'Long window (inner pane, tilted 5°)',f:'#6f8aa3',o:.6}];
+    case 'BIE':return [{s0:DOOR_S_IN-DOOR_W/2,s1:DOOR_S_IN+DOOR_W/2,y0:0,y1:80,t:'Inner door (swings in)',f:'#3a332c'},{s0:DOOR_S_IN-LITE_W/2,s1:DOOR_S_IN+LITE_W/2,y0:LITE_B,y1:LITE_T,t:'',f:'#6f8aa3',o:.8}];
+    case 'BIS':{const c=IN_E-(IN_W+IN_E)/2;return [{s0:c-23,s1:c+23,y0:0,y1:30,t:'Desk',f:'#8e8a85',o:.45}];}
+    default:return [];
+  }
+}
+function wallSheet(v){
+  const w=WALL[v],L=w.L,Ht=w.leaf==='inner'?state.booth-DWL:state.ceil,g=state.gap;
+  let ps=panels.filter(p=>p.wall.id===v).map(p=>({p,off:0}));
+  if(v==='N')ps=ps.concat(panels.filter(p=>p.wall.id==='P').map(p=>({p,off:AMPW.p0[0]})));
+  const ml=36,mr=10,mt=26,mb=30,vbW=L+ml+mr,vbH=Ht+mt+mb;
+  const cw=Math.min(innerWidth-40,590),px=Math.max(cw,vbW*1.55),sc=px/vbW,fs=10.5/sc,sw=1/sc;
+  const X=x=>ml+x,Y=y=>mt+(Ht-y),night=state.night;
+  const ledCol=LED_COLORS[state.ledColor];
+  let o=`<svg viewBox="0 0 ${vbW.toFixed(1)} ${vbH.toFixed(1)}" width="${px.toFixed(0)}" height="${(vbH*sc).toFixed(0)}" font-family="system-ui,sans-serif" font-size="${fs.toFixed(2)}">`;
+  o+=`<rect x="0" y="0" width="${vbW}" height="${vbH}" fill="${night?'#0d0d0f':'#fbfaf7'}"/><rect x="${X(0)}" y="${Y(Ht)}" width="${L}" height="${Ht}" fill="${night?'#1a1a1d':'#f2efe9'}" stroke="#9c9388" stroke-width="${sw}"/>`;
+  if(w.outer&&(state.framing||true))framing.F.filter(m=>m.id===v).forEach(m=>{o+=`<rect x="${X(m.s0).toFixed(2)}" y="${Y(m.y1).toFixed(2)}" width="${(m.s1-m.s0).toFixed(2)}" height="${(m.y1-m.y0).toFixed(2)}" fill="${m.kind==='header'?'#c99a5755':'none'}" stroke="#c9a971" stroke-width="${sw}" stroke-dasharray="${3*sw} ${2*sw}"/>`;});
+  wallObstacles(v,Ht).forEach(b=>{o+=`<rect x="${X(b.s0)}" y="${Y(b.y1)}" width="${b.s1-b.s0}" height="${b.y1-b.y0}" fill="${b.f}" fill-opacity="${b.o||1}" stroke="#6b645c" stroke-width="${sw}"/><text x="${X((b.s0+b.s1)/2)}" y="${Y(b.y0)-fs*.6}" text-anchor="middle" fill="${night?'#d9d3c9':'#3d3833'}">${b.t}</text>`;});
+  ps.forEach(({p,off})=>{
+    const x0=p.s0+off;
+    if(p.type==='diff'){const ww=wellW(p.w);o+=`<rect x="${X(x0).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${p.w}" height="${p.H}" fill="#141416" stroke="#7d4a2c" stroke-width="${sw}"/>`;
+      QRD.forEach((d,j)=>{o+=`<rect x="${X(x0+FIN_T+j*(ww+FIN_T)).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${ww.toFixed(2)}" height="${p.H}" fill="#7d4a2c" fill-opacity="${(.15+d*.18).toFixed(2)}"/>`;});}
+    else if(p.type==='abs')o+=`<rect x="${X(x0).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${p.w}" height="${p.H}" fill="#2a2a2e" stroke="#7d4a2c" stroke-width="${1.5*sw}"/><text x="${X(x0+p.w/2)}" y="${Y(p.bot+p.H/2)}" text-anchor="middle" fill="#bbb">absorber</text>`;
+    else for(let i=0;i<p.k;i++)o+=`<rect x="${X(x0+i*(SLAT_W+g)).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${SLAT_W}" height="${p.H}" fill="#7d4a2c" stroke="#4e2c18" stroke-width="${sw*.6}"/>`;
+    p.rys.forEach(y=>{const n=Math.abs(y-p.cleat)<1e-6;o+=`<line x1="${X(x0+.56).toFixed(2)}" x2="${X(x0+p.w-.56).toFixed(2)}" y1="${Y(p.bot+y).toFixed(2)}" y2="${Y(p.bot+y).toFixed(2)}" stroke="${n?'#ff9d2e':'#e8d3a8'}" stroke-width="${(n?2.2:1.4)*sw}" stroke-dasharray="${n?'none':4*sw+' '+2*sw}"/>`;});
+    o+=`<text x="${X(x0+p.w/2).toFixed(2)}" y="${(Y(p.bot+p.H)-fs*.45).toFixed(2)}" text-anchor="middle" font-weight="700" fill="${night?'#f1e6d8':'#1d1d1f'}">${p.id} · ${fIn(p.w)}</text>`;
+  });
+  {const runs=[...new Set(ps.map(({p,off})=>p.run.wall+'|'+off+'|'+RUNS.indexOf(p.run)))];runs.forEach(k=>{const [ , off, ri]=k.split('|');const r=RUNS[+ri];ledXs(r).forEach(x=>{o+=`<rect x="${X(x+ +off-.3).toFixed(2)}" y="${Y(r.sp.bot+r.sp.H-.5).toFixed(2)}" width=".6" height="${r.sp.H-1}" fill="${ledCol}"/>`;});});}
+  /* height dims for each distinct panel band on this wall */
+  const seen=new Set();let dx=ml-4;
+  ps.forEach(({p,off})=>{const key=p.bot+'|'+p.H;if(seen.has(key))return;seen.add(key);
+    const xL=seen.size===1?X(-4):X(p.s0+off-3);const lines=[[0,p.bot,fFt(p.bot)],[p.bot,p.bot+p.H,fBoth(p.H)],[p.bot+p.H,Ht,fFt(Ht-p.bot-p.H)]];
+    lines.forEach(([a,b,t])=>{if(b-a<.3)return;o+=`<line x1="${xL}" x2="${xL}" y1="${Y(a)}" y2="${Y(b)}" stroke="${DIM}" stroke-width="${1.2*sw}"/><line x1="${xL-1.5}" x2="${xL+1.5}" y1="${Y(a)}" y2="${Y(a)}" stroke="${DIM}" stroke-width="${1.2*sw}"/><line x1="${xL-1.5}" x2="${xL+1.5}" y1="${Y(b)}" y2="${Y(b)}" stroke="${DIM}" stroke-width="${1.2*sw}"/>`;
+      o+=`<text x="${xL-1.2}" y="${(Y((a+b)/2)+fs*.35).toFixed(2)}" text-anchor="end" fill="${DIM}" font-weight="700">${t}</text>`;});
+    if(p.cleat==null)return;const yc=p.bot+p.cleat;o+=`<path d="M${xL+1} ${Y(yc)} l${2.6} ${-1.5} v3 z" fill="#ff9d2e"/><text x="${xL+4}" y="${(Y(yc)-fs*.5).toFixed(2)}" fill="#ff9d2e" font-weight="700">cleat ${fFt(yc)}</text>`;});
+  o+=`<line x1="${X(0)}" x2="${X(L)}" y1="${Y(0)+12}" y2="${Y(0)+12}" stroke="${night?'#d9d3c9':'#1d1d1f'}" stroke-width="${sw}"/><text x="${X(L/2)}" y="${Y(0)+12+fs*1.25}" text-anchor="middle" font-weight="700" fill="${night?'#f1e6d8':'#1d1d1f'}">${w.name}: ${fBoth(L)} (from ${w.from})</text>`;
+  o+='</svg>';
+  /* table */
+  const rows=ps.map(({p,off})=>{const n=p.rys.length;return [p.id,p.type==='ipe'?p.k:p.type==='diff'?'diffuser':'absorber',`${fIn(p.w)} × ${fIn(p.H)}`,`${fIn(p.bot)} to ${fFt(p.bot+p.H)}`,p.run.door?'none: screwed through the door':`${n} × ${fIn(p.Lr)} (1 notched)`,p.run.door?'none':fIn(p.Lc),fIn(p.s0+off)];});
+  let t=`<table class="cut"><tr><th>Panel</th><th>Slats</th><th>W × H</th><th>Above floor</th><th>2x4 rails</th><th>Wall cleat</th><th>Starts at</th></tr>`+rows.map(r=>'<tr>'+r.map((c,i)=>`<td${i===1?' class="n"':''}>${c}</td>`).join('')+'</tr>').join('')+'</table>';
+  let txt=`${w.name.toUpperCase()} (${fFt(L)}, measured from the ${w.from})\n`+rows.map(r=>`${r[0]}: ${r[1]} slats, ${r[2]}, ${r[3]} above floor, rails ${r[4]}, wall cleat ${r[5]}, starts ${r[6]} from ${w.from}`).join('\n');
+  const fw=framing.walls[v];if(fw){
+    const fr=fw.cuts.map(c=>[c.label.split(': ')[1]||c.label,`${c.n} × ${fIn(c.len)} ${c.lum}`]);
+    fr.unshift(['Wall',`${w.leaf==='outer'?'Outer leaf, to the ceiling':'Inner leaf, booth height'}: ${fIn(fw.len)} long × ${fFt(fw.H)} tall, studs 16" on center`]);
+    if(fw.door)fr.push(['Door rough opening',`${fIn(RO_W)} × ${fIn(RO_H)}, centered ${fIn((fw.door[0]+fw.door[1])/2)} along this face`]);
+    if(v==='BN')fr.push(['Bar',`${fIn(BAR_L)} × ${fIn(BAR_D)} deep × ${fIn(BAR_H)} tall, ${fIn(BAR_X0)} from the west wall; ipe above it from ${fIn(BAR_H+2)}`]);
+    t+=`<h3 style="margin:12px 0 4px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em">Framing: 2x4 studs, 2 layers 5/8" drywall on the ${w.leaf==='outer'?'room':'booth'} side</h3><table class="cut">`+fr.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')+'</table>';
+    txt+='\nFRAMING\n'+fr.map(r=>`${r[0]}: ${r[1]}`).join('\n');}
+  if(!ps.length){t='<p class="hint">No ipe panels on this face.</p>'+t;}
+  return {svg:o,html:t,txt};
+}
+function updateSheet(){
+  const v=state.view,elev=!!WALL[v];const btn=document.getElementById('sheetBtn');if(btn)btn.style.display=elev?'flex':'none';
+  const sh=document.getElementById('sheet');if(!sh)return;
+  if(!elev||!sheetOpen||!panels.length){sh.classList.remove('open');return;}
+  const r=wallSheet(v);sh.dataset.txt=r.txt;
+  document.getElementById('sheetTitle').textContent=`Cut sheet: ${WALL[v].name}`;
+  document.getElementById('sheetBody').innerHTML=`<div class="diag">${r.svg}</div><p class="hint" style="margin:0 0 6px">Dashed lines are the 2x4 rails behind the ipe; orange is the notched cleat rail. Dashed tan boxes are booth framing.</p>${r.html}`;
+  sh.classList.add('open');
+}
+/* ---------- whole-room materials and cut list ---------- */
+function buildCutList(){
+  const s=stats,out=[],T=[];const sec=(h)=>{out.push(`<tr><td class="sub" colspan="3">${h}</td></tr>`);T.push('\n'+h.toUpperCase());};
+  const row=(item,qty,note='')=>{out.push(`<tr><td>${item}${note?`<div class="hint" style="margin:2px 0 0">${note}</div>`:''}</td><td class="n" colspan="2">${qty}</td></tr>`);T.push(`- ${item}: ${qty}${note?' ('+note+')':''}`);};
+  sec('Ipe, 1" × 5 1/2" × 97" boards');
+  [['Main band',s.main],['Amp wall face',s.amp],['Booth walls',s.booth]].forEach(([n,G])=>{if(G.slats)row(`${n}: cut to ${fIn(G.H)}`,`${G.slats} slats`,`${G.boards} boards, ${G.cuts} cut each, ${fIn(Math.max(0,G.offEach))} offcut`);});
+  if(s.barG.slats)row(`Booth, above the bar: cut to ${fIn(s.barG.H)}`,`${s.barG.slats} slats`,`${s.barG.boards} boards, ${fIn(s.barG.offEach)} offcut each`);
+  if(s.doorG.slats)row('Booth door face (around a 20" × 30" vision lite)',`2 × ${fIn(79)} + 3 × ${fIn(LITE_B-1-.5)} + 3 × ${fIn(79.5-LITE_T-1)}`,'3 boards; screw from inside the door, keep slats 1/2" off the hinge edge');
+  s.over.pieces.forEach(o=>{const src=[['above-bar',s.barG.offEach],['amp-wall',s.amp.offEach]].filter(([,L])=>L>=o.H+KERF).sort((a,b)=>a[1]-b[1])[0];
+    row(`${o.name}: cut to ${fIn(o.H)}`,`${o.n} slats`,src?`from ${src[0]} offcuts (${fIn(src[1])}, ${Math.floor((src[1]+KERF)/(o.H+KERF))} per offcut), no extra boards`:'needs extra boards');});
+  {const H=Math.max(...s.over.pieces.map(o=>o.H),1),per=L=>Math.max(0,Math.floor((L+KERF)/(H+KERF)));const need=s.over.pieces.reduce((a,o)=>a+o.n,0)+(state.ampTrim&&state.ampGap>.05?3:0);
+    const cap=s.amp.slats*per(s.amp.offEach)+s.barG.slats*per(s.barG.offEach);if(need>cap)row('Offcut shortfall','buy '+Math.ceil((need-cap)/Math.max(1,per(STOCK)))+' more boards');}
+  const amp=RUNS.find(r=>r.amp);if(state.ampTrim&&state.ampGap>.05){const pcs=Math.ceil(amp.used/(s.amp.offEach-1));row('Amp wall ceiling trim strip',`${pcs} × ${fIn(amp.used/pcs)}`,`rip ${fIn(state.ampGap-.0625)} wide from amp-wall offcuts; butt joints over LED gaps`);}
+  row('Door casings (room door + both booth doors, both sides)','about 15 pcs',`${fIn(CASING)} wide, rip from offcuts; heads ${fIn(DOOR_W+2*CASING)}`);
+  row('Bar top (5 boards edge-glued, 20" deep with the overhang)',`5 × ${fIn(BAR_L+2)}`,'cut from 5 extra boards; the 22" offcuts become door casing');
+  row('Boards to buy',`${s.boards+5} + 5 spare`);
+  sec('2x4 (8 ft), panel rails');
+  Object.entries(s.railCuts).sort((a,b)=>b[0]-a[0]).forEach(([L,n])=>{const notched=s.hung.filter(p=>Math.abs(p.Lr-L)<1e-3).length;row(`Rails at ${fIn(+L)}`,`${n}`,`${notched} get the 45° notch (cleat rail), ${n-notched} plain`);});
+  {const sp=panels.filter(p=>p.nr>0&&p.type==='ipe');const n=sp.reduce((a,p)=>a+p.nr,0);
+    row('Spacer strips on the rail faces (1/2" plywood, 3 1/2" wide)',`${n} strips`,`same length as each rail; sets the ipe 2" off the wall. About ${Math.ceil(sp.reduce((a,p)=>a+p.nr*p.Lr*RAIL_H,0)/144/32*1.15)} sheets of 1/2" plywood, or rip from 1x4`);
+    if(state.led==='back')row('LED groove down the center back of every board',`${s.slats-s.doorG.slats} boards`,'1/2" wide × 1/4" deep, full length, table saw with the fence at 2 1/2"; the strip sits in it facing the wall and passes over the rails');}
+  sec('Booth framing (2x4 studs 16" on center)');
+  const fg={};framing.cuts.forEach(c=>{const k=c.label+'|'+c.len.toFixed(3)+'|'+c.lum;fg[k]=fg[k]||{...c,n:0};fg[k].n+=c.n;});
+  Object.values(fg).forEach(c=>row(c.label,`${c.n} × ${fIn(c.len)}`,c.lum));
+  const all2x4=[];panels.forEach(p=>{for(let i=0;i<p.nr;i++)all2x4.push({len:p.Lr});});
+  const all2x6=[],all2x10=[];framing.cuts.forEach(c=>{for(let i=0;i<c.n;i++)(c.lum==='2x6'?all2x6:c.lum==='2x10'?all2x10:all2x4).push({len:c.len});});
+  packByStock(all2x4).forEach(b=>row(`${b.ft} ft 2x4s to buy (rails + framing)`,`${b.boards} + ${Math.ceil(b.boards*.08)} spare`,'packed with 1/8" kerf'));
+  packByStock(all2x6).forEach(b=>row(`${b.ft} ft 2x6s to buy (headers + lid)`,`${b.boards} + 1 spare`));
+  packByStock(all2x10).forEach(b=>row(`${b.ft} ft 2x10s to buy (inner window header)`,`${b.boards}`));
+  sec('Wall cleats: one continuous cleat per run, into every stud');
+  {const runs=RUNS.filter(r=>r.panels.length&&!r.door&&r.panels.some(p=>p.nr>0));const lf=runs.reduce((a,r)=>a+(r.end-r.start-1),0)/12;
+    runs.forEach(r=>row(`${r.name}`,`1 × ${fIn(r.end-r.start-1)}`,`level at ${fFt(r.panels[0].bot+r.panels[0].cleat)} to the top of the bevel`));
+    row('Wall cleat stock: 3/4" plywood ripped 2 1/2" wide, top beveled 45°',`${lf.toFixed(0)} ft`,`about ${Math.ceil(lf/136)} sheet${lf>136?'s':''} of 3/4" plywood (17 strips per sheet); splice over a stud. The wedges from the notches are scrap.`);}
+  if(s.types&&(s.types.diff||s.types.abs)){sec('Diffuser and absorber panels (replace ipe panels 1 for 1)');
+    s.types.rows.forEach(r=>row(r[0],r[1],r[2]||''));}
+  sec('Sound isolation, drywall, doors');
+  const fi=framing.interior;
+  row('Booth inside (finished)',`${fIn(fi[0])} × ${fIn(fi[1])} × ${fIn(fi[2])} tall`,`${(fi[0]*fi[1]/144).toFixed(0)} sq ft`);
+  row('Drywall 5/8" 4×8 sheets, 2 layers (outer leaf room side, inner leaf booth side, lid)',`${Math.ceil(framing.dwSqft/32*1.12)}`,`${framing.dwSqft.toFixed(0)} sq ft; damping compound between layers`);
+  row('Mineral wool batts (3 1/2" walls, 5 1/2" lid)',`${framing.insSqft.toFixed(0)} sq ft`);
+  row('Solid-core prehung doors with a vision lite',`2 × ${DOOR_W}"`,`${LITE_W}" × ${LITE_T-LITE_B}" laminated glass lite at ${fIn(LITE_B)} to ${fIn(LITE_T)}; outer swings out, inner swings in; perimeter seals + automatic door bottoms`);
+  row('Studio window above the bar',`${WIN_W}" × ${WIN_H}" opening, sill at ${fIn(WIN_SILL)}`,`2 panes of laminated glass, different thickness (1/4" + 3/8"), one per leaf, inner pane tilted 5°; rough opening ${fIn(WIN_W+1)} × ${fIn(WIN_H+1)} in both leaves; line the jamb with black felt`);
+  row('Sill gasket under every bottom plate + acoustic sealant at every edge','about 2 tubes per wall');
+  row('Air gap','1" everywhere between leaves and between the inner leaf and the room walls; nothing may bridge it');
+  sec('Fasteners and finish');
+  const slatScrews=panels.reduce((a,p)=>a+p.k*(p.run.door?3:p.nr)*2,0);
+  row('Stainless #8 × 2 1/2" screws, through the 2x4 and spacer into the ipe',`${slatScrews} (+10%)`,'2 per slat per rail; predrill and countersink, ipe is very hard');
+  row('Structural screws 1/4" × 3 1/8", wall cleats into studs',`${RUNS.filter(r=>r.panels.length&&!r.door).reduce((a,r)=>a+2*(Math.floor((r.end-r.start)/16)+1),0)} (+10%)`,'2 at every stud the cleat crosses');
+  row('Framing screws 3"',`about ${framing.F.filter(m=>m.kind!=='plate').length*4+framing.joists.length*6}`);
+  row('Ipe end-grain sealer + penetrating oil','1 qt each');
+  sec('Ceiling fabric and rugs');
+  if(state.curtains){const area=(264*194-60*32/2-BX*(194-BY))/144;row('Draped ceiling fabric (flame-retardant velvet or muslin, dyed)',`about ${Math.ceil(area*1.6/13.5)} linear yd of 54" fabric`,`${area.toFixed(0)} sq ft of ceiling at about 1.6× for the sag; pin every 32", keep 18" clear of light fixtures and use FR-rated fabric only`);}
+  if(state.rugs)row('Persian-style rugs, layered wall to wall',`about ${stats.rugs||0} rugs, mostly 4×6 and 6×8 ft`,'overlapping so no floor shows; non-slip pads under the bottom layer, tape the top edges near doors');
+  sec('Lighting and dimming');
+  row('LED strip, 24 V COB, about 1.5 W/ft (4.8 W/m), tunable white or RGBW',`${s.led.ft.toFixed(0)} ft`,`${s.led.count} strips, ${state.led==='back'?'one down the back of every board, facing the wall':'one per panel joint'}; low-profile, high-density (no visible dots) 24 V strip`);
+  {const zones=RUNS.filter(r=>r.panels.length&&!r.door).map(r=>ledXs(r).length*(r.sp.H-1)/12*1.5);const tot=zones.reduce((a,b)=>a+b,0);
+    const ps={60:0,100:0,150:0,240:0};zones.forEach(w=>{const need=w*1.2;const sz=[60,100,150,240].find(x=>x>=need)||240;ps[sz]+=Math.ceil(need/sz);});
+    row('24 V power supplies, one per zone (sized at 1.5 W/ft + 20%)',Object.entries(ps).filter(([,n])=>n).map(([w,n])=>`${n} × ${w} W`).join(', '),`about ${Math.round(tot)} W total at full brightness, roughly ${(tot/120).toFixed(1)} A at 120 V: 2 dedicated 15 A circuits leave headroom. A 2" wash needs far less than full output, so most days this draws a third of that.`);}
+  row('Dimming','1 PWM dimmer / controller per zone',`zones: one per wall run (${RUNS.filter(r=>r.panels.length).length} runs); a Wi-Fi or DMX controller sets color and brightness from your phone`);
+  if(state.strings&&s.stringFt)row('Warm string lights on a separate dimmer',`about ${Math.ceil(s.stringFt/5)*5} ft`,`${s.bulbs} bulbs in the model`);
+  return {html:'<table class="cut">'+out.join('')+'</table>',txt:'MATERIALS AND CUT LIST\n'+T.join('\n').trim()};
+}
+const CUT_STEPS=[
+  '<b>Ipe on the miter saw.</b> Square one factory end of each 97" board (take about 1/4"), set a stop block at the slat length (90" main band) and cut. Cut the bar, amp wall and door lengths the same way. Seal the cut ends the same day.',
+  '<b>2x4 rails on the miter saw.</b> Set a stop block for each rail length in the list and cut all of one length at once. Pick the straightest 2x4s for the notched cleat rails.',
+  '<b>LED groove (table saw).</b> On the back of every board cut a 1/2" wide × 1/4" deep groove down the center (fence at 2 1/2", two passes). The LED strip lies in it facing the wall, so it passes over the rails and lights the wall behind each board. Leave the wire end at the bottom.',
+  '<b>Notch, cut 1 (table saw, 45°).</b> Rail flat, wall face down, bottom edge against the fence. Blade tilted 45° away from the fence, 3/4" high, meeting the table 1 3/4" from the fence. Nothing comes free.',
+  '<b>Notch, cut 2 (table saw, 90°).</b> Rail on its bottom edge, ipe face against the fence, blade 2 1/2" high and 3/4" from the fence. The wedge drops on the open side: it is that panel\'s wall cleat. Featherboard and push stick, test on scrap first.',
+  '<b>Assemble panels face down.</b> Slats face down with 1" spacers. Glue and pin a 1/2" spacer strip to the face of each rail, then lay the rails square across the slats (notch toward the wall, at the cleat line) and screw through the 2x4 and spacer into the ipe with #8 × 2 1/2" screws, 2 per slat per rail. Press the LED strip into each board\'s groove before the panel is hung.',
+  '<b>Booth outer leaf.</b> Frame the north and east walls to the room ceiling with 10 ft 2x4s, studs 16" on center, door opening in the north wall. Sill gasket under the bottom plate, screw the top plate to the ceiling joists, insulate, 2 layers of 5/8" drywall with damping compound on the room side only.',
+  '<b>Booth inner leaf.</b> Frame 4 walls 1" away from the outer leaf and from the room walls (use 1" foam blocks as temporary spacers, then pull them). Sill gasket under every plate, door opening lined up with the outer door. Lay the 2x6 lid joists across the north and south top plates, insulate, then 2 layers of 5/8" drywall on the booth side and the lid underside. Nothing may touch both leaves.',
+  '<b>Hang.</b> Screw each wall cleat level into studs at the cleat height (outside panels into the outer leaf, inside panels into the inner leaf), wire the LED channels to their zone dimmers, then lift each panel 1" and drop it onto its cleat.',
+];
+/* ---------- build guide ---------- */
+function buildGuide(){
+  const s=stats,fr=framing,S=[];const sec=(id,title,html)=>S.push({id,title,html});
+  const tbl=(head,rows)=>`<table class="cut"><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i&&typeof c==='number'?' class="n"':''}>${c}</td>`).join('')}</tr>`).join('')}</table>`;
+  /* 1. order of work */
+  sec('order','Order of work',`<ol>
+    <li><b>Booth outer walls</b> (north and east, to the ceiling) with the window and door openings. 1 to 2 days, 2 people.</li>
+    <li><b>Booth inner walls and lid</b>, 1" off everything. 2 days.</li>
+    <li><b>Electrical rough-in:</b> circuits and boxes for the LED power supplies, dimmers and string lights. Licensed electrician. 1 day.</li>
+    <li><b>Insulation, 2 layers of drywall, tape, paint the whole room black.</b> 3 to 4 days with drying.</li>
+    <li><b>Doors and window:</b> hang both doors, set both panes, trim in ipe. 1 to 2 days.</li>
+    <li><b>Cut and build all ipe panels</b> (slats, grooves, rails, notches, spacers, LEDs). 4 to 6 days.</li>
+    <li><b>Wall cleats, then hang the panels</b> wall by wall and plug in the LED zones. 2 days, 2 people.</li>
+    <li><b>Fabric ceiling, string lights, rugs.</b> 1 day.</li></ol><p>About 3 weeks of weekends for two people, plus drywall drying time.</p>`);
+  /* 2. ipe panels */
+  const kinds={};panels.filter(p=>p.type==='ipe'&&!p.run.door).forEach(p=>{const k=`${p.k}|${p.H.toFixed(2)}|${p.Lr.toFixed(3)}|${p.nr}`;(kinds[k]=kinds[k]||{p,n:0,ids:[]}).n++;kinds[k].ids.push(p.id);});
+  const prow=Object.values(kinds).sort((a,b)=>b.p.H-a.p.H||b.p.k-a.p.k).map(({p,n,ids})=>[`${p.k}-slat × ${fIn(p.H)}`,n,`${p.k} × ${fIn(p.H)}`,`${p.nr} × ${fIn(p.Lr)} (1 notched)`,`${p.nr} × ${fIn(p.Lr)}`,fIn(p.Lc),lb(p.weight),ids.join(', ')]);
+  sec('panels','Ipe panels',`<p>Every panel is the same recipe at a different size: 1" × 5 1/2" ipe slats with 1" gaps, on 2x4 rails laid flat, with a 1/2" spacer strip on each rail so the ipe floats 2" off the wall. The top rail is notched at 45° and hangs on a matching wall cleat. An LED strip runs down a groove in the back of every board.</p>
+    ${tbl(['Panel','Qty','Ipe slats','2x4 rails','1/2" spacers','Wall cleat','Weight','Panels'],prow)}
+    <h3>Build one panel</h3><ol>
+    <li>Cut the slats (miter saw, stop block). Seal the ends.</li>
+    <li>Table saw: 1/2" wide × 1/4" deep groove down the center back of each slat.</li>
+    <li>Cut the 2 rails per panel (miter saw, stop block): a bottom rail 6" up and the notched cleat rail 12" below the top. Two rails keep the backlight even; the ipe spans the gap easily because it carries no load. On the cleat rail, make the two notch cuts (see the cleat section view): 45° cut 3/4" deep, then the 90° cut 2 1/2" high. The wedge is scrap.</li>
+    <li>Rip 1/2" plywood into 3 1/2" strips, cut them to rail length, glue and pin one to the face of each rail.</li>
+    <li>Lay the slats face down on a flat bench with 1" spacer blocks. Set the rails square across them, rail centers at the heights in the cut sheet, ends 9/16" in from the panel edges, notch toward the wall.</li>
+    <li>Predrill and screw through rail and spacer into each slat: 2 stainless #8 × 2 1/2" screws per slat per rail.</li>
+    <li>Press the LED strip into each groove, solder or clip the leads at the bottom, label the panel ID on a rail.</li></ol>`);
+  /* 3. hanging */
+  const hang=RUNS.filter(r=>r.panels.length&&!r.door).map(r=>[r.name,r.panels.length,fFt(r.sp.bot+(r.sp.cleat??0)),`${fFt(r.sp.bot)} to ${fFt(r.sp.bot+r.sp.H)}`]);
+  sec('hang','Wall cleats and hanging',`<p>Each run gets one continuous wall cleat: 3/4" plywood ripped 2 1/2" wide with a 45° bevel on top, long point up and away from the wall, screwed into every stud it crosses. Panels can then hang anywhere along it, and no panel depends on hitting studs on its own.</p>
+    ${tbl(['Run','Panels','Cleat top above floor','Panel bottom to top'],hang)}
+    <ol><li>Snap a level line at the cleat height for the run. Find and mark studs.</li><li>Screw the cleat into every stud with 2 structural screws (1/4" × 3 1/8"); splice lengths over a stud.</li><li>Two people: lift the panel 1", slide it to the wall, and drop the notch over the cleat. Check the 1" gap to the next panel with a spacer block.</li><li>Panels are 3 slats wide at most (about 60 lb at 90"), so two people can lift and seat them easily.</li></ol>`);
+  /* 4. booth framing */
+  const wallTbl=(ids)=>ids.map(id=>{const w=fr.walls[id];return `<h3>${WALL[id].name.replace('Booth ','')}: ${fIn(w.len)} long × ${fFt(w.H)} tall</h3>`+tbl(['Piece','Qty × length','Lumber'],w.cuts.map(c=>[c.label.split(': ')[1],`${c.n} × ${fIn(c.len)}`,c.lum]));}).join('');
+  sec('outer','Booth outer walls',`<p>Two new walls on the north and east sides of the booth, from the floor to the room ceiling, built with 10 ft 2x4s. They hold the outer pane of the long window and the outer door. Drywall goes on the room side only.</p>${wallTbl(['BN','BE'])}
+    <ol><li>Lay out bottom and top plates together; mark studs 16" on center from the west wall (north) and the south wall (east). Mark the window opening (north) and door opening (east).</li>
+    <li>Sill gasket under the bottom plate, screw it to the floor. Screw the top plate to the ceiling joists (add blocking if they run parallel).</li>
+    <li>Build the openings: king and jack studs, a doubled header with a 1/2" spacer, the doubled rough sill under the window, cripples above and below.</li>
+    <li>Mineral wool in the cavities, then 2 layers of 5/8" drywall with damping compound between them on the room side. Caulk every edge with acoustic sealant.</li></ol>`);
+  sec('inner','Booth inner walls and lid',`<p>A separate box inside the outer walls: 4 walls and a lid, with a 1" air gap from the outer walls and from the room's west and south walls. The north and south walls carry the lid joists, which is why the long window gets a 2x10 header here.</p>${wallTbl(['BIN','BIS','BIE','BIW'])}
+    <h3>Lid</h3>${tbl(['Piece','Qty × length','Lumber'],[['Lid joists, 16" on center, resting on the north and south top plates',`${fr.joists.length} × ${fIn(fr.joists[0].len)}`,'2x6'],['Blocking at mid-span','1 row','2x6']])}
+    <ol><li>Use 1" foam blocks as temporary spacers against the outer walls and room walls; pull them once the walls are tied together.</li><li>Sill gasket under every bottom plate. Build the north and south walls first, then the east and west walls between them.</li><li>Set the joists, add blocking, mineral wool between joists.</li><li>2 layers of 5/8" drywall on the booth side of the walls and under the lid. The booth inside stays plain drywall, painted black.</li><li>Check that nothing (screws, conduit, trim) touches both the inner and outer walls.</li></ol>`);
+  /* 5. double door */
+  sec('door','Double door (short east side)',`<p>Two ${DOOR_W}" solid-core prehung doors, one in each wall, both hinged on the north jamb. The outer door swings out into the room; the inner door swings into the booth. Each has a ${LITE_W}" × ${LITE_T-LITE_B}" laminated glass vision panel at ${fIn(LITE_B)} to ${fIn(LITE_T)}.</p>
+    ${tbl(['Item','Qty','Size / note'],[['Prehung solid-core door, outswing',1,`${DOOR_W}" × 80", jamb ripped to ${fIn(OUT_T)}`],['Prehung solid-core door, inswing',1,`${DOOR_W}" × 80", jamb ripped to ${fIn(DWL+ST)}`],['Rough opening, each wall',2,`${fIn(RO_W)} × ${fIn(RO_H)}`],['Perimeter seal kit + automatic door bottom',2,''],['Heavy ball-bearing hinges',8,'4 per door (the outer door carries the ipe)'],['Ipe on the outer door face, resawn to 1/2"',8,`2 × 79", 3 × ${fIn(LITE_B-1.5)}, 3 × ${fIn(79.5-LITE_T-1)} around the glass`],['Ipe casing, 2 1/2" wide',2,'sets, room side and booth side']])}
+    <ol><li>Hang each door in its own wall; shim and screw through the jamb into its own king studs only.</li><li>Fill the 1" gap between the two jambs with closed-cell foam backer rod and acoustic sealant. Never bridge it with wood.</li><li>Fit perimeter seals and the automatic door bottoms; adjust so each door closes with light pressure.</li><li>Resaw the door slats to 1/2" thick on the table saw (two passes, flip end for end), then screw them to the outer door from the inside face, 1/2" back from the hinge edge so the door can open fully. That keeps the door about 30 lb heavier, not 60.</li></ol>`);
+  /* 6. double window */
+  sec('window','Long double window (north side, above the bar)',`<p>A ${WIN_W}" × ${WIN_H}" opening through both walls, sill at ${fIn(WIN_SILL)}, centered over a ${fIn(BAR_L)} bar. Two panes of different thickness with the inner one tilted 5°, so sound does not ring between them.</p>
+    ${tbl(['Item','Qty','Size / note'],[['Rough opening, each wall',2,`${fIn(WIN_W+1)} × ${fIn(WIN_H+1)}`],['Window box, black 1x stock ripped to the wall thickness',2,`${fIn(WIN_W)} × ${fIn(WIN_H)} inside`],['Outer pane, 1/4" laminated glass',1,`${fIn(WIN_W-.5)} × ${fIn(WIN_H-.5)}`],['Inner pane, 3/8" laminated glass',1,`${fIn(WIN_W-.5)} × ${fIn(WIN_H-.5)}, set 5° out at the bottom`],['3/4" × 3/4" glass stops',2,'sets, one per box'],['Neoprene setting blocks + glazing tape','1 kit',''],['Black felt for the jambs between panes','1 yd',''],['Ipe casing on the room side','1','set']])}
+    <ol><li>Build a window box for each wall from black 1x stock ripped to that wall's thickness. Screw each box to its own wall only.</li><li>Fix the stops on the far side of each box first. Set the outer pane from the room side and the inner pane from inside the booth, each on setting blocks with glazing tape, then screw the near stops on (screws, not nails, so either pane can come out later for cleaning or replacement). Tilt the inner pane 5° with a tapered stop.</li><li>Line the jambs between panes with felt; close the 1" gap between the boxes with backer rod and acoustic sealant.</li><li>Bar: 2x4 frame against the outer wall, top from 5 ipe boards edge-glued to 20" deep.</li></ol>`);
+  /* 7. diffusers and absorbers */
+  const D=panels.filter(p=>p.type==='diff'),A=panels.filter(p=>p.type==='abs');
+  sec('diff','Diffusers and absorbers (optional swaps)',`<p>Any panel 3 or more slats wide can be swapped for one of these. They keep the same size and hang on the same notched rails and cleats. Currently: ${D.length} diffusers, ${A.length} absorbers.</p>
+    <h3>QRD diffuser</h3><ol><li>1/2" plywood back, the full panel size less 1/4".</li><li>${QRD.length+1} fins, 1/2" × ${DIFF_D}" × panel height, faced with a 1/2" ipe strip; glue and screw to the back at equal spacing.</li><li>Well floors from 1/2" plywood set back 0, 1, 4, 2, 2, 4, 1" from the front, on cleats glued to the fins.</li><li>Paint the back and floors black; screw the rails to the back.</li></ol>
+    <h3>Absorber</h3><ol><li>1x3 frame the panel size, 2" mineral wool board inside.</li><li>Wrap in black acoustic fabric, staple on the back, add ipe edge strips.</li><li>Screw the rails to the frame.</li></ol>`);
+  /* 8. LEDs */
+  const zones=RUNS.filter(r=>r.panels.length&&!r.door).map(r=>{const n=ledXs(r).length;return [r.name,n,`${fIn(r.sp.H-1)}`,`${(n*(r.sp.H-1)/12).toFixed(0)} ft`,`${Math.round(n*(r.sp.H-1)/12*1.5)} W`];});
+  sec('led','LED lighting',`<p>One strip down the back of every board, facing the wall, so each board is backlit with a halo on the black wall 2" behind it. Each run is its own dimmer zone.</p>
+    ${tbl(['Zone (run)','Strips','Strip length','Total','Power at 1.5 W/ft'],zones)}
+    <ol><li>Use 24 V, high-density (no visible dots) strip, warm white or tunable white/RGBW if you want the color presets.</li><li>Leave every lead at the bottom of the board; join a panel's strips in parallel on a small bus behind the bottom rail with a plug.</li><li>Mount a power supply and PWM dimmer (or Wi-Fi/DMX controller) per zone in a ventilated spot; run 18 AWG to each panel's plug. Inject power at both ends of long runs.</li><li>String lights go on their own dimmer.</li></ol>`);
+  /* 9. finishes */
+  sec('finish','Ceiling fabric, rugs and finish',`<ol><li>Paint walls, ceiling, booth and trim matte black before hanging anything.</li><li>Ceiling fabric: flame-retardant only. Pin a batten every 32" across the ceiling, staple the fabric to each batten so it sags about 9" between, and keep it 18" from any light fixture.</li><li>Rugs: lay the four 8×10s first with pads, then layer the smaller rugs. Tape the top edges near the doors and the bar.</li><li>Ipe: wipe with a penetrating oil before hanging; seal all cut ends.</li></ol>`);
+  sec('materials','Full materials and cut list',buildCutList().html);
+  const html=S.map(x=>`<h2 id="g-${x.id}">${x.title}</h2>${x.html}`).join('');
+  const tmp=document.createElement('div');tmp.innerHTML=html;
+  return {toc:S.map(x=>`<a href="#g-${x.id}">${x.title}</a>`).join(''),html,txt:'BUILD GUIDE\n\n'+tmp.innerText};
+}
+function openGuide(){const g=buildGuide();$('guideToc').innerHTML=g.toc;$('guideBody').innerHTML=g.html;$('guide').dataset.txt=g.txt;$('guide').classList.add('open');
+  $('guideToc').querySelectorAll('a').forEach(a=>a.onclick=e=>{e.preventDefault();const t=document.getElementById(a.getAttribute('href').slice(1));if(t)$('guideBody').scrollTo({top:t.offsetTop-8,behavior:'smooth'});});}
+/* ---------- UI ---------- */
+const $=id=>document.getElementById(id);
+VIEWS.forEach(([v,t])=>{const b=document.createElement('button');b.className='chip';b.textContent=t;b.dataset.v=v;b.onclick=()=>setView(v);$('views').appendChild(b);});
+STUD_WALLS.forEach(w=>{const l=document.createElement('label');l.textContent=`${w.name} (from ${w.from})`;l.htmlFor='st_'+w.id;const i=document.createElement('input');i.type='number';i.inputMode='decimal';i.step='0.25';i.min='0';i.max='16';i.id='st_'+w.id;i.value=state.studOff[w.id];
+  i.oninput=()=>{const v=parseFloat(i.value);if(!isNaN(v)){state.studOff[w.id]=v;requestRebuild();}};$('studInputs').append(l,i);});
+function seg(id,key,cb){$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{state[key]=b.dataset.v;cb&&cb(b.dataset.v);rebuild();if(key==='preset')setView(state.view,true);});}
+seg('presetSeg','preset',v=>{state.H=+v;state.bottom=PRESETS[v].bottom;state.cleat=state.H-12;});
+seg('dimSeg','dims');
+const SCENES={session:{ledLevel:.45,stringLevel:.7,ambLevel:.3,ledColor:'warm'},show:{ledLevel:1,stringLevel:1,ambLevel:.15,ledColor:'amber'},work:{ledLevel:.7,stringLevel:.4,ambLevel:1,ledColor:'warm'},late:{ledLevel:.18,stringLevel:.35,ambLevel:.05,ledColor:'red'}};
+$('sceneSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{Object.assign(state,SCENES[b.dataset.v],{ledHex:null});applyLighting();renderLightUI();if(state.led==='off'){state.led='all';rebuild();}});
+['ledLevel','stringLevel','ambLevel'].forEach(k=>$(k).oninput=e=>{state[k]=+e.target.value;applyLighting();renderLightUI();});
+$('ledHex').oninput=e=>{state.ledHex=e.target.value;applyLighting();renderLightUI();};
+Object.entries(LED_COLORS).forEach(([k,v])=>{const d=document.createElement('i');d.style.background=v;d.title=k;d.onclick=()=>{state.ledColor=k;state.ledHex=null;applyLighting();renderLightUI();};$('qDots').appendChild(d);});
+$('qColor').oninput=e=>{state.ledHex=e.target.value;applyLighting();renderLightUI();};
+$('qLevel').oninput=e=>{state.ledLevel=+e.target.value;applyLighting();renderLightUI();};
+const step=d=>{state.ledLevel=Math.max(0,Math.min(1,Math.round((state.ledLevel+d)*20)/20));applyLighting();renderLightUI();};
+$('qDim').onclick=()=>step(-.1);$('qBright').onclick=()=>step(.1);
+function renderLightUI(){$('qLevel').value=state.ledLevel;$('qOut').textContent=Math.round(state.ledLevel*100)+'%';$('qColor').value=state.ledHex||LED_COLORS[state.ledColor];$('ledHex').value=state.ledHex||LED_COLORS[state.ledColor];['ledLevel','stringLevel','ambLevel'].forEach(k=>{$(k).value=state[k];$(k+'Out').textContent=Math.round(state[k]*100)+'%';});
+  document.querySelectorAll('#ledColSeg button').forEach(b=>b.classList.toggle('on',!state.ledHex&&b.dataset.v===state.ledColor));}
+$('typeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{const v=b.dataset.v;state.ptypes={};
+  RUNS.forEach((r,ri)=>{if(r.door||r.overDoor)return;r.panels.forEach((p,i)=>{const k=ri+'-'+i;
+    if(v==='alt'&&!r.overBar&&i%2===1&&p.k>=3)state.ptypes[k]='diff';
+    if(v==='booth'&&/^B[NE]$/.test(r.wall)&&!r.overDoor)state.ptypes[k]='abs';
+    if(v==='amp'&&r.amp&&p.k>=3)state.ptypes[k]='diff';});});
+  rebuild();document.querySelectorAll('#typeSeg button').forEach(x=>x.classList.toggle('on',x===b));});seg('ledSeg','led');seg('ledColSeg','ledColor',()=>{state.ledHex=null;});
+$('moodSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.night=b.dataset.v==='night';rebuild();});
+[['bottom','bottom'],['cleat','cleat'],['ceil','ceil'],['booth','booth'],['gap','gap'],['ampH','ampH'],['ampGap','ampGap']].forEach(([id,k])=>{$(id).oninput=e=>{state[k]=parseFloat(e.target.value);requestRebuild();};});
+['walls','obstacles','hardware','xray','studs','ear','ledge','ampTrim','framing','strings','curtains','rugs','cutaway'].forEach(k=>{const el=$('t_'+k);el.checked=state[k];el.onchange=()=>{state[k]=el.checked;rebuild();};});
+$('ctrlBtn').onclick=()=>$('panel').classList.toggle('open');$('closePanel').onclick=()=>$('panel').classList.remove('open');
+$('warnPill').onclick=()=>$('panel').classList.add('open');$('infoX').onclick=()=>{state.sel=null;$('info').style.display='none';rebuild();};
+$('zIn').onclick=()=>zoomBy(.7);$('zOut').onclick=()=>zoomBy(1/.7);$('fitBtn').onclick=()=>{home=viewPose(state.view);goTo(home);};
+$('sheetClose').onclick=()=>{sheetOpen=false;updateSheet();};$('sheetBtn').onclick=()=>{sheetOpen=!sheetOpen;updateSheet();};
+$('sheetCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('sheet').dataset.txt||'');$('sheetCopy').textContent='Copied';}catch(e){$('sheetCopy').textContent='Copy blocked';}setTimeout(()=>$('sheetCopy').textContent='Copy',1600);};
+$('copyCuts').onclick=async()=>{try{await navigator.clipboard.writeText(buildCutList().txt+'\n\nHOW TO CUT\n'+CUT_STEPS.map((x,i)=>(i+1)+'. '+x.replace(/<[^>]+>/g,'')).join('\n'));$('copyMsg').textContent='Copied.';}catch(e){$('copyMsg').textContent='Copy was blocked here; select the text instead.';}};
+$('guideBtn').onclick=openGuide;$('guideClose').onclick=()=>$('guide').classList.remove('open');
+$('guideCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('guide').dataset.txt||'');$('guideCopy').textContent='Copied';}catch(e){$('guideCopy').textContent='Copy blocked';}setTimeout(()=>$('guideCopy').textContent='Copy all',1600);};
+$('modeBtn').onclick=()=>{setOrbit(!state.orbit);updateLegend();};
+/* swipe the sheet down to close */
+(()=>{let y0=null;const p=$('panel');p.addEventListener('touchstart',e=>{if(p.scrollTop<=0)y0=e.touches[0].clientY;else y0=null;},{passive:true});
+  p.addEventListener('touchmove',e=>{if(y0!==null&&e.touches[0].clientY-y0>70){p.classList.remove('open');y0=null;}},{passive:true});})();
+
+function renderUI(){
+  document.querySelectorAll('#presetSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.preset));
+  document.querySelectorAll('#dimSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.dims));
+  document.querySelectorAll('#ledSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.led));
+  document.querySelectorAll('#ledColSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.ledColor));
+  document.querySelectorAll('#moodSeg button').forEach(b=>b.classList.toggle('on',(b.dataset.v==='night')===state.night));
+  $('ledHint').textContent=`${fFt(stats.led.ft*12)} of LED strip in ${stats.led.count} strips${state.led==='back'?', one down the back of each board, washing the black wall 2" behind it':''}.`;
+  const s=stats,H=state.H;const pct=v=>(v*100).toFixed(1)+'%';
+  $('presetHint').textContent=`${s.cuts} cut${s.cuts>1?'s':''} per board, ${fIn(Math.max(0,s.offEach))} offcut per board (${((1-s.usedMain)*100).toFixed(0)}% of the ipe left over). 4-slat panel about ${lb(s.w4)}, 3-slat about ${lb(s.w3)}.`;
+  $('bottom').max=Math.max(0,state.ceil-H);$('bottom').value=state.bottom;$('bottomOut').textContent=`${fIn(state.bottom)} (top ${fFt(state.bottom+H)})`;
+  $('cleat').min=RAIL_H/2;$('cleat').max=H-RAIL_H/2;$('cleat').value=state.cleat;$('cleatOut').textContent=`${fIn(state.cleat)} (${fFt(state.bottom+state.cleat)} above floor)`;
+  $('ceil').value=state.ceil;$('ceilOut').textContent=fFt(state.ceil);
+  $('booth').max=state.ceil;$('booth').value=state.booth;$('boothOut').textContent=fFt(state.booth);
+  $('gap').value=state.gap;$('gapOut').textContent=fIn(state.gap);
+  $('ampH').value=state.ampH;$('ampHOut').textContent=fBoth(state.ampH);
+  $('ampGap').value=state.ampGap;$('ampGapOut').textContent=fIn(state.ampGap);
+  const A=s.amp,ab=state.ceil-state.ampGap-state.ampH;
+  $('ampHint').textContent=`Panels run ${fFt(ab)} to ${fFt(ab+state.ampH)} above floor (covering ${fIn(state.ceil-ab)} from the ceiling down). ${A.slats} slats from ${A.boards} boards, ${fIn(Math.max(0,A.offEach))} offcut each. 4-slat about ${lb(s.aw4)}, 5-slat about ${lb(s.aw5)}.`;
+  const rows=[
+    ['sub','Panels'],
+    ['Panels',`${panels.length} (${[5,4,3].filter(k=>s.n[k]).map(k=>s.n[k]+' × '+k+'-slat').join(', ')})`],
+    ['4-slat / 3-slat width',`${fIn(4*SLAT_W+3*state.gap)} / ${fIn(3*SLAT_W+2*state.gap)}`],
+    ['Slats, main band',`${s.main.slats} at ${fIn(s.main.H)}`],['Slats, amp wall',`${s.amp.slats} at ${fIn(s.amp.H)}`],['Slats total',s.slats],
+    ['Bottom / top above floor',`${fIn(state.bottom)} / ${fFt(state.bottom+H)}`],['Bare wall above',fFt(state.ceil-state.bottom-H)],
+    ['Cleat rail center',`${fIn(state.cleat)} up panel, ${fFt(state.bottom+state.cleat)} above floor`],
+    ['sub','Stock yield (97" boards)'],
+    ['Boards, main band',`${s.main.boards} (${fIn(Math.max(0,s.main.offEach))} offcut each)`],['Boards, amp wall',`${s.amp.boards} (${fIn(Math.max(0,s.amp.offEach))} offcut each)`],['Boards total',s.boards],
+    ['Total offcut',(Math.max(0,s.offTotal)/12).toFixed(1)+' ft'],['Stock used',pct(s.used)],
+    ['sub','Weight (ipe 66 lb/ft³, framing 34 lb/ft³)'],
+    ['One slat',s.slatLb.toFixed(1)+' lb'],['Main 4-slat / 3-slat panel',`${lb(s.w4)} / ${lb(s.w3)}`],['Amp 5-slat / 4-slat panel',`${lb(s.aw5)} / ${lb(s.aw4)}`],['All ipe',lb(s.ipeTotal)],['Everything on the walls',lb(s.total)],
+    ['sub','Framing'],
+    ['Stand-off, wall to slat face',fIn(STANDOFF)],
+    
+    ...Object.entries(s.railCuts).map(([L,n])=>[`2x4 cuts at ${fIn(+L)}`,n]),
+    ['2x4 total',s.railFt.toFixed(1)+' ft'],['8 ft 2x4s to buy',s.twoByBoards],
+    ['Notched rails (45°, 3/4" deep)',s.hung.length],
+    ['Wall cleat stock, continuous per run',(RUNS.filter(r=>r.panels.length&&!r.door).reduce((a,r)=>a+(r.end-r.start-1),0)/12).toFixed(1)+' ft'],
+    ['sub','Coverage'],
+    ['Band length around room',fBoth(s.bandLen)],['Band area / gross wall area',pct(s.bandArea/s.wallArea)],['Ipe face / gross wall area',pct(s.slatArea/s.wallArea)],
+  ];
+  if(state.ledge)rows.push(['sub','Cap ledge'],['Ledge needed',(s.ledgeUsed/12).toFixed(1)+' ft'],['Offcut available',(s.ledgeAvail/12).toFixed(1)+' ft']);
+  rows.push(['sub','Runs (clockwise from window)']);
+  RUNS.forEach(r=>rows.push([`${r.name}: ${r.comp.join('+')}`,`${fIn(r.used)} of ${fIn(r.avail)}`]));
+  $('stats').innerHTML='<table>'+rows.map(r=>r[0]==='sub'?`<tr><td class="sub" colspan="2">${r[1]}</td></tr>`:`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')+'</table>';
+  const bad=warns.filter(w=>w[0]==='bad').length;
+  $('warns').innerHTML=warns.length?warns.map(w=>`<div class="w-${w[0]}">${w[1]}</div>`).join(''):'<div class="w-ok">No overlaps, ceiling or clearance problems.</div>';
+  const pill=$('warnPill');pill.style.display=warns.length?'inline-block':'none';pill.style.background=bad?'var(--bad)':'var(--warn)';pill.textContent=`${warns.length} warning${warns.length>1?'s':''}`;
+  const cl=buildCutList();$('cutlist').innerHTML=cl.html;$('cutSteps').innerHTML=CUT_STEPS.map(x=>`<li>${x}</li>`).join('');
+  renderLightUI();
+  if(state.sel)showInfo(panels.find(p=>p.id===state.sel));
+}
+function showInfo(p){
+  if(!p){$('info').style.display='none';return;}
+  const w=p.wall,pt=s=>`(${(w.p0[0]+w.u[0]*s).toFixed(1)}, ${(w.p0[1]+w.u[1]*s).toFixed(1)})`;
+  const swap=p.run.door||p.run.overDoor||p.k<3?(p.k<3&&!p.run.door&&!p.run.overDoor?'<p class="hint">Too narrow for a diffuser or absorber (needs 3+ slats wide).</p>':''):`<div class="seg" style="margin:8px 0">${[['ipe','Ipe slats'],['diff','Diffuser'],['abs','Absorber']].map(([v,t])=>`<button data-pt="${v}" class="${p.type===v?'on':''}">${t}</button>`).join('')}</div>`;
+  $('infoBody').innerHTML=`<h4>${p.id} · ${p.type==='ipe'?p.k+'-slat panel':p.type==='diff'?'QRD diffuser':'Absorber'}</h4>${swap}
+  <div style="color:var(--mut)">${p.run.name}</div>
+  <table>
+  <tr><td>Width × height</td><td>${fIn(p.w)} × ${fIn(p.H)}</td></tr>
+  <tr><td>Along wall (from ${w.from})</td><td>${fIn(p.s0)} to ${fIn(p.s1)}</td></tr>
+  <tr><td>Plan X,Y start / end</td><td>${pt(p.s0)} / ${pt(p.s1)}</td></tr>
+  <tr><td>Bottom / top above floor</td><td>${fIn(p.bot)} / ${fIn(p.bot+p.H)}</td></tr>
+  <tr><td>Weight</td><td style="color:${p.weight>HEAVY?'var(--warn)':'inherit'}">${lb(p.weight)}</td></tr>
+  <tr><td>Rails / wall cleat</td><td>${p.nr} × ${fIn(p.Lr)} / ${fIn(p.Lc)}</td></tr>
+  <tr><td>Stud hits</td><td style="color:${hitColor(p.hits)}">${p.hits}${state.studs?'':' (turn on stud overlay)'}</td></tr>
+  </table>`;
+  $('info').style.display='block';
+  $('infoBody').querySelectorAll('[data-pt]').forEach(b=>b.onclick=()=>{state.ptypes[p.key]=b.dataset.pt;rebuild();});
+}
+
+/* ---------- picking: tap selects a panel, double-tap zooms to the point ---------- */
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();let down=null,lastTap=0,lastXY=[0,0],pointers=0;
+function hitAt(x,y,onlyPanels){const r=canvas.getBoundingClientRect();ndc.set((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);
+  const root=state.view==='detail'?explG:state.view==='section'?sectG:roomG;const objs=[];root.traverse(o=>{if(o.isMesh&&o.visible&&(!onlyPanels||o.userData.pid))objs.push(o);});
+  return ray.intersectObjects(objs,false)[0];}
+canvas.addEventListener('pointerdown',e=>{pointers++;down=pointers===1?[e.clientX,e.clientY,performance.now()]:null;});
+canvas.addEventListener('pointercancel',()=>{pointers=Math.max(0,pointers-1);down=null;});
+canvas.addEventListener('pointerup',e=>{
+  pointers=Math.max(0,pointers-1);
+  if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>8||performance.now()-down[2]>450){down=null;return;}
+  const now=performance.now();
+  if(now-lastTap<320&&Math.hypot(e.clientX-lastXY[0],e.clientY-lastXY[1])<30){
+    lastTap=0;const h=hitAt(e.clientX,e.clientY,false);
+    if(h){const off=camera.position.clone().sub(controls.target);const d=Math.max(controls.minDistance*2,off.length()*.5);goTo({p:h.point.clone().add(off.setLength(d)),t:h.point.clone(),f:camera.fov},380);}
+    return;}
+  lastTap=now;lastXY=[e.clientX,e.clientY];
+  if(state.view==='detail'||state.view==='section')return;
+  const h=hitAt(e.clientX,e.clientY,true);
+  const id=h?h.object.userData.pid:null;
+  if(id!==state.sel){state.sel=id;if(!id)$('info').style.display='none';rebuild();}
+});
+canvas.addEventListener('dblclick',e=>e.preventDefault());
+document.addEventListener('gesturestart',e=>e.preventDefault());
+
+/* ---------- loop ---------- */
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);composer.setSize(w,h);bloom.resolution.set(w/(isTouch?2:1.5),h/(isTouch?2:1.5));camera.aspect=w/h;camera.updateProjectionMatrix();labels.forEach(scaleLabel);}
+addEventListener('resize',resize);
+addEventListener('orientationchange',()=>setTimeout(()=>{resize();setView(state.view,true);},250));
+function loop(now){
+  requestAnimationFrame(loop);
+  if(tween){const k=tween.dur?Math.min(1,(now-tween.t0)/tween.dur):1;const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+    camera.position.lerpVectors(tween.from.p,tween.to.p,e);controls.target.lerpVectors(tween.from.t,tween.to.t,e);
+    const f=tween.from.f+(tween.to.f-tween.from.f)*e;if(Math.abs(f-camera.fov)>1e-4){camera.fov=f;camera.updateProjectionMatrix();labels.forEach(scaleLabel);}
+    if(k>=1)tween=null;}
+  controls.update();cutaway();if(state.night)composer.render();else renderer.render(scene,camera);
+}
+/* dynamic cutaway: any wall whose back faces the camera is hidden with everything mounted on it, so the near side of the
+   build never blocks the view. Wall elevations keep their own isolation. */
+let cutWasOn=false;
+function cutaway(){
+  const v=state.view,on=state.cutaway&&roomG.visible&&!WALL[v];
+  if(!on){if(cutWasOn){cutWasOn=false;applyVisibility();}return;}
+  cutWasOn=true;const P=camera.position,hidden=new Set();
+  [...WALLS,...EXTRA].forEach(w=>{if(!w.g)return;const d=(P.x-w.p0[0])*w.n[0]+(P.z-w.p0[1])*w.n[1];const show=d>-4;w.g.visible=show;if(!show)hidden.add(w.id);});
+  const above=P.y>state.ceil-2;
+  roomG.children.forEach(o=>{
+    if(o.userData.obs)o.children.forEach(c=>{const t=c.userData.walls||[];c.visible=!t.length||!t.some(id=>hidden.has(id));});
+    else if(o.userData.curtain)o.visible=!above;});
+}
+resize();rebuild();setView('iso',true);requestAnimationFrame(loop);
+</script>
+</body>
+</html>
