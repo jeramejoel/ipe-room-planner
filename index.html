@@ -317,6 +317,7 @@ const CLEAT_AREA=RAIL_T*RAIL_H/2;         /* each half, in\u00b2 */
 const CLEAT_RISE=RAIL_T;                  /* lift needed to engage or free the hook */
 const PRESETS={84:{bottom:1},90:{bottom:1},72:{bottom:1},96:{bottom:1},48:{bottom:1}};
 const MIN_RIP=1;            /* narrower than this and a filler is not worth cutting */
+const MAX_GAP_CREEP=0.35;   /* most a board gap may grow to swallow a run's leftover sliver */
 const isTouch=matchMedia('(pointer: coarse)').matches;
 const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'90',H:90,bottom:1,cleat:78,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
 
@@ -580,7 +581,7 @@ function boothFraming(){
 /* LED strip positions along a run: every panel joint, plus both run ends when there is at least 3/4" to the next stop */
 function ledXs(r){if(state.led==='off'||r.door)return [];const g=state.gap,xs=[];
   if(r.start-r.refA>=.75)xs.push(r.start-Math.min(g/2,(r.start-r.refA)/2));
-  if(state.led==='back'){r.panels.forEach(p=>{if(p.type==='ipe')for(let k=0;k<p.k;k++)xs.push(p.s0+k*(p.sw+g)+p.sw/2);});return xs;}
+  if(state.led==='back'){r.panels.forEach(p=>{const pg=p.g??g;if(p.type==='ipe')for(let k=0;k<p.k;k++)xs.push(p.s0+k*(p.sw+pg)+p.sw/2);});return xs;}
   r.panels.forEach((p,i)=>{if(i<r.panels.length-1)xs.push(p.s1+g/2);});
   if(r.refB-r.end>=.75)xs.push(r.end+Math.min(g/2,(r.refB-r.end)/2));
   return xs;}
@@ -616,16 +617,27 @@ function layout(){
         else{const w1=rem-g;if(w1>=MIN_RIP)parts.push({k:1,w:w1,sw:w1,rip:w1});}
       }
     }
-    r.parts=parts;
-    const ws=parts.map(q=>q.w);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*g;r.over=r.used-r.avail;
-    let s=r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];
+    /* Close the run exactly. After the fillers there is usually a sliver left over,
+       too small to rip. Spread it across the board gaps instead of leaving it bare at a
+       corner: a few hundredths on each gap is invisible, a bare strip is not. Solve
+       A + B*eg = avail, where A is all the board width and B counts every gap. */
+    let eg=g;
+    {const A=parts.reduce((a,q)=>a+(q.rip?q.rip:q.k*SLAT_W),0);
+     const B=parts.reduce((a,q)=>a+(q.rip?0:q.k-1),0)+(parts.length-1);
+     if(B>0){const want=(r.avail-A)/B;if(want>g&&want-g<=MAX_GAP_CREEP)eg=want;}}
+    /* Round every panel to 1/16" so rails and components still group into repeatable
+       cuts. Whatever is left after that is a few hundredths and goes to the end reveals. */
+    parts.forEach(q=>{const w=q.rip?q.rip:q.k*SLAT_W+(q.k-1)*eg;q.w=Math.round(w*16)/16;if(q.rip)q.rip=q.w,q.sw=q.w;});
+    r.g=eg;r.parts=parts;
+    const ws=parts.map(q=>q.w);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*eg;r.over=r.used-r.avail;
+    let s=r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];const gg=eg;
     ws.forEach((w,i)=>{const q=parts[i],k=q.k,Lr=q.rip?0:w-2*RAIL_INSET,Lc=Lr,c0=s+(w-Lc)/2,c1=s+(w+Lc)/2;
       const railIn3=r.door?0:Lr*(CLEAT_AREA+Math.max(0,rys.length-1)*RAIL_T*RAIL_H);
       const hits=2;
       const key=RUNS.indexOf(r)+'-'+i;const type=r.door||r.overDoor?'ipe':(state.ptypes[key]||'ipe');
-      const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,sw:q.sw,rip:q.rip,s0:s,s1:s+w,Lr,Lc,c0,c1,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys:q.rip?[]:rys,slatLb:type==='ipe'?(r.door?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79)*slatLb:k*slatLb*(q.rip?q.rip/SLAT_W:1)):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:q.rip?0:railIn3/1728*BACK_PCF,hits:q.rip?0:hits,nr:q.rip?0:rys.length};
+      const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,sw:q.sw,rip:q.rip,s0:s,s1:s+w,Lr,Lc,c0,c1,g:gg,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys:q.rip?[]:rys,slatLb:type==='ipe'?(r.door?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79)*slatLb:k*slatLb*(q.rip?q.rip/SLAT_W:1)):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:q.rip?0:railIn3/1728*BACK_PCF,hits:q.rip?0:hits,nr:q.rip?0:rys.length};
       p.weight=p.slatLb+p.backLb;
-      r.panels.push(p);panels.push(p);s+=w+g;});
+      r.panels.push(p);panels.push(p);s+=w+gg;});
     r.end=s-g;
   });
   const grp=(H,runs)=>{const ps=panels.filter(p=>runs.includes(p.run)&&p.type==='ipe');
@@ -637,10 +649,23 @@ function layout(){
   const overPs=panels.filter(p=>p.run.overDoor);const over={slats:overPs.reduce((a,p)=>a+p.k,0),lb:overPs.reduce((a,p)=>a+p.slatLb,0),pieces:RUNS.filter(r=>r.overDoor).map(r=>({name:r.name,n:r.panels.reduce((a,p)=>a+p.k,0),H:r.sp.H}))};
   const slats=main.slats+amp.slats+booth.slats+over.slats+barG.slats+doorG.slats,boards=main.boards+amp.boards+booth.boards+barG.boards+doorG.boards;
   const bandLen=RUNS.filter(r=>!r.amp&&!r.booth&&!r.overDoor&&!r.overBar&&!r.door).reduce((a,r)=>a+r.used,0);
-  const railCuts={};panels.filter(p=>p.nr>0).forEach(p=>{const L=+p.Lr.toFixed(4);railCuts[L]=(railCuts[L]||0)+p.nr;});
+  const railCuts={};panels.filter(p=>p.nr>0).forEach(p=>{const L=Math.round(p.Lr*16)/16;railCuts[L]=(railCuts[L]||0)+p.nr;});
   let twoByBoards=0;Object.entries(railCuts).forEach(([L,n])=>{const per=Math.floor((STUD_STOCK+KERF)/(+L+KERF));twoByBoards+=Math.ceil(n/per);});
+  /* Edge audit: what is left bare at the end of every run. A run stops short where a
+     panel on the next wall returns into the corner, and that clearance is the panel's own
+     depth plus one board gap. Anything wider than that is an open strip. */
+  const edges=[];
+  RUNS.forEach(r=>{
+    if(r.door||!r.panels.length)return;
+    const need=STANDOFF+state.gap;
+    [[r.a-r.refA,r.start-r.a,'start'],[r.refB-r.b,r.b-r.end,'end']].forEach(([inset,sliver,which])=>{
+      if(inset<=0.03&&sliver<=0.03)return;
+      const kind=inset>=STANDOFF-0.03?'corner':(inset>0.03?'reveal':'flush');
+      edges.push({name:r.name,which,inset:Math.max(0,inset),sliver:Math.max(0,sliver),need,kind,gap:r.g});
+    });
+  });
   const hung=panels.filter(p=>p.nr>0);const wallCleatLb=hung.reduce((a,p)=>a+p.Lc*CLEAT_AREA,0)/1728*BACK_PCF;
-  stats={main,amp,booth,over,barG,doorG,hung,rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
+  stats={main,amp,booth,over,barG,doorG,hung,edges,rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:main.offTotal+amp.offTotal+booth.offTotal,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
     n:{3:panels.filter(p=>p.k===3).length,4:panels.filter(p=>p.k===4).length,5:panels.filter(p=>p.k===5).length},
     ipeTotal:panels.reduce((a,x)=>a+(x.type==='ipe'?x.slatLb:0),0),total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
     railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
@@ -777,13 +802,13 @@ function buildRoom(){
         [[p.s0+.5,p.H],[p.s1-.5,p.H]].forEach(([x,h])=>box(.75,h,2.6,M.casing,x,p.bot+h/2,RAIL_T+1.3,pg));}
     }
     else for(let i=0;i<p.k;i++){
-      const sx=p.s0+i*(p.sw+state.gap),lite=p.run.door&&sx+p.sw>DOOR_S_OUT-LITE_W/2&&sx<DOOR_S_OUT+LITE_W/2;
+      const sx=p.s0+i*(p.sw+(p.g??state.gap)),lite=p.run.door&&sx+p.sw>DOOR_S_OUT-LITE_W/2&&sx<DOOR_S_OUT+LITE_W/2;
       if(lite){[[p.bot,LITE_B-1],[LITE_T+1,p.bot+p.H]].forEach(([y0,y1])=>{const b=box(p.sw,y1-y0,SLAT_T,M.casing,sx+p.sw/2,(y0+y1)/2,Z_DOOR,pg);b.userData.pid=p.id;b.castShadow=true;});si++;continue;}
       const r=rng(1000+si++);const col=new THREE.Color('#7d4a2c');col.offsetHSL((r()-.5)*.02,(r()-.5)*.08,(r()-.5)*.09);
       const m=new THREE.MeshStandardMaterial({color:col,map:grain,roughness:.55,transparent:state.xray,opacity:state.xray?.28:1,depthWrite:!state.xray});
       if(p.run.over>1e-6)m.emissive.set('#7a0000');
       if(state.sel===p.id)m.emissive.set('#6a4500');
-      const sm=new THREE.Mesh(slatGeoFor(p.H,p.sw),m);sm.position.set(p.s0+i*(p.sw+state.gap)+p.sw/2,p.bot+p.H/2,p.run.door?Z_DOOR:Z_SLAT);
+      const sm=new THREE.Mesh(slatGeoFor(p.H,p.sw),m);sm.position.set(p.s0+i*(p.sw+(p.g??state.gap))+p.sw/2,p.bot+p.H/2,p.run.door?Z_DOOR:Z_SLAT);
       sm.castShadow=!state.xray;sm.userData.pid=p.id;pg.add(sm);
     }
     const cx=(p.s0+p.s1)/2;
@@ -920,17 +945,16 @@ function buildSection(){
   /* assembled, as hung, cut across the cleat. Local x = along wall, viewed from +x. */
   const H=state.H,cl=state.cleat,L=10;
   const sg=new THREE.BoxGeometry(L,H,SLAT_T);const s=new THREE.Mesh(sg,slatMat(0));s.position.set(0,H/2,FLOAT+SLAT_T/2);sectG.add(s);
-  box(L,H-1,.12,new THREE.MeshBasicMaterial({color:new THREE.Color('#ffb46a').multiplyScalar(2.5),toneMapped:false}),0,H/2,FLOAT-.06,sectG);
+  box(L,H-1,.12,new THREE.MeshBasicMaterial({color:new THREE.Color('#ffb46a').multiplyScalar(.9),toneMapped:false}),0,H/2,FLOAT-.06,sectG);
   railYs(H).forEach(y=>{const n=Math.abs(y-cl)<1e-6;rail(L,n,n?M.crail:M.rail,0,y,0,sectG);});
   wallCleat(L,M.wcleat,0,cl,0,sectG);
   box(L,H+16,.5,M.drywall,0,H/2,-.25,sectG);
   box(1.5,H+16,3.5,M.studWood,0,H/2,-.5-1.75,sectG);
   const xe=L/2+.05,h=RAIL_H/2;
-  label('Drywall + stud',V(xe,cl+5.5,-1.6),sectG,{bg:'#6b5a3a',k:.95});
+  label('Drywall + stud',V(xe,cl+h+4.4,-1.9),sectG,{bg:'#6b5a3a',k:.95});
   label('2x4 cleat rail on the panel',V(xe,cl+h+1.0,RAIL_T/2),sectG,{bg:'#8a5a14',k:.95});
   label('2x4 wall cleat, 45\u00b0 face, into studs',V(xe,cl-h-1.1,RAIL_T/2),sectG,{bg:'#5f4a28',k:.95});
-  label('1" ipe slat, LED strip in a groove on its back',V(xe,cl+h+5,FLOAT+SLAT_T/2+.6),sectG,{bg:'#6b3f26',k:.95});
-  label(`Ipe floats ${fIn(RAIL_T)} off the wall`,V(xe,cl+h+7.4,RAIL_T),sectG,{bg:'#8a7650',k:.9});
+  label(`1" ipe slat, floating ${fIn(RAIL_T)} off the wall, LED strip in a groove on its back`,V(xe,cl+h+2.4,FLOAT+SLAT_T/2+.6),sectG,{bg:'#6b3f26',k:.95});
   label(`Lift ${fIn(CLEAT_RISE+.25)} to hang or lift off`,V(xe,cl-h-5,1.2),sectG,{bg:'#495057',k:.9});
   if(state.dims!=='off'){
     dim(sectG,V(xe,cl+h+2.6,0),V(xe,cl+h+2.6,STANDOFF),`${fIn(STANDOFF)} stand-off`,{small:true,off:V(0,.8,0),k:.9});
@@ -985,7 +1009,7 @@ function viewPose(v){
   if(v==='iso'){target=V(132,C*.35,97);const d=fit(camera.aspect<1?430:370,300,fov);pos=target.clone().add(V(.55,.62,.75).normalize().multiplyScalar(d));}
   else if(v==='plan'){fov=16;target=V(132,0,97);pos=V(132,fit(330,250,fov)+C,97.01);}
   else if(v==='detail'){const w=4*SLAT_W+3*state.gap;target=V(420+w/2+6,state.H/2,20);fov=40;const d=fit(70,state.H+36,fov);pos=target.clone().add(V(.9,.22,.55).normalize().multiplyScalar(d*1.05));}
-  else if(v==='section'){fov=30;target=V(520,state.cleat,1.4);const d=fit(13,17,fov);pos=target.clone().add(V(1,.02,0).normalize().multiplyScalar(d));}
+  else if(v==='section'){fov=30;target=V(520,state.cleat,-0.6);const d=fit(12,18,fov);pos=target.clone().add(V(1,.03,0).normalize().multiplyScalar(d));}
   else{const w=WALL[v];fov=14;const hh=w.booth?state.booth:C;target=V(w.p0[0]+w.u[0]*w.L/2,hh/2,w.p0[1]+w.u[1]*w.L/2);const d=fit(w.L+30,hh+20,fov);pos=target.clone().add(V(w.n[0],0,w.n[1]).multiplyScalar(d));}
   return {p:pos,t:target,f:fov};
 }
@@ -1051,7 +1075,7 @@ function ikBadge(x,y,n,fs){const r=fs*.68;
 /* front and back of one panel. Deliberately plain: boards, rails, screws, three dimensions.
    Groups carry data-pt2 / data-dm so the measurement list can highlight what it belongs to. */
 function panelDiagram(p){
-  const g=state.gap,W=p.w,H=p.H,k=p.k,ipe=p.type==='ipe',BW=p.sw;
+  const g=p.g??state.gap,W=p.w,H=p.H,k=p.k,ipe=p.type==='ipe',BW=p.sw;
   const ry=p.rys.length?p.rys.slice():[];
   const loR=ry.length?Math.min.apply(null,ry):H/2, hiR=ry.length?Math.max.apply(null,ry):H/2;
   let Bk=Math.max(13,loR+RAIL_H), Tk=Math.max(13,H-hiR+RAIL_H);
@@ -1159,7 +1183,7 @@ function wallSheet(v){
     if(p.type==='diff'){const ww=wellW(p.w);o+=`<rect x="${X(x0).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${p.w}" height="${p.H}" fill="#141416" stroke="#7d4a2c" stroke-width="${sw}"/>`;
       QRD.forEach((d,j)=>{o+=`<rect x="${X(x0+FIN_T+j*(ww+FIN_T)).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${ww.toFixed(2)}" height="${p.H}" fill="#7d4a2c" fill-opacity="${(.15+d*.18).toFixed(2)}"/>`;});}
     else if(p.type==='abs')o+=`<rect x="${X(x0).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${p.w}" height="${p.H}" fill="#2a2a2e" stroke="#7d4a2c" stroke-width="${1.5*sw}"/><text x="${X(x0+p.w/2)}" y="${Y(p.bot+p.H/2)}" text-anchor="middle" fill="#bbb">absorber</text>`;
-    else for(let i=0;i<p.k;i++)o+=`<rect x="${X(x0+i*(p.sw+g)).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${p.sw.toFixed(2)}" height="${p.H}" fill="${p.rip?'#9c6239':'#7d4a2c'}" stroke="#4e2c18" stroke-width="${sw*.6}"/>`;
+    else for(let i=0;i<p.k;i++)o+=`<rect x="${X(x0+i*(p.sw+(p.g??g))).toFixed(2)}" y="${Y(p.bot+p.H).toFixed(2)}" width="${p.sw.toFixed(2)}" height="${p.H}" fill="${p.rip?'#9c6239':'#7d4a2c'}" stroke="#4e2c18" stroke-width="${sw*.6}"/>`;
     p.rys.forEach(y=>{const n=Math.abs(y-p.cleat)<1e-6;o+=`<line x1="${X(x0+.56).toFixed(2)}" x2="${X(x0+p.w-.56).toFixed(2)}" y1="${Y(p.bot+y).toFixed(2)}" y2="${Y(p.bot+y).toFixed(2)}" stroke="${n?'#ff9d2e':'#e8d3a8'}" stroke-width="${(n?2.2:1.4)*sw}" stroke-dasharray="${n?'none':4*sw+' '+2*sw}"/>`;});
   });
   {const runs=[...new Set(ps.map(({p,off})=>p.run.wall+'|'+off+'|'+RUNS.indexOf(p.run)))];runs.forEach(k=>{const [ , off, ri]=k.split('|');const r=RUNS[+ri];ledXs(r).forEach(x=>{o+=`<rect x="${X(x+ +off-.3).toFixed(2)}" y="${Y(r.sp.bot+r.sp.H-.5).toFixed(2)}" width=".6" height="${r.sp.H-1}" fill="${ledCol}"/>`;});});}
@@ -1205,7 +1229,7 @@ function buildCutList(){
   row('Bar top (5 boards edge-glued, 20" deep with the overhang)',`5 × ${fIn(BAR_L+2)}`,'cut from 5 extra boards; the 22" offcuts become door casing');
   row('Boards to buy',`${s.boards+5} + 5 spare`);
   sec('2x4 (8 ft), panel rails');
-  Object.entries(s.railCuts).sort((a,b)=>b[0]-a[0]).forEach(([L,n])=>{const c=s.hung.filter(x=>Math.abs(x.Lr-L)<1e-3).length;row(`Rails at ${fIn(+L)}`,`${n}`,`${c} ripped at 45° as cleat rails (each yielding its own wall cleat), ${n-c} plain bottom rails; all painted matte black`);});
+  Object.entries(s.railCuts).sort((a,b)=>b[0]-a[0]).forEach(([L,n])=>{const c=s.hung.filter(x=>Math.abs(x.Lr-L)<1e-3).length;row(`Rails at ${fIn16(+L)}`,`${n}`,`${c} ripped at 45° as cleat rails (each yielding its own wall cleat), ${n-c} plain bottom rails; all painted matte black`);});
   {if(state.led==='back')row('LED groove down the center back of every board',`${s.slats-s.doorG.slats} boards`,'1/2" wide × 1/4" deep, full length, table saw with the fence at 2 1/2"; the strip sits in it facing the wall and passes over the rails');}
   sec('Booth framing (2x4 studs 16" on center)');
   const fg={};framing.cuts.forEach(c=>{const k=c.label+'|'+c.len.toFixed(3)+'|'+c.lum;fg[k]=fg[k]||{...c,n:0};fg[k].n+=c.n;});
@@ -1460,7 +1484,7 @@ function panelDetail(p){
     ['Overall size',`${fIn(p.w)} x ${fIn(p.H)}`,'w'],
     ['Boards',`${k} x ${fIn(p.sw)} wide`,'slat'],
     ['Bottom / top above floor',`${fIn(p.bot)} / ${fFt(top)}`,'h'],
-    nr?['2x4 rail length',fIn(p.Lr),'lr']:null,
+    nr?['2x4 rail length',fIn16(p.Lr),'lr']:null,
     p.cleat!=null&&nr?['Cleat rail, below the top',fIn(p.H-p.cleat),'cleat']:null,
     nr>1?['Bottom rail, up from the bottom',fIn(Math.min.apply(null,p.rys)),'brace']:null,
     ['Weight',`<span style="color:${p.weight>HEAVY?'var(--warn)':'inherit'}">${lb(p.weight)}</span>`]
@@ -1469,8 +1493,8 @@ function panelDetail(p){
   if(ipe)mats.push([`Ipe slats, cut to ${fIn(p.H)}`,`${k} from 1 x 5 1/2 x 97`]);
   else mats.push([p.type==='diff'?'QRD diffuser blank':'Absorber blank',`1 at ${fIn(p.w)} x ${fIn(p.H)}`]);
   if(nr){
-    mats.push([`2x4 cleat rail (45${String.fromCharCode(176)} rip), cut to ${fIn(p.Lr)}`,'1']);
-    if(nr>1)mats.push([`Plain 2x4 bottom rail, cut to ${fIn(p.Lr)}`,`${nr-1}`]);
+    mats.push([`2x4 cleat rail (45${String.fromCharCode(176)} rip), cut to ${fIn16(p.Lr)}`,'1']);
+    if(nr>1)mats.push([`Plain 2x4 bottom rail, cut to ${fIn16(p.Lr)}`,`${nr-1}`]);
     mats.push([`2x4 wall cleat (the other half of the rip)`,fIn(p.Lc)]);
     if(ipe)mats.push(['Stainless #8 x 2 1/2 screws',`${k*2*nr}`]);
     mats.push(['Structural screws 1/4" x 3 1/8" into studs',`${Math.max(2,p.hits*2)}`]);
@@ -1479,7 +1503,7 @@ function panelDetail(p){
   const steps=[];
   if(ipe){const cpb=Math.max(1,Math.floor((STOCK+KERF)/(p.H+KERF)));steps.push(`Cut ${k} slats to <b>${fIn(p.H)}</b>. ${cpb} cut${cpb>1?'s':''} per ${STOCK}" board at this length.`);}
   if(nr){
-    steps.push(`Cut ${nr} 2x4 rails to <b>${fIn(p.Lr)}</b> (panel width less ${fIn(2*RAIL_INSET)}, so the rails sit ${fIn16(RAIL_INSET)} in from each edge).`);
+    steps.push(`Cut ${nr} 2x4 rails to <b>${fIn16(p.Lr)}</b> (panel width less ${fIn(2*RAIL_INSET)}, so the rails sit ${fIn16(RAIL_INSET)} in from each edge).`);
     steps.push(`Rip one 2x4 at <b>45${String.fromCharCode(176)}</b> down its length, the cut entering the back face ${fIn(CLEAT_CUT)} up. That single pass gives you both halves: one is this panel's cleat rail, the other is its piece of wall cleat.`);
     steps.push(`Paint every rail and the wall cleat <b>matte black</b> before the ipe goes on: they show through the ${fIn(state.gap)} gaps.`);
   }
@@ -1530,7 +1554,7 @@ function compGroups(){
 }
 /* a tiny true-to-scale thumbnail of one component */
 function miniPanel(p){
-  const W=p.w,H=p.H,g=state.gap,sw=Math.max(.01,W/50);
+  const W=p.w,H=p.H,g=p.g??state.gap,sw=Math.max(.01,W/50);
   let o=`<svg viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" preserveAspectRatio="xMidYMid meet">`;
   for(let i=0;i<p.k;i++)o+=`<rect x="${(i*(p.sw+g)).toFixed(2)}" y="0" width="${p.sw.toFixed(2)}" height="${H.toFixed(2)}" fill="${p.rip?'#d7b183':'#e3d2b6'}" stroke="#1d1d1f" stroke-width="${sw.toFixed(3)}"/>`;
   p.rys.forEach(y=>{const yy=(H-y).toFixed(2);o+=`<line x1="0" x2="${W.toFixed(2)}" y1="${yy}" y2="${yy}" stroke="#d6336c" stroke-width="${(sw*1.6).toFixed(3)}"/>`;});
@@ -1562,6 +1586,15 @@ function componentsDetail(){
     ${dd('Standard panels',`${std.length} component${std.length===1?'':'s'}`,std.map(row).join('')||'<p class="tnote">None.</p>',true)}
     ${dd('Bespoke ripped fillers',`${rip.reduce((a,g)=>a+g.n,0)} piece${rip.reduce((a,g)=>a+g.n,0)===1?'':'s'}`,
       (rip.length?`<p class="tnote">These close the end gaps so each run reads as one continuous surface. Measure the real gap on site before ripping.</p>`:'')+(rip.map(row).join('')||'<p class="tnote">None: every run lands on full boards.</p>'),true)}
+    ${dd('Edges and corners',`${(stats.edges||[]).length} edge${(stats.edges||[]).length===1?'':'s'}`,
+      (()=>{const es=(stats.edges||[]).slice().sort((a,b)=>(b.sliver-a.sliver)||(b.inset-a.inset));
+        if(!es.length)return '<p class="tnote">Every run lands flush on its reference line.</p>';
+        const bare=es.reduce((a,e)=>a+e.sliver,0);
+        const WHY={corner:'panel returning into the corner',reveal:'reveal against a casing or obstacle',flush:'flush'};
+        const rows=es.map(e=>`<tr><td>${e.name}<br><span style="font-size:11px;color:var(--mut)">${e.which} ${String.fromCharCode(183)} ${WHY[e.kind]}</span></td><td class="n">${fIn(e.inset)}</td><td class="n" style="color:${e.sliver>0.03?'var(--warn)':'var(--mut)'}">${e.sliver>0.03?fIn(e.sliver):'0'}</td></tr>`).join('');
+        return `<p class="tnote">Each run stops short where a panel on the next wall returns into the corner. That clearance is the panel depth ${fIn(STANDOFF)} plus one board gap, so a corner reads with the same reveal as every other joint. <b>Clearance</b> is that designed inset; <b>bare</b> is anything left uncovered beyond it.</p>`
+         +`<table class="mat"><tr><th>Area</th><th>Clearance</th><th>Bare</th></tr>${rows}</table>`
+         +`<p class="tnote" style="margin-top:9px">${bare<=0.05?'<b>Nothing bare:</b> every run is closed to its bounds, the leftover absorbed into the board gaps.':`<b>${fIn(bare)}</b> still bare across ${es.filter(e=>e.sliver>0.03).length} edge(s).`}</p>`;})())}
     <p class="tnote"><button class="copy" id="ckReset" style="background:#f1eee9;color:var(--ink)">Clear all ticks</button></p>`;
   const txt='REPEATABLE COMPONENTS\n'+gs.map(g=>`${g.n} x ${g.p.rip?'ripped filler':g.p.k+'-slat panel'} ${fIn(g.p.w)} x ${fIn(g.p.H)} (${g.ids.join(', ')})`).join('\n');
   return {key:'components',title:'Components',sub:`${gs.length} repeatable pieces ${String.fromCharCode(183)} ${tot} total`,html,txt};
