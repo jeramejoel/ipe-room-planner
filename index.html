@@ -377,6 +377,7 @@ function cornerAngle(wi,wj){const a=[-wi.u[0],-wi.u[1]],b=wj.u;return Math.acos(
 const clearAt=ang=>STANDOFF/Math.tan(ang/2);
 const CL_EA=clearAt(cornerAngle(WALL.E,WALL.A)), CL_AS=clearAt(cornerAngle(WALL.A,WALL.S));
 const RUNS=[
+  {wall:'N',name:'North, corner to room door',a:STANDOFF+REVEAL,b:10-CASING-REVEAL,refA:0,refB:10-CASING,comp:[],auto:true},
   {wall:'N',name:'North, door to screen',a:46+CASING+REVEAL,b:85-REVEAL,refA:46,refB:85,comp:[],auto:true},
   {wall:'N',name:'North, right of screen',a:173+REVEAL,b:264,refA:173,refB:264,comp:[],auto:true},
   {wall:'E',name:'East',a:STANDOFF+REVEAL,b:162-CL_EA-REVEAL,refA:0,refB:162,comp:[],auto:true},
@@ -615,6 +616,10 @@ function layout(){
     /* Seamless: a run of full 5 1/2" boards rarely lands exactly on the wall, so the leftover
        is ripped into filler boards at the ends. Every filler is a bespoke cut and is called out. */
     let parts=r.comp.map(k=>({k,w:k*SLAT_W+(k-1)*g,sw:SLAT_W,rip:0}));
+    /* A run narrower than a single board still gets ipe: one board ripped to fit. It has
+       no neighbour to screw into, so unlike an end filler it keeps its own rails. */
+    if(state.seamless&&!r.door&&!parts.length&&r.avail>=MIN_RIP)
+      parts=[{k:1,w:r.avail,sw:r.avail,rip:r.avail,solo:true}];
     if(state.seamless&&!r.door&&parts.length){
       const base=parts.reduce((a,q)=>a+q.w,0)+(parts.length-1)*g;
       const rem=r.avail-base;
@@ -642,11 +647,11 @@ function layout(){
     r.g=eg;r.parts=parts;
     const ws=parts.map(q=>q.w);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*eg;r.over=r.used-r.avail;
     let s=r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];const gg=eg;
-    ws.forEach((w,i)=>{const q=parts[i],k=q.k,Lr=q.rip?0:w-2*RAIL_INSET,Lc=Lr,c0=s+(w-Lc)/2,c1=s+(w+Lc)/2;
+    ws.forEach((w,i)=>{const q=parts[i],k=q.k,noR=q.rip&&!q.solo,Lr=noR?0:w-2*RAIL_INSET,Lc=Lr,c0=s+(w-Lc)/2,c1=s+(w+Lc)/2;
       const railIn3=r.door?0:Lr*(CLEAT_AREA+Math.max(0,rys.length-1)*RAIL_T*RAIL_H);
       const hits=2;
       const key=RUNS.indexOf(r)+'-'+i;const type=r.door||r.overDoor?'ipe':(state.ptypes[key]||'ipe');
-      const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,sw:q.sw,rip:q.rip,s0:s,s1:s+w,Lr,Lc,c0,c1,g:gg,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys:q.rip?[]:rys,slatLb:type==='ipe'?(r.door?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79)*slatLb:k*slatLb*(q.rip?q.rip/SLAT_W:1)):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:q.rip?0:railIn3/1728*BACK_PCF,hits:q.rip?0:hits,nr:q.rip?0:rys.length};
+      const p={id:'P'+id++,key,type,run:r,wall:WALL[r.wall],k,w,sw:q.sw,rip:q.rip,s0:s,s1:s+w,Lr,Lc,c0,c1,g:gg,solo:!!q.solo,H:sp.H,bot:sp.bot,cleat:sp.cleat,rys:noR?[]:rys,slatLb:type==='ipe'?(r.door?.5*(2+3*((LITE_B-1.5)+(79.5-LITE_T-1))/79)*slatLb:k*slatLb*(q.rip?q.rip/SLAT_W:1)):type==='diff'?diffLb(w,sp.H):absLb(w,sp.H),backLb:noR?0:railIn3/1728*BACK_PCF,hits:noR?0:hits,nr:noR?0:rys.length};
       p.weight=p.slatLb+p.backLb;
       r.panels.push(p);panels.push(p);s+=w+gg;});
     r.end=s-g;
@@ -1148,7 +1153,7 @@ function fastenChain(p){
   const node=(t,sub)=>`<div class="cn"><b>${t}</b><span>${sub}</span></div>`;
   const arrow=t=>`<div class="ar">${String.fromCharCode(8595)} ${t}</div>`;
   if(p.run.door)return `<div class="chain">${node(`${p.k} ipe board${p.k>1?'s':''}`,`resawn to ${fIn(.5)} thick, ${fIn(p.H)} long`)}${arrow('stainless #8, driven from inside the door')}${node('Booth door','solid core, 4 ball-bearing hinges')}</div>`;
-  if(p.rip)return `<div class="chain">${node('1 ripped ipe filler',`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}${arrow(`stainless #8 ${String.fromCharCode(215)} 2 1/2 into the rails of the panel beside it, every 16"`)}${node('2x4 rails of the neighbouring panel','already hanging on the wall cleat')}${arrow('nothing further: the neighbour carries it')}${node('Stud','16" on center')}</div>`;
+  if(p.rip&&!p.solo)return `<div class="chain">${node('1 ripped ipe filler',`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}${arrow(`stainless #8 ${String.fromCharCode(215)} 2 1/2 into the rails of the panel beside it, every 16"`)}${node('2x4 rails of the neighbouring panel','already hanging on the wall cleat')}${arrow('nothing further: the neighbour carries it')}${node('Stud','16" on center')}</div>`;
   return `<div class="chain">
     ${node(`${p.k} ipe board${p.k>1?'s':''}`,`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}
     ${arrow(`${p.k*2*p.nr} ${String.fromCharCode(215)} stainless #8 ${String.fromCharCode(215)} 2 1/2, two per board at every rail`)}
@@ -1530,7 +1535,7 @@ function panelDetail(p){
     ['Weight',`<span style="color:${p.weight>HEAVY?'var(--warn)':'inherit'}">${lb(p.weight)}</span>`]
   ].filter(Boolean));
   const mats=[];
-  if(ipe)mats.push([`Ipe slats, cut to ${fIn(p.H)}`,`${k} from 1 x 5 1/2 x 97`]);
+  if(ipe)mats.push([`Ipe board${k>1?'s':''}, cut to ${fIn(p.H)}`,`${k} from 1 x 5 1/2 x 97`]);
   else mats.push([p.type==='diff'?'QRD diffuser blank':'Absorber blank',`1 at ${fIn(p.w)} x ${fIn(p.H)}`]);
   if(nr){
     mats.push([`2x4 cleat rail (45${String.fromCharCode(176)} rip), cut to ${fIn16(p.Lr)}`,'1']);
@@ -1541,13 +1546,14 @@ function panelDetail(p){
   } else mats.push(['Screwed through the door from inside','no rails']);
   const cl=p.cleat!=null?`${fIn(p.H-p.cleat)} below the panel top`:'n/a';
   const steps=[];
-  if(ipe){const cpb=Math.max(1,Math.floor((STOCK+KERF)/(p.H+KERF)));steps.push(`Cut ${k} slats to <b>${fIn(p.H)}</b>. ${cpb} cut${cpb>1?'s':''} per ${STOCK}" board at this length.`);}
+  if(p.solo)steps.push(`This stretch of wall is narrower than one board, so rip a single board to <b>${fIn(p.w)}</b> wide. Its rails are short blocks: cut them from the offcut of a longer rail.`);
+  if(ipe){const cpb=Math.max(1,Math.floor((STOCK+KERF)/(p.H+KERF)));steps.push(`Cut ${k} slat${k>1?'s':''} to <b>${fIn(p.H)}</b>. ${cpb} cut${cpb>1?'s':''} per ${STOCK}" board at this length.`);}
   if(nr){
     steps.push(`Cut ${nr} 2x4 rails to <b>${fIn16(p.Lr)}</b> (panel width less ${fIn(2*RAIL_INSET)}, so the rails sit ${fIn16(RAIL_INSET)} in from each edge).`);
     steps.push(`Rip one 2x4 at <b>45${String.fromCharCode(176)}</b> down its length, the cut entering the back face ${fIn(CLEAT_CUT)} up. That single pass gives you both halves: one is this panel's cleat rail, the other is its piece of wall cleat.`);
     steps.push(`Paint every rail and the wall cleat <b>matte black</b> before the ipe goes on: they show through the ${fIn(state.gap)} gaps.`);
   }
-  if(ipe)steps.push(`Lay the slats face down with <b>${fIn(state.gap)}</b> spacer blocks between them and square the panel up.`);
+  if(ipe)steps.push(k>1?`Lay the boards face down with <b>${fIn(state.gap)}</b> spacer blocks between them and square the panel up.`:'Lay the board face down and square the rails across it.');
   if(nr&&ipe)steps.push(`Predrill and drive <b>2 screws per slat at each rail</b> (${k*2*nr} total). Cleat rail sits ${cl}; the bottom rail sits ${fIn(Math.min.apply(null,p.rys.length?p.rys:[0]))} up from the bottom.`);
   if(nr)steps.push(`Screw the wall cleat level into every stud it crosses (<b>2 structural 1/4" x 3 1/8"</b> per stud), then lift the panel <b>${fIn(CLEAT_RISE+.25)}</b> and drop it on. The bottom rail lands flat on the wall and holds it parallel.`);
   const pos=kv([['Run',p.run.name],[`Along the wall from the ${w.from}`,`${fIn(p.s0)} to ${fIn(p.s1)}`],['Plan X,Y start',pt(p.s0)],['Plan X,Y end',pt(p.s1)],['Stud hits',`<span style="color:${hitColor(p.hits)}">${p.hits}${state.studs?'':' (stud overlay off)'}</span>`]]);
