@@ -259,6 +259,7 @@ tr.hl:focus{outline:2px solid var(--acc);outline-offset:-2px}
     </div>
     <p class="hint" id="presetHint"></p>
     <label class="tog"><input type="checkbox" id="t_seamless">Close the end of every run with a ripped board</label>
+    <label class="tog"><input type="checkbox" id="t_gridAlign">One board grid per wall, so doors line up with the wall</label>
   </div>
   <div class="sec">
     <h3>Dimensions</h3>
@@ -389,9 +390,10 @@ function ampFit(){
   const tiers=Math.max(0,Math.min(4,Math.floor((shelfTop-shelfBot)/AMP_TIER_PITCH)));
   return {soffit,inW,perTier,cabs,shelfBot,shelfTop,tiers,heads:tiers*perTier,pitch:AMP_TIER_PITCH};
 }
-const MIN_RIP=1;            /* narrower than this and a filler is not worth cutting */
+const MIN_RIP=1;
+const GRID_MIN=0.5;         /* on the grid, a filler this narrow still beats bare wall */            /* narrower than this and a filler is not worth cutting */
 const isTouch=matchMedia('(pointer: coarse)').matches;
-const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:60,ampCabsInBay:true,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
+const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:60,ampCabsInBay:true,gridAlign:true,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
 
 /* Plan coords: origin NW interior floor corner, +X east, +Y south. Three: x=X, z=Y, y=up. Walls run clockwise.
    ROOM_W is the north wall, measured on site 2026-11-15 at 239" and confirmed by the overhang:
@@ -689,23 +691,44 @@ const DEPTH={ipe:STANDOFF,diff:RAIL_T+.5+DIFF_D,abs:RAIL_T+2.75};
 function layout(){
   framing=boothFraming();
   const g=state.gap;let id=1;panels=[];
+  /* each wall's grid starts at its first run, so that run opens with a whole board */
+  const G0={};RUNS.forEach(r=>{if(G0[r.wall]===undefined||r.a<G0[r.wall])G0[r.wall]=r.a;});
   RUNS.forEach(r=>{
     const sp=runSpec(r);r.sp=sp;const rys=r.door?[]:railYs(sp.H,sp.cleat);const slatLb=SLAT_W*SLAT_T*sp.H/1728*IPE_PCF;
-    if(r.auto)r.comp=splitSlats(Math.floor((r.b-r.a+g)/(SLAT_W+g)),sp.H>=60?3:4);
     r.avail=r.b-r.a;
+    /* One board grid per wall. Every run on a wall, and every door in it, takes its board
+       positions from the same datum, so the rhythm carries across an opening instead of
+       restarting inside it. A door gets whole boards only: the offset lands in the jamb
+       reveal rather than as a sliver ripped onto a door edge. */
+    let gridded=false, startAt=null;
+    if(state.gridAlign){
+      const P=SLAT_W+g, o=(G0[r.wall]!==undefined?G0[r.wall]:r.a);
+      const i0=Math.ceil((r.a-o)/P-1e-9), i1=Math.floor((r.b-o-SLAT_W)/P+1e-9), n=Math.max(0,i1-i0+1);
+      if(n>0){
+        gridded=true;
+        const firstX=o+i0*P, lastEnd=o+i1*P+SLAT_W, hr=firstX-r.a-g, tr=r.b-lastEnd-g;
+        r.comp=splitSlats(n,sp.H>=60?3:4); if(!r.comp.length)r.comp=[n];
+        r.gridParts=[];
+        if(!r.door&&hr>=GRID_MIN){r.gridParts.push({k:1,w:hr,sw:hr,rip:hr});startAt=r.a;}
+        else startAt=firstX;
+        r.comp.forEach(k=>r.gridParts.push({k,w:k*SLAT_W+(k-1)*g,sw:SLAT_W,rip:0}));
+        if(!r.door&&tr>=GRID_MIN)r.gridParts.push({k:1,w:tr,sw:tr,rip:tr});
+      }
+    }
+    if(!gridded&&r.auto)r.comp=splitSlats(Math.floor((r.b-r.a+g)/(SLAT_W+g)),sp.H>=60?3:4);
     /* Seamless: a run of full 5 1/2" boards rarely lands exactly on the wall, so the leftover
        is ripped into filler boards at the ends. Every filler is a bespoke cut and is called out. */
-    let parts=r.comp.map(k=>({k,w:k*SLAT_W+(k-1)*g,sw:SLAT_W,rip:0}));
+    let parts=gridded?r.gridParts:r.comp.map(k=>({k,w:k*SLAT_W+(k-1)*g,sw:SLAT_W,rip:0}));
     /* A run narrower than a single board still gets ipe: one board ripped to fit. It has
        no neighbour to screw into, so unlike an end filler it keeps its own rails. */
-    if(state.seamless&&!r.door&&!parts.length&&r.avail>=MIN_RIP)
+    if(!gridded&&state.seamless&&!r.door&&!parts.length&&r.avail>=MIN_RIP)
       parts=[{k:1,w:r.avail,sw:r.avail,rip:r.avail,solo:true}];
     /* Every gap is exactly state.gap, so the wall reads as one field of boards with no
        wider joint anywhere. A run almost never lands on whole boards, so the slack goes
        into the two END boards, ripped narrower, with everything between them full width.
        If the slack is too thin to rip, give one full board back and the two ends come out
        usable: dropping a board frees SLAT_W + gap, half of which lands on each end. */
-    if(state.seamless&&!r.door&&parts.length&&!parts[0].solo){
+    if(!gridded&&state.seamless&&!r.door&&parts.length&&!parts[0].solo){
       const width=()=>parts.reduce((a,q)=>a+q.w,0)+(parts.length-1)*g;
       const boards=()=>parts.reduce((a,q)=>a+q.k,0);
       const rem=r.avail-width();
@@ -730,7 +753,7 @@ function layout(){
     parts.forEach(q=>{if(!q.rip)q.w=q.k*SLAT_W+(q.k-1)*eg;});
     r.g=eg;r.parts=parts;
     const ws=parts.map(q=>q.w);r.used=ws.reduce((a,b)=>a+b,0)+(ws.length-1)*eg;r.over=r.used-r.avail;
-    let s=r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];const gg=eg;
+    let s=gridded?startAt:r.a+(r.avail-r.used)/2;r.start=s;r.panels=[];const gg=eg;
     ws.forEach((w,i)=>{const q=parts[i],k=q.k,noR=q.rip&&!q.solo,Lr=noR?0:w-2*RAIL_INSET,Lc=Lr,c0=s+(w-Lc)/2,c1=s+(w+Lc)/2;
       const railIn3=r.door?0:Lr*(CLEAT_AREA+Math.max(0,rys.length-1)*RAIL_T*RAIL_H);
       const hits=2;
@@ -758,7 +781,9 @@ function layout(){
   RUNS.forEach(r=>{
     if(r.door||!r.panels.length)return;
     const need=STANDOFF+state.gap;
-    [[r.a-r.refA,r.start-r.a,'start'],[r.refB-r.b,r.b-r.end,'end']].forEach(([inset,sliver,which])=>{
+    /* A run end always carries at least a board gap before whatever it meets. Only the
+       part beyond one gap is bare wall; below that it reads as the reveal. */
+    [[r.a-r.refA,Math.max(0,(r.start-r.a)-state.gap),'start'],[r.refB-r.b,Math.max(0,(r.b-r.end)-state.gap),'end']].forEach(([inset,sliver,which])=>{
       if(inset<=0.03&&sliver<=0.03)return;
       const kind=inset>=STANDOFF-0.03?'corner':(inset>0.03?'reveal':'flush');
       edges.push({name:r.name,which,inset:Math.max(0,inset),sliver:Math.max(0,sliver),need,kind,gap:r.g});
@@ -1548,7 +1573,7 @@ $('typeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{const v=b.data
   rebuild();document.querySelectorAll('#typeSeg button').forEach(x=>x.classList.toggle('on',x===b));});seg('ledSeg','led');seg('ledColSeg','ledColor',()=>{state.ledHex=null;});
 $('moodSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.night=b.dataset.v==='night';rebuild();});
 [['bottom','bottom'],['cleat','cleat'],['ceil','ceil'],['booth','booth'],['gap','gap'],['ampH','ampH'],['ampGap','ampGap'],['ampSoffit','ampSoffit']].forEach(([id,k])=>{$(id).oninput=e=>{state[k]=parseFloat(e.target.value);requestRebuild();};});
-['walls','obstacles','hardware','xray','studs','ear','ledge','ampTrim','framing','curtains','rugs','cutaway','seamless','ampCabsInBay'].forEach(k=>{const el=$('t_'+k);el.checked=state[k];el.onchange=()=>{state[k]=el.checked;rebuild();};});
+['walls','obstacles','hardware','xray','studs','ear','ledge','ampTrim','framing','curtains','rugs','cutaway','seamless','ampCabsInBay','gridAlign'].forEach(k=>{const el=$('t_'+k);el.checked=state[k];el.onchange=()=>{state[k]=el.checked;rebuild();};});
 $('ctrlBtn').onclick=()=>$('panel').classList.toggle('open');$('closePanel').onclick=()=>$('panel').classList.remove('open');
 $('warnPill').onclick=()=>$('panel').classList.add('open');
 $('zIn').onclick=()=>zoomBy(.7);$('zOut').onclick=()=>zoomBy(1/.7);$('fitBtn').onclick=()=>{home=viewPose(state.view);goTo(home);};
