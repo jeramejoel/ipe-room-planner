@@ -477,7 +477,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
    swing in. Everything behind the ipe is painted matte black so it disappears behind the 1" gaps.
    Stand-off = 1 1/2" (nested cleat, and the bottom rail) + 1" ipe = 2 1/2". */
 const SLAT_W=5.5, SLAT_T=1, RAIL_T=1.5, RAIL_H=3.5, FLOAT=RAIL_T, STANDOFF=RAIL_T+SLAT_T,
-  STOCK=97, KERF=0.125, IPE_PCF=66, BACK_PCF=34, HEAVY=75, RAIL_MAX_SPAN=84, REVEAL=1, STUD_STOCK=96, RAIL_INSET=0.5625;
+  STOCK=97, TRIM=0.25, KERF=0.125, IPE_PCF=66, BACK_PCF=34, HEAVY=75, RAIL_MAX_SPAN=84, REVEAL=1, STUD_STOCK=96, RAIL_INSET=0.5625;
 /* One 45 degree rip through the 1 1/2" thickness of a 2x4, entering the back face 1" up and leaving the
    front face 2 1/2" up. Centred, so both halves have the same 2 5/8 in section. */
 const CLEAT_CUT=(RAIL_H-RAIL_T)/2;        /* 1": where the rip meets the back face */
@@ -512,6 +512,10 @@ function ampFit(){
   return {soffit,inW,perTier,cabs,shelfBot,shelfTop,tiers,heads:tiers*perTier,pitch:AMP_TIER_PITCH};
 }
 const MIN_RIP=1;
+/* Nothing shorter than this comes off a 2x4 on a miter saw: a piece this short has no room
+   for a hand and no room for a clamp, and the blade takes it. Cut short rails from a longer
+   offcut on a sled, or let the neighbouring panel carry the filler. */
+const MIN_CROSSCUT=6;
 const GRID_MIN=MIN_RIP;     /* a filler narrower than this is not worth cutting: an ipe strip under 1" splits on the screw */            /* narrower than this and a filler is not worth cutting */
 const isTouch=matchMedia('(pointer: coarse)').matches;
 const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:60,ampCabsInBay:true,gridAlign:true,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
@@ -812,7 +816,13 @@ function ledXs(r){if(state.led==='off'||r.door)return [];const g=state.gap,xs=[]
 /* first-fit decreasing; each cut goes to the shortest stock that holds it (8, 10, 12 ft) */
 function packByStock(cuts){const out={};cuts.forEach(c=>{const st=[96,120,144].find(L=>c.len<=L-.5)||144;(out[st]=out[st]||[]).push(c);});return Object.entries(out).map(([st,list])=>({ft:st/12,boards:packBoards(list,+st).length}));}
 /* first-fit decreasing onto 96" boards */
-function packBoards(cuts,stock=96){const bins=[];const list=[];cuts.forEach(c=>{if(c.len>stock-.5){const n=Math.ceil(c.len/(stock-1));for(let i=0;i<n;i++)list.push({...c,len:c.len/n});}else list.push(c);});[...list].sort((a,b)=>b.len-a.len).forEach(c=>{let b=bins.find(b=>b.left>=c.len+KERF);if(!b){b={left:stock,items:[]};bins.push(b);}b.items.push(c);b.left-=c.len+KERF;});return bins;}
+/* Usable length is the stock minus the trim taken off one factory end to square it, which is
+   what the build guide tells you to do. A cut longer than that does not fit, and quietly
+   splitting it into equal halves would answer with a board count for a board nobody can cut.
+   Over-length cuts are packed anyway so the arithmetic survives, and reported so the warning
+   list can say so out loud. */
+function packBoards(cuts,stock=96,trim=0){const bins=[];const list=[];const over=[];const cap=stock-trim;
+  cuts.forEach(c=>{if(c.len>cap){over.push(c.len);const n=Math.ceil(c.len/(cap-1));for(let i=0;i<n;i++)list.push({...c,len:c.len/n});}else list.push(c);});[...list].sort((a,b)=>b.len-a.len).forEach(c=>{let b=bins.find(b=>b.left>=c.len+KERF);if(!b){b={left:stock,items:[]};bins.push(b);}b.items.push(c);b.left-=c.len+KERF;});bins.over=over;return bins;}
 let framing=null;
 /* ---------- diffuser / absorber panels: same footprint as the ipe panel they replace ----------
    Diffuser: 1D quadratic-residue diffuser, N=7, well depths 0,1,4,2,2,4,1 inches (n² mod 7), 1/2" plywood back, fins and
@@ -912,13 +922,13 @@ function layout(){
   [main,amp,booth,barG,doorG].forEach(G=>{if(G.slats)pushCut(G.slats+Math.ceil(G.ripEq),G.H);});
   over.pieces.forEach(o=>pushCut(o.n,o.H));
   pushCut(5,BAR_L+2);                       /* the bar top, edge-glued from 5 boards */
-  const boards=packBoards(buyList,STOCK).length,buyLen=buyList.reduce((a,c)=>a+c.len,0);
+  const buyPack=packBoards(buyList,STOCK,TRIM),boards=buyPack.length,buyLen=buyList.reduce((a,c)=>a+c.len,0);
   const bandLen=RUNS.filter(r=>!r.amp&&!r.booth&&!r.overDoor&&!r.overBar&&!r.door).reduce((a,r)=>a+r.used,0);
   const railCuts={};panels.filter(p=>p.nr>0).forEach(p=>{const L=Math.round(p.Lr*16)/16;railCuts[L]=(railCuts[L]||0)+p.nr;});
   /* Mix rail lengths on one 2x4. Packing each length into boards of its own leaves the
      same offcut over and over: five 17 3/8" rails end an 8 ft board 8 1/2" short of a sixth. */
   const railList=[];Object.entries(railCuts).forEach(([L,n])=>{for(let i=0;i<n;i++)railList.push({len:+L});});
-  const twoByBoards=packBoards(railList,STUD_STOCK).length;
+  const twoByBoards=packBoards(railList,STUD_STOCK,TRIM).length;
   /* Edge audit: what is left bare at the end of every run. A run stops short where a
      panel on the next wall returns into the corner, and that clearance is the panel's own
      depth plus one board gap. Anything wider than that is an open strip. */
@@ -948,7 +958,7 @@ function layout(){
      spans.forEach(sp=>{if(sp[0]-cur>0.5)holes.push({wall:w.name,from:cur,to:sp[0]});cur=Math.max(cur,sp[1]);});
      if(w.L-cur>0.5)holes.push({wall:w.name,from:cur,to:w.L});});}
   const hung=panels.filter(p=>p.nr>0);const wallCleatLb=hung.reduce((a,p)=>a+p.Lc*CLEAT_AREA,0)/1728*BACK_PCF;
-  stats={main,amp,booth,over,barG,doorG,hung,edges,holes,rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:boards*STOCK-buyLen,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
+  stats={main,amp,booth,over,barG,doorG,hung,edges,holes,tooLong:buyPack.over,shortRails:Object.keys(railCuts).map(Number).filter(L=>L<MIN_CROSSCUT),rips:panels.filter(x=>x.rip&&x.type==='ipe'),slats,boards,cuts:main.cuts,offEach:main.offEach,offTotal:boards*STOCK-buyLen,slatLb:main.slatLb,bandLen,railCuts,twoByBoards,
     n:{3:panels.filter(p=>p.k===3).length,4:panels.filter(p=>p.k===4).length,5:panels.filter(p=>p.k===5).length},
     ipeTotal:panels.reduce((a,x)=>a+(x.type==='ipe'?x.slatLb:0),0),total:panels.reduce((a,p)=>a+p.weight,0)+wallCleatLb,
     railFt:panels.reduce((a,p)=>a+p.nr*p.Lr,0)/12,
@@ -992,6 +1002,10 @@ function layout(){
   if(heavy.length)warns.push(['warn',`${heavy.length} panels weigh over ${HEAVY} lb (${heavy.map(p=>p.id).join(', ')}). Two people to lift onto the cleat.`]);
   RUNS.forEach(r=>{if(!r.panels.length||r.door)return;const st=studs(WALL[r.wall]).filter(x=>x>=r.start&&x<=r.end).length;r.cleatStuds=st;
     if(state.studs&&st<2)warns.push(['warn',`${r.name}: its wall cleat crosses ${st} stud${st===1?'':'s'} (set the stud positions to check). Add blocking or toggle bolts between studs if that is right.`]);});
+  if(stats.tooLong&&stats.tooLong.length){const L=[...new Set(stats.tooLong.map(x=>fIn(x)))].join(', ');
+    warns.push(['bad',`${stats.tooLong.length} cut${stats.tooLong.length>1?'s are':' is'} longer than one board will give. A ${fIn(STOCK)} board squared at one end yields ${fIn(STOCK-TRIM)}, and ${L} will not come off it. Shorten the board length or buy longer stock: the board count below assumes these are joined, and a vertical board cannot be joined.`]);}
+  if(stats.shortRails&&stats.shortRails.length){const L=stats.shortRails.map(x=>fIn(x)).join(', ');
+    warns.push(['warn',`Rails at ${L} are shorter than ${fIn(MIN_CROSSCUT)}. Do not crosscut a piece that short on the miter saw. Cut them on a sled from a longer offcut, or let the neighbouring panel's rails carry that filler.`]);}
   if(state.ledge&&!stats.ledgeOk)warns.push(['warn',`Offcuts are only ${fIn(Math.max(0,main.offEach))} long at this board length, too short for a cap ledge.`]);
   if(state.ledge&&stats.ledgeOk&&stats.ledgeUsed>stats.ledgeAvail)warns.push(['bad','Not enough offcut length for the cap ledge.']);
 }
@@ -1596,7 +1610,7 @@ function buildCutList(){
   row('Air gap','1" everywhere between leaves and between the inner leaf and the room walls; nothing may bridge it');
   sec('Fasteners and finish');
   const slatScrews=panels.reduce((a,p)=>a+p.k*(p.run.door?3:p.nr)*2,0);
-  row('Stainless #8 × 2 1/2" screws, through the 2x4 and spacer into the ipe',`${slatScrews} (+10%)`,'2 per board per rail; predrill and countersink, ipe is very hard');
+  row('Stainless #8 × 2 1/2" screws, through the 2x4 rail into the ipe',`${slatScrews} (+10%)`,'2 per board per rail; predrill and countersink, ipe is very hard');
   row('Structural screws 1/4" × 3 1/8", wall cleats into studs',`${RUNS.filter(r=>r.panels.length&&!r.door).reduce((a,r)=>a+2*(Math.floor((r.end-r.start)/16)+1),0)} (+10%)`,'2 at every stud the cleat crosses');
   row('Framing screws 3"',`about ${framing.F.filter(m=>m.kind!=='plate').length*4+framing.joists.length*6}`);
   row('Ipe end-grain sealer + penetrating oil','1 qt each');
@@ -1612,8 +1626,8 @@ function buildCutList(){
   if(state.strings&&s.stringFt)row('Warm string lights on a separate dimmer',`about ${Math.ceil(s.stringFt/5)*5} ft`,`${s.bulbs} bulbs in the model`);
   return {html:'<table class="cut">'+out.join('')+'</table>',txt:'MATERIALS AND CUT LIST\n'+T.join('\n').trim()};
 }
-const CUT_STEPS=[
-  '<b>Ipe on the miter saw.</b> Square one factory end of each 97" board (take about 1/4"), set a stop block at the board length (90" main band) and cut. Cut the bar, amp wall and door lengths the same way. Seal the cut ends the same day.',
+const cutSteps=()=>[
+  `<b>Ipe on the miter saw.</b> Square one factory end of each ${fIn(STOCK)} board (take about ${fIn(TRIM)}), which leaves ${fIn(STOCK-TRIM)} to cut from. Set a stop block at the board length (${fIn(state.H)} main band) and cut. Cut the bar, amp wall and door lengths the same way. Seal the cut ends the same day.`,
   '<b>2x4 rails on the miter saw.</b> Set a stop block for each rail length in the list and cut all of one length at once. Each panel takes one cleat rail and one plain bottom rail of the same length. Pick the straightest 2x4s for the cleats.',
   '<b>LED groove (table saw).</b> On the back of every board cut a 1/2" wide × 1/4" deep groove down the center (fence at 2 1/2", two passes). The LED strip lies in it facing the wall, so it passes over the rails and lights the wall behind each board. Leave the wire end at the bottom.',
   '<b>French cleats (table saw, 45°).</b> Blade tilted 45°, fence set so the cut enters the back face 1" up the 3 1/2" width. One pass down a 2x4 gives two identical halves: the panel\'s cleat rail and its matching piece of wall cleat. Cut them in pairs so each panel keeps its own match.',
@@ -1802,7 +1816,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&$('tray').classList.contains
   const end=()=>{if(y0===null)return;t.classList.remove('drag');t.style.transform='';if(dy>120)trayClose();y0=null;};
   gr.addEventListener('pointerup',end);gr.addEventListener('pointercancel',end);})();
 $('trayCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('tray').dataset.txt||'');$('trayCopy').textContent='Copied';}catch(e){$('trayCopy').textContent='Blocked';}setTimeout(()=>$('trayCopy').textContent='Copy',1600);};
-$('copyCuts').onclick=async()=>{try{await navigator.clipboard.writeText(buildCutList().txt+'\n\nHOW TO CUT\n'+CUT_STEPS.map((x,i)=>(i+1)+'. '+x.replace(/<[^>]+>/g,'')).join('\n'));$('copyMsg').textContent='Copied.';}catch(e){$('copyMsg').textContent='Copy was blocked here; select the text instead.';}};
+$('copyCuts').onclick=async()=>{try{await navigator.clipboard.writeText(buildCutList().txt+'\n\nHOW TO CUT\n'+cutSteps().map((x,i)=>(i+1)+'. '+x.replace(/<[^>]+>/g,'')).join('\n'));$('copyMsg').textContent='Copied.';}catch(e){$('copyMsg').textContent='Copy was blocked here; select the text instead.';}};
 $('compBtn').onclick=()=>{compView=!compView;if(compView){boothView=false;state.sel=null;}updateTray();};
 $('boothBtn').onclick=()=>{boothView=!boothView;if(boothView){compView=ampView=false;state.sel=null;}updateTray();};
 $('ampBtn').onclick=()=>{ampView=!ampView;if(ampView){compView=boothView=false;state.sel=null;}updateTray();};
@@ -1815,6 +1829,17 @@ $('modeBtn').onclick=()=>{setOrbit(!state.orbit);updateLegend();};
 (()=>{let y0=null;const p=$('panel');p.addEventListener('touchstart',e=>{if(p.scrollTop<=0)y0=e.touches[0].clientY;else y0=null;},{passive:true});
   p.addEventListener('touchmove',e=>{if(y0!==null&&e.touches[0].clientY-y0>70){p.classList.remove('open');y0=null;}},{passive:true});})();
 
+/* Piece length against stock length is the biggest lever on what this costs, and it moves in
+   steps, not smoothly. One 97" board gives the same one piece at 72" as at 96", so a shorter
+   band buys nothing and throws away the difference. Say where the next step is. */
+function perBoard(H){return Math.max(1,Math.floor((STOCK-TRIM+KERF)/(H+KERF)));}
+function tallestAt(n){return (STOCK-TRIM+KERF)/n-KERF;}
+function yieldNote(){
+  const H=state.H,n=perBoard(H),top=tallestAt(n),next=tallestAt(n+1);
+  const waste=((1-H/top)*100).toFixed(1)+'%';
+  return `${n} piece${n>1?'s':''} per board up to ${fIn16(top)}. At ${fIn(H)} that leaves ${waste} of each board unused, `
+    +`and no band taller than ${fIn16(next)} costs fewer than ${stats.boards} boards, so cut the tallest the room allows. `
+    +`${fIn16(next)} or shorter gives ${n+1} per board.`;}
 function renderUI(){
   document.querySelectorAll('#presetSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.preset));
   document.querySelectorAll('#dimSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.dims));
@@ -1844,9 +1869,10 @@ function renderUI(){
     ['Boards, main band',`${s.main.slats} at ${fIn(s.main.H)}`],['Boards, amp wall',`${s.amp.slats} at ${fIn(s.amp.H)}`],['Boards total',s.slats],
     ['Bottom / top above floor',`${fIn(state.bottom)} / ${fFt(state.bottom+H)}`],['Bare wall above',fFt(state.ceil-state.bottom-H)],
     ['Cleat rail center',`${fIn(state.cleat)} up panel, ${fFt(state.bottom+state.cleat)} above floor`],
-    ['sub','Stock yield (97" boards)'],
+    ['sub',`Stock yield (${fIn(STOCK)} boards, ${fIn(TRIM)} off one end)`],
     ['Boards, main band',`${s.main.boards} (${fIn(Math.max(0,s.main.offEach))} offcut each)`],['Boards, amp wall',`${s.amp.boards} (${fIn(Math.max(0,s.amp.offEach))} offcut each)`],['Boards total',s.boards],['Rip allowance for fillers',s.rips.length?`${Math.ceil(s.main.ripEq+s.amp.ripEq)} board-widths across ${s.rips.length} pieces`:'none'],
     ['Total offcut',(Math.max(0,s.offTotal)/12).toFixed(1)+' ft'],['Stock used',pct(s.used)],
+    ['Cheapest board length',yieldNote()],
     ['sub','Weight (ipe 66 lb/ft³, framing 34 lb/ft³)'],
     ['One board',s.slatLb.toFixed(1)+' lb'],['Main panel',wCell(s.main.ps.filter(x=>!x.rip))],['Amp wall panel',wCell(s.amp.ps.filter(x=>!x.rip))],['All ipe',lb(s.ipeTotal)],['Everything on the walls',lb(s.total)],
     ['sub','Framing'],
@@ -1865,7 +1891,7 @@ function renderUI(){
   const bad=warns.filter(w=>w[0]==='bad').length;
   $('warns').innerHTML=warns.length?warns.map(w=>`<div class="w-${w[0]}">${w[1]}</div>`).join(''):'<div class="w-ok">No overlaps, ceiling or clearance problems.</div>';
   const pill=$('warnPill');pill.style.display=warns.length?'inline-block':'none';pill.style.background=bad?'var(--bad)':'var(--warn)';pill.textContent=innerWidth<900?`⚠ ${warns.length}`:`${warns.length} warning${warns.length>1?'s':''}`;
-  const cl=buildCutList();$('cutlist').innerHTML=cl.html;$('cutSteps').innerHTML=CUT_STEPS.map(x=>`<li>${x}</li>`).join('');
+  const cl=buildCutList();$('cutlist').innerHTML=cl.html;$('cutSteps').innerHTML=cutSteps().map(x=>`<li>${x}</li>`).join('');
   renderLightUI();
   updateTray();
 }

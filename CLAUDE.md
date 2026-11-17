@@ -29,5 +29,8 @@ so friends can open it from a link on their phones.
 ## Things to keep
 - No em dashes in any user-facing text.
 - Keep it one self-contained file so Pages serves it as is.
-- Stud positions, wall lengths and obstacle positions were scaled from a hand drawing:
-  field-measure before trusting cut lengths.
+- Wall lengths and the overhang were measured on site 2026-11-15 and the code says so at
+  `ROOM_W` and `OH_W`. Stud and obstacle positions are still scaled from the hand drawing:
+  field-measure those before trusting cut lengths.
+- `STOCK=97` carries no provenance and the entire buy rests on it. The main band is cut at
+  96", so a true 8 ft board does not fit. Confirm the real length with the supplier.
