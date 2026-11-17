@@ -1,0 +1,2 @@
+# Vendored library: keep it out of diffs and language stats.
+vendor/** linguist-vendored

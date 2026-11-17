@@ -309,7 +309,10 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible,input:focus-visib
   #ctrlBtn{padding:8px 10px}
 }
 </style>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<!-- three.js r160, vendored under vendor/. A planner you open at the lumberyard cannot
+     depend on somebody else's uptime or on there being any signal at all. MIT, see
+     vendor/three/LICENSE. No build step: these are the published ES modules, unmodified. -->
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -353,7 +356,13 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible,input:focus-visib
     <summary><b>The Wall</b><small>board length, heights and gaps</small></summary>
     <div class="pgb">
       <div class="sec">
-    <h3>Board length (cut from 97" boards)</h3>
+    <h3>Stock length</h3>
+    <div class="seg" id="stockSeg">
+      <button data-v="96">8 ft</button><button data-v="97">97"</button><button data-v="120">10 ft</button><button data-v="144">12 ft</button>
+    </div>
+    <label class="tog"><input type="checkbox" id="t_stockSrc">Confirmed with the supplier</label>
+    <p class="hint" id="stockHint"></p>
+    <h3 id="presetH3">Board length</h3>
     <div class="seg" id="presetSeg">
       <button data-v="72">72"</button><button data-v="84">84"</button><button data-v="90">90"</button><button data-v="96">96"</button><button data-v="48">48"</button>
     </div>
@@ -477,9 +486,15 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
    swing in. Everything behind the ipe is painted matte black so it disappears behind the 1" gaps.
    Stand-off = 1 1/2" (nested cleat, and the bottom rail) + 1" ipe = 2 1/2". */
 const SLAT_W=5.5, SLAT_T=1, RAIL_T=1.5, RAIL_H=3.5, FLOAT=RAIL_T, STANDOFF=RAIL_T+SLAT_T,
-  STOCK=97, TRIM=0.25, KERF=0.125, IPE_PCF=66, BACK_PCF=34, HEAVY=75, RAIL_MAX_SPAN=84, REVEAL=1, STUD_STOCK=96, RAIL_INSET=0.5625;
+  TRIM=0.25, KERF=0.125, IPE_PCF=66, BACK_PCF=34, HEAVY=75, RAIL_MAX_SPAN=84, REVEAL=1, STUD_STOCK=96, RAIL_INSET=0.5625;
 /* One 45 degree rip through the 1 1/2" thickness of a 2x4, entering the back face 1" up and leaving the
    front face 2 1/2" up. Centred, so both halves have the same 2 5/8 in section. */
+/* The one number nothing else in this file can check. Every wall here carries the date it was
+   taped; the board length carries whoever said it at the counter. It is also the number the whole
+   buy is packed onto, so getting it wrong does not make the margin thinner, it makes an order that
+   produces no parts. Set it from the panel, and say on every sheet whether it was confirmed. */
+let STOCK=97;
+const STOCK_LENGTHS=[96,97,120,144];
 const CLEAT_CUT=(RAIL_H-RAIL_T)/2;        /* 1": where the rip meets the back face */
 const CLEAT_AREA=RAIL_T*RAIL_H/2;         /* each half, in\u00b2 */
 const CLEAT_RISE=RAIL_T;                  /* lift needed to engage or free the hook */
@@ -511,6 +526,14 @@ function ampFit(){
   const tiers=Math.max(0,Math.min(4,Math.floor((shelfTop-shelfBot)/AMP_TIER_PITCH)));
   return {soffit,inW,perTier,cabs,shelfBot,shelfTop,tiers,heads:tiers*perTier,pitch:AMP_TIER_PITCH};
 }
+/* Hardwood culls. Ipe arrives with sapwood, checks and the odd twisted board, and a short
+   order means a second delivery at a second freight charge. One rate, every line. */
+const SPARE=0.10;
+const spare=n=>Math.ceil(n*SPARE);
+/* A screw has to stop inside the board it is pulling, not at its face. Two thirds of the way
+   through the ipe, rounded to a size that is actually sold: through a 1 1/2" rail into a 1"
+   board that is 2 1/4", and 1/4" of wood is left in front of the point. */
+const SCREW=RAIL_T+Math.round(SLAT_T*(2/3)*4)/4;
 const MIN_RIP=1;
 /* Nothing shorter than this comes off a 2x4 on a miter saw: a piece this short has no room
    for a hand and no room for a clamp, and the blade takes it. Cut short rails from a longer
@@ -518,7 +541,7 @@ const MIN_RIP=1;
 const MIN_CROSSCUT=6;
 const GRID_MIN=MIN_RIP;     /* a filler narrower than this is not worth cutting: an ipe strip under 1" splits on the screw */            /* narrower than this and a filler is not worth cutting */
 const isTouch=matchMedia('(pointer: coarse)').matches;
-const state={cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:60,ampCabsInBay:true,gridAlign:true,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
+const state={stock:97,stockSrc:'assumed',cutaway:true,curtains:true,rugs:true,ledLevel:.8,stringLevel:.8,ambLevel:.45,ledHex:null,ptypes:{},booth:105,ampSoffit:60,ampCabsInBay:true,gridAlign:true,seamless:true,dims:'off',framing:false,night:true,led:'back',ledColor:'warm',strings:true,sheet:true,preset:'96',H:96,bottom:1,cleat:84,ampH:62.75,ampGap:1.75,ampTrim:true,ceil:124,gap:1,walls:true,obstacles:true,hardware:false,xray:false,studs:false,ear:false,ledge:false,studOff:{PW:16,PE:16,N:16,E:16,A:16,S:16,W:16,P:16,BN:16,BE:16,BIN:16,BIE:16,BIS:16,BIW:16},view:'iso',sel:null,orbit:true};
 
 /* Plan coords: origin NW interior floor corner, +X east, +Y south. Three: x=X, z=Y, y=up. Walls run clockwise.
    ROOM_W is the north wall, measured on site 2026-11-15 at 239" and confirmed by the overhang:
@@ -833,6 +856,7 @@ function diffLb(w,H){const back=(w-.25)*H*.5,fins=(QRD.length+1)*FIN_T*DIFF_D*H,
 function absLb(w,H){return ((w-.25)*H*2)/1728*8+(2*(w+H)*.75*2.5)/1728*34;}
 const DEPTH={ipe:STANDOFF,diff:RAIL_T+.5+DIFF_D,abs:RAIL_T+2.75};
 function layout(){
+  STOCK=state.stock;
   framing=boothFraming();
   const g=state.gap;let id=1;panels=[];
   /* each wall's grid starts at its first run, so that run opens with a whole board */
@@ -1463,10 +1487,10 @@ function fastenChain(p){
   const node=(t,sub)=>`<div class="cn"><b>${t}</b><span>${sub}</span></div>`;
   const arrow=t=>`<div class="ar">${String.fromCharCode(8595)} ${t}</div>`;
   if(p.run.door)return `<div class="chain">${node(`${p.k} ipe board${p.k>1?'s':''}`,`resawn to ${fIn(.5)} thick, ${fIn(p.H)} long`)}${arrow('stainless #8, driven from inside the door')}${node('Booth door','solid core, 4 ball-bearing hinges')}</div>`;
-  if(p.rip&&!p.solo)return `<div class="chain">${node('1 ripped ipe filler',`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}${arrow(`stainless #8 ${String.fromCharCode(215)} 2 1/2 into the rails of the panel beside it, every 16"`)}${node('2x4 rails of the neighbouring panel','already hanging on the wall cleat')}${arrow('nothing further: the neighbour carries it')}${node('Stud','16" on center')}</div>`;
+  if(p.rip&&!p.solo)return `<div class="chain">${node('1 ripped ipe filler',`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}${arrow(`stainless #8 ${String.fromCharCode(215)} ${fIn16(SCREW)} into the rails of the panel beside it, every 16"`)}${node('2x4 rails of the neighbouring panel','already hanging on the wall cleat')}${arrow('nothing further: the neighbour carries it')}${node('Stud','16" on center')}</div>`;
   return `<div class="chain">
     ${node(`${p.k} ipe board${p.k>1?'s':''}`,`${fIn(p.sw)} wide ${String.fromCharCode(215)} ${fIn(p.H)} long`)}
-    ${arrow(`${p.k*2*p.nr} ${String.fromCharCode(215)} stainless #8 ${String.fromCharCode(215)} 2 1/2, two per board at every rail`)}
+    ${arrow(`${p.k*2*p.nr} ${String.fromCharCode(215)} stainless #8 ${String.fromCharCode(215)} ${fIn16(SCREW)}, two per board at every rail`)}
     ${node(`2x4 cleat rail + ${Math.max(0,p.nr-1)} plain 2x4 bottom rail`,`both ${fIn(p.Lr)} long, both ${fIn(RAIL_T)} thick, painted matte black`)}
     ${arrow(`hooks over: 45${String.fromCharCode(176)} face, no screws, gravity holds it`)}
     ${node('2x4 wall cleat',`the other half of the same rip, ${fIn(p.Lc)} of it behind this panel`)}
@@ -1580,7 +1604,7 @@ function buildCutList(){
   const amp=RUNS.find(r=>r.amp);if(state.ampTrim&&state.ampGap>.05){const pcs=Math.ceil(amp.used/(s.amp.offEach-1));row('Amp wall ceiling trim strip',`${pcs} × ${fIn(amp.used/pcs)}`,`rip ${fIn(state.ampGap-.0625)} wide from amp-wall offcuts; butt joints over LED gaps`);}
   row('Door casings (room door + both booth doors, both sides)','about 15 pcs',`${fIn(CASING)} wide, rip from offcuts; heads ${fIn(DOOR_W+2*CASING)}`);
   row('Bar top (5 boards edge-glued, 20" deep with the overhang)',`5 × ${fIn(BAR_L+2)}`,'counted in the buy below; the 22" offcuts become door casing');
-  row('Boards to buy',`${s.boards} + 5 spare`,'every cut above packed onto 97" stock, longest first');
+  row('Boards to buy',`${s.boards} + ${spare(s.boards)} spare`,`every cut above packed onto ${fIn(STOCK)} stock, longest first; spare at ${Math.round(SPARE*100)}% for culls`);
   sec('2x4 (8 ft), panel rails');
   Object.entries(s.railCuts).sort((a,b)=>b[0]-a[0]).forEach(([L,n])=>{const c=s.hung.filter(x=>Math.abs(x.Lr-L)<1e-3).length;row(`Rails at ${fIn16(+L)}`,`${n}`,`${c} ripped at 45° as cleat rails (each yielding its own wall cleat), ${n-c} plain bottom rails; all painted matte black`);});
   {if(state.led==='back')row('LED groove down the center back of every board',`${s.slats-s.doorG.slats} boards`,'1/2" wide × 1/4" deep, full length, table saw with the fence at 2 1/2"; the strip sits in it facing the wall and passes over the rails');}
@@ -1589,8 +1613,8 @@ function buildCutList(){
   Object.values(fg).forEach(c=>row(c.label,`${c.n} × ${fIn(c.len)}`,c.lum));
   const all2x4=[];panels.forEach(p=>{for(let i=0;i<p.nr;i++)all2x4.push({len:p.Lr});});
   const all2x6=[],all2x10=[];framing.cuts.forEach(c=>{for(let i=0;i<c.n;i++)(c.lum==='2x6'?all2x6:c.lum==='2x10'?all2x10:all2x4).push({len:c.len});});
-  packByStock(all2x4).forEach(b=>row(`${b.ft} ft 2x4s to buy (rails + framing)`,`${b.boards} + ${Math.ceil(b.boards*.08)} spare`,'packed with 1/8" kerf'));
-  packByStock(all2x6).forEach(b=>row(`${b.ft} ft 2x6s to buy (headers + lid)`,`${b.boards} + 1 spare`));
+  packByStock(all2x4).forEach(b=>row(`${b.ft} ft 2x4s to buy (rails + framing)`,`${b.boards} + ${spare(b.boards)} spare`,'packed with 1/8" kerf'));
+  packByStock(all2x6).forEach(b=>row(`${b.ft} ft 2x6s to buy (headers + lid)`,`${b.boards} + ${spare(b.boards)} spare`));
   packByStock(all2x10).forEach(b=>row(`${b.ft} ft 2x10s to buy (inner window header)`,`${b.boards}`));
   sec('French cleats: one 2x4 rip serves both halves');
   {const runs=RUNS.filter(r=>r.panels.length&&!r.door&&r.panels.some(p=>p.nr>0));const lf=runs.reduce((a,r)=>a+(r.end-r.start-1),0)/12;
@@ -1610,8 +1634,9 @@ function buildCutList(){
   row('Air gap','1" everywhere between leaves and between the inner leaf and the room walls; nothing may bridge it');
   sec('Fasteners and finish');
   const slatScrews=panels.reduce((a,p)=>a+p.k*(p.run.door?3:p.nr)*2,0);
-  row('Stainless #8 × 2 1/2" screws, through the 2x4 rail into the ipe',`${slatScrews} (+10%)`,'2 per board per rail; predrill and countersink, ipe is very hard');
-  row('Structural screws 1/4" × 3 1/8", wall cleats into studs',`${RUNS.filter(r=>r.panels.length&&!r.door).reduce((a,r)=>a+2*(Math.floor((r.end-r.start)/16)+1),0)} (+10%)`,'2 at every stud the cleat crosses');
+  row(`Stainless #8 × ${fIn16(SCREW)} screws, through the 2x4 rail into the ipe`,`${slatScrews} + ${spare(slatScrews)} spare`,`2 per board per rail; ${fIn16(SCREW-RAIL_T)} into a ${fIn(SLAT_T)} board, so the point stops short of the face. Predrill and countersink, ipe is very hard`);
+  {const nSc=RUNS.filter(r=>r.panels.length&&!r.door).reduce((a,r)=>a+2*(Math.floor((r.end-r.start)/16)+1),0);
+   row('Structural screws 1/4" × 3 1/8", wall cleats into studs',`${nSc} + ${spare(nSc)} spare`,'2 at every stud the cleat crosses');}
   row('Framing screws 3"',`about ${framing.F.filter(m=>m.kind!=='plate').length*4+framing.joists.length*6}`);
   row('Ipe end-grain sealer + penetrating oil','1 qt each');
   sec('Ceiling fabric and rugs');
@@ -1632,7 +1657,7 @@ const cutSteps=()=>[
   '<b>LED groove (table saw).</b> On the back of every board cut a 1/2" wide × 1/4" deep groove down the center (fence at 2 1/2", two passes). The LED strip lies in it facing the wall, so it passes over the rails and lights the wall behind each board. Leave the wire end at the bottom.',
   '<b>French cleats (table saw, 45°).</b> Blade tilted 45°, fence set so the cut enters the back face 1" up the 3 1/2" width. One pass down a 2x4 gives two identical halves: the panel\'s cleat rail and its matching piece of wall cleat. Cut them in pairs so each panel keeps its own match.',
   '<b>Paint everything behind the ipe matte black.</b> Cleat rails, bottom rails, and wall cleats sit behind a 1" gap between every board, so any bare wood reads as a stripe. Paint before assembly, both faces and all edges.',
-  '<b>Assemble panels face down.</b> Boards face down with 1" spacer blocks. Lay the cleat rail across the top with its 45° face pointing down and toward the wall, and the plain bottom rail across the foot, and screw through the 2x4 into the ipe with #8 × 2 1/2" screws, 2 per board per rail. Both rails are 1 1/2" thick, so the panel hangs parallel to the wall. Press the LED strip into each board\'s groove before the panel goes up.',
+  `<b>Assemble panels face down.</b> Boards face down with 1" spacer blocks. Lay the cleat rail across the top with its 45° face pointing down and toward the wall, and the plain bottom rail across the foot, and screw through the 2x4 into the ipe with #8 × ${fIn16(SCREW)} screws, 2 per board per rail. Do not reach for a longer one: at ${fIn16(SCREW)} the point stops ${fIn16(SLAT_T-(SCREW-RAIL_T))} short of the show face, and anything longer comes through it. Both rails are ${fIn(RAIL_T)} thick, so the panel hangs parallel to the wall. Press the LED strip into each board's groove before the panel goes up.`,
   '<b>Booth outer leaf.</b> Frame the north and east walls to the room ceiling with 10 ft 2x4s, studs 16" on center, door opening in the north wall. Sill gasket under the bottom plate, screw the top plate to the ceiling joists, insulate, 2 layers of 5/8" drywall with damping compound on the room side only.',
   '<b>Booth inner leaf.</b> Frame 4 walls 1" away from the outer leaf and from the room walls (use 1" foam blocks as temporary spacers, then pull them). Sill gasket under every plate, door opening lined up with the outer door. Lay the 2x6 lid joists across the north and south top plates, insulate, then 2 layers of 5/8" drywall on the booth side and the lid underside. Nothing may touch both leaves.',
   '<b>Hang.</b> Screw each wall cleat level into every stud it crosses, 45° face up and away from the wall (outside panels into the outer leaf, inside panels into the inner leaf), splicing lengths over a stud. Wire the LED channels to their zone dimmers, then lift each panel 1 3/4" and drop it on. The bottom rail lands flat on the wall and squares the panel up.',
@@ -1667,7 +1692,7 @@ function buildGuide(){
     <li>Paint the rails and the wall cleat matte black, both faces and all edges, and let them dry before assembly. They sit behind a 1" gap, so bare wood reads as a stripe.</li>
     <li>Rip 1/2" plywood into 3 1/2" strips, cut them to rail length, glue and pin one to the face of each rail.</li>
     <li>Lay the boards face down on a flat bench with 1" spacer blocks. Set the rails square across them, rail centers at the heights in the cut sheet, ends 9/16" in from the panel edges, the cleat rail's 45° face pointing down and toward the wall.</li>
-    <li>Predrill and screw through rail and spacer into each board: 2 stainless #8 × 2 1/2" screws per board per rail.</li>
+    <li>Predrill and screw through the rail into each board: 2 stainless #8 × ${fIn16(SCREW)} screws per board per rail.</li>
     <li>Press the LED strip into each groove, solder or clip the leads at the bottom, label the panel ID on a rail.</li></ol>`);
   /* 3. hanging */
   const hang=RUNS.filter(r=>r.panels.length&&!r.door).map(r=>[r.name,r.panels.length,fFt(r.sp.bot+(r.sp.cleat??0)),`${fFt(r.sp.bot)} to ${fFt(r.sp.bot+r.sp.H)}`]);
@@ -1769,6 +1794,9 @@ STUD_WALLS.forEach(w=>{const l=document.createElement('label');l.textContent=`${
 function seg(id,key,cb){$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{state[key]=b.dataset.v;cb&&cb(b.dataset.v);rebuild();if(key==='preset')setView(state.view,true);});}
 seg('presetSeg','preset',v=>{state.H=+v;state.bottom=PRESETS[v].bottom;state.cleat=state.H-12;});
 seg('dimSeg','dims');
+$('stockSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.stock=+b.dataset.v;STOCK=state.stock;rebuild();});
+{const el=$('t_stockSrc');el.checked=state.stockSrc==='measured';
+ el.onchange=()=>{state.stockSrc=el.checked?'measured':'assumed';rebuild();};}
 const SCENES={session:{ledLevel:.45,stringLevel:.7,ambLevel:.3,ledColor:'warm'},show:{ledLevel:1,stringLevel:1,ambLevel:.15,ledColor:'amber'},work:{ledLevel:.7,stringLevel:.4,ambLevel:1,ledColor:'warm'},late:{ledLevel:.18,stringLevel:.35,ambLevel:.05,ledColor:'red'}};
 $('sceneSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{Object.assign(state,SCENES[b.dataset.v],{ledHex:null});applyLighting();renderLightUI();if(state.led==='off'){state.led='all';rebuild();}});
 ['ledLevel','stringLevel','ambLevel'].forEach(k=>$(k).oninput=e=>{state[k]=+e.target.value;applyLighting();renderLightUI();});
@@ -1830,7 +1858,7 @@ $('modeBtn').onclick=()=>{setOrbit(!state.orbit);updateLegend();};
   p.addEventListener('touchmove',e=>{if(y0!==null&&e.touches[0].clientY-y0>70){p.classList.remove('open');y0=null;}},{passive:true});})();
 
 /* Piece length against stock length is the biggest lever on what this costs, and it moves in
-   steps, not smoothly. One 97" board gives the same one piece at 72" as at 96", so a shorter
+   steps, not smoothly. One 97" board gives the same single piece at 72" as at 96", so a shorter
    band buys nothing and throws away the difference. Say where the next step is. */
 function perBoard(H){return Math.max(1,Math.floor((STOCK-TRIM+KERF)/(H+KERF)));}
 function tallestAt(n){return (STOCK-TRIM+KERF)/n-KERF;}
@@ -1842,6 +1870,11 @@ function yieldNote(){
     +`${fIn16(next)} or shorter gives ${n+1} per board.`;}
 function renderUI(){
   document.querySelectorAll('#presetSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.preset));
+  document.querySelectorAll('#stockSeg button').forEach(b=>b.classList.toggle('on',+b.dataset.v===state.stock));
+  $('presetH3').textContent=`Board length (cut from ${fIn(STOCK)} boards)`;
+  $('stockHint').innerHTML=state.stockSrc==='measured'
+    ?`Confirmed with the supplier: ${fIn(STOCK)} boards. ${fIn(TRIM)} off one end leaves ${fIn(STOCK-TRIM)} to cut from, and the buy is ${stats.boards} boards.`
+    :`<b>Not confirmed.</b> ${fIn(STOCK)} is assumed, and the whole ${stats.boards}-board buy is packed onto it. "8 ft" is exactly 96" in most yards, which leaves nothing to square and will not give a ${fIn(state.H)} board at all. Ask before you order, then tick this.`;
   document.querySelectorAll('#dimSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.dims));
   document.querySelectorAll('#ledSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.led));
   document.querySelectorAll('#ledColSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===state.ledColor));

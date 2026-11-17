@@ -28,9 +28,15 @@ so friends can open it from a link on their phones.
 
 ## Things to keep
 - No em dashes in any user-facing text.
-- Keep it one self-contained file so Pages serves it as is.
+- Keep it self-contained and buildless. `index.html` plus `vendor/` is the whole thing, and
+  Pages serves it as is. three.js r160 is vendored, unmodified, under `vendor/three/`,
+  because a planner you open at the lumberyard cannot need signal. Do not put it back on a
+  CDN, and do not add a bundler.
 - Wall lengths and the overhang were measured on site 2026-11-15 and the code says so at
   `ROOM_W` and `OH_W`. Stud and obstacle positions are still scaled from the hand drawing:
   field-measure those before trusting cut lengths.
-- `STOCK=97` carries no provenance and the entire buy rests on it. The main band is cut at
-  96", so a true 8 ft board does not fit. Confirm the real length with the supplier.
+- The board length is a setting now (`state.stock`, `STOCK_LENGTHS`), with a confirmed /
+  assumed tag beside it, because the whole buy is packed onto it. It still says assumed.
+  Tap 8 ft to see why it matters: at a true 96" the main band cannot be cut at all.
+- One spare rate (`SPARE`) and one screw length (`SCREW`, derived from the rail and board
+  thickness) feed every line that names them. Do not restate either as a literal.
